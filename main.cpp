@@ -2,9 +2,6 @@
 #include <citro3d.h>
 #include <string.h>
 
-// Simple vertex structure
-typedef struct { float pos[3]; float clr[3]; } vertex;
-
 int main() {
     gfxInitDefault();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -18,11 +15,12 @@ int main() {
         hidScanInput();
         if (hidKeysDown() & KEY_START) break; // Exit on Start
 
-        C3D_FrameBegin(C3D_FRAME_SYNCHRONOUS);
+        // FIXED LINE BELOW: Changed SYNCHRONOUS to SYNCDRAW
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW); 
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0);
         C3D_FrameDrawOn(target);
 
-        // Draw nothing for now to ensure a successful build
+        // Frame rendering logic would go here
         
         C3D_FrameEnd(0);
     }
