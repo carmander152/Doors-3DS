@@ -1,0 +1,27 @@
+; Basic 3DS Projection Shader
+.set out_pos, out
+.set out_clr, out
+
+; Inputs from our code (Position and Color)
+.set in_pos, v0
+.set in_clr, v1
+
+; The Camera Matrix
+.set proj_mtx, c0
+
+.out out_pos position
+.out out_clr color
+
+.entry main
+.proc main
+    ; Multiply our 3D position by the Camera Matrix
+    dp4 out_pos.x, proj_mtx[0], in_pos
+    dp4 out_pos.y, proj_mtx[1], in_pos
+    dp4 out_pos.z, proj_mtx[2], in_pos
+    dp4 out_pos.w, proj_mtx[3], in_pos
+
+    ; Pass the color straight through to the screen
+    mov out_clr, in_clr
+    
+    end
+.end
