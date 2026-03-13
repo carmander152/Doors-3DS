@@ -1,16 +1,26 @@
 #include <3ds.h>
 #include <citro3d.h>
 #include <string.h>
-#include "vshader_shbin.h" // FIX: Underscore instead of a dot!
+#include "vshader_shbin.h"
 
 typedef struct { float pos[3]; float clr[3]; } vertex;
 
 static const vertex hallway_mesh[] = {
-    // Floor
-    {{ -1.0f, 0.0f, -3.0f }, { 0.2f, 0.1f, 0.0f }}, {{  1.0f, 0.0f, -3.0f }, { 0.2f, 0.1f, 0.0f }}, {{ -1.0f, 0.0f,  0.0f }, { 0.2f, 0.1f, 0.0f }},
-    {{  1.0f, 0.0f, -3.0f }, { 0.2f, 0.1f, 0.0f }}, {{  1.0f, 0.0f,  0.0f }, { 0.2f, 0.1f, 0.0f }}, {{ -1.0f, 0.0f,  0.0f }, { 0.2f, 0.1f, 0.0f }},
-    // Left Wall
-    {{ -1.0f, 0.0f, -3.0f }, { 0.3f, 0.3f, 0.3f }}, {{ -1.0f, 1.5f, -3.0f }, { 0.3f, 0.3f, 0.3f }}, {{ -1.0f, 0.0f,  0.0f }, { 0.3f, 0.3f, 0.3f }},
+    // Floor (Brown)
+    {{ -1.0f, 0.0f, -3.0f }, { 0.4f, 0.2f, 0.1f }},
+    {{  1.0f, 0.0f, -3.0f }, { 0.4f, 0.2f, 0.1f }},
+    {{ -1.0f, 0.0f,  0.0f }, { 0.4f, 0.2f, 0.1f }},
+    {{  1.0f, 0.0f, -3.0f }, { 0.4f, 0.2f, 0.1f }},
+    {{  1.0f, 0.0f,  0.0f }, { 0.4f, 0.2f, 0.1f }},
+    {{ -1.0f, 0.0f,  0.0f }, { 0.4f, 0.2f, 0.1f }},
+    
+    // Left Wall (Grey)
+    {{ -1.0f, 0.0f, -3.0f }, { 0.5f, 0.5f, 0.5f }},
+    {{ -1.0f, 1.5f, -3.0f }, { 0.5f, 0.5f, 0.5f }},
+    {{ -1.0f, 0.0f,  0.0f }, { 0.5f, 0.5f, 0.5f }},
+    {{ -1.0f, 1.5f, -3.0f }, { 0.5f, 0.5f, 0.5f }},
+    {{ -1.0f, 1.5f,  0.0f }, { 0.5f, 0.5f, 0.5f }},
+    {{ -1.0f, 0.0f,  0.0f }, { 0.5f, 0.5f, 0.5f }}
 };
 
 int main() {
@@ -26,12 +36,8 @@ int main() {
     shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]);
     C3D_BindProgram(&program);
 
-    // 2. Setup the Camera (Projection Matrix)
+    // 2. Map our 3D data to the shader
     int uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx");
-    C3D_Mtx projection;
-    Mtx_PerspTilt(&projection, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
-
-    // 3. Map our 3D data to the shader
     C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
     AttrInfo_Init(attrInfo);
     AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // Position
@@ -43,17 +49,36 @@ int main() {
     BufInfo_Init(bufInfo);
     BufInfo_Add(bufInfo, vbo_data, sizeof(vertex), 2, 0x10);
 
+    // FIX 1: Turn off Face Culling so we don't accidentally hide the walls
+    C3D_CullFace(GPU_CULL_NONE);
+    // FIX 2: Enable the Depth Buffer so 3D shapes overlap correctly
+    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+
     while (aptMainLoop()) {
         hidScanInput();
         if (hidKeysDown() & KEY_START) break;
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); // Black background
+        // FIX 3: Change background to a dark spooky blue instead of pitch black
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x102030FF, 0); 
         C3D_FrameDrawOn(target);
 
-        // 4. Send the Camera to the Shader and Draw!
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projection);
-        C3D_DrawArrays(GPU_TRIANGLES, 0, 9);
+        // --- CAMERA MATH ---
+        C3D_Mtx projection;
+        Mtx_PerspTilt(&projection, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
+        
+        // Move the camera back and slightly up so we aren't standing inside the geometry
+        C3D_Mtx view;
+        Mtx_Identity(&view);
+        Mtx_Translate(&view, 0.0f, -0.5f, 1.5f, true); 
+
+        // Combine the Lens (Projection) and the Position (View)
+        C3D_Mtx projView;
+        Mtx_Multiply(&projView, &projection, &view);
+
+        // Send to Shader and Draw 12 Vertices (6 for floor, 6 for wall)
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projView);
+        C3D_DrawArrays(GPU_TRIANGLES, 0, 12);
 
         C3D_FrameEnd(0);
     }
