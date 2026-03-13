@@ -1,7 +1,7 @@
 #include <3ds.h>
 #include <citro3d.h>
 #include <string.h>
-#include "vshader.shbin.h" // This is our new shader file!
+#include "vshader_shbin.h" // FIX: Underscore instead of a dot!
 
 typedef struct { float pos[3]; float clr[3]; } vertex;
 
