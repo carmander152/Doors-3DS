@@ -58,16 +58,12 @@ static const vertex level_mesh[] = {
     {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
 
     // --- 7. NEW: THE CABINET (96 to 119) ---
-    // Front Face (We skip drawing this when hiding so you can see out!)
     {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
-    // Left Face
     {{  1.5f, 0.0f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
     {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
-    // Right Face
     {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 0.0f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }},
     {{  2.5f, 0.0f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }},
-    // Top Face
     {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  2.5f, 1.5f, -7.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }},
     {{  2.5f, 1.5f, -7.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }},
 };
@@ -114,9 +110,7 @@ int main() {
     float camYaw = 0.0f;   
     float camPitch = 0.0f; 
 
-    // THE HIDING STATE
     bool isHiding = false;
-
     const float playerRadius = 0.2f;
 
     while (aptMainLoop()) {
@@ -130,8 +124,8 @@ int main() {
         // --- C-STICK (FIXED AXIS!) ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        // Reversed the sign here to `-=` so Left is actually Left!
-        if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
+        // FIX: Swapped back to += so it's correct for your device!
+        if (abs(cStick.dx) > 10) camYaw += cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f; 
         
         if (kHeld & KEY_DLEFT)   camYaw -= 0.05f;
@@ -142,13 +136,12 @@ int main() {
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
-        // --- INTERACTION LOGIC (THE CABINET) ---
+        // --- INTERACTION LOGIC ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
         
         if ((kDown & KEY_X) && nearCabinet) {
-            isHiding = !isHiding; // Toggle hiding state!
+            isHiding = !isHiding; 
             
-            // If we just popped OUT of the cabinet, push us back into the room
             if (!isHiding) {
                 camX = 1.0f;
                 camZ = -5.5f;
@@ -158,9 +151,8 @@ int main() {
         float nextX = camX;
         float nextZ = camZ;
 
-        // If you are hiding, lock movement. If not, read the Circle Pad!
         if (isHiding) {
-            nextX = 2.0f;  // Inside the cabinet
+            nextX = 2.0f;  
             nextZ = -6.5f;
         } else {
             circlePosition circlePad;
@@ -177,14 +169,14 @@ int main() {
                 nextZ += sinf(camYaw) * speed;
             }
 
-            // --- COLLISION ---
-            bool doorOpen = (nextZ < -1.5f); 
+            // Local collision variable
+            bool isDoorOpenCollision = (nextZ < -1.5f); 
 
             if (nextZ > -3.0f + playerRadius) {
                 if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
                 if (nextX >  1.0f - playerRadius) nextX =  1.0f - playerRadius;
                 if (nextZ >  1.5f - playerRadius) nextZ =  1.5f - playerRadius;
-                if (!doorOpen && nextZ < -2.8f + playerRadius) nextZ = -2.8f + playerRadius;
+                if (!isDoorOpenCollision && nextZ < -2.8f + playerRadius) nextZ = -2.8f + playerRadius;
             } 
             else if (nextZ <= -3.0f + playerRadius && nextZ >= -3.0f - playerRadius) {
                 if (nextX < -0.8f) nextX = -0.8f;
@@ -195,7 +187,7 @@ int main() {
                 if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
                 if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
                 
-                // NEW: Block the player from walking THROUGH the cabinet
+                // Cabinet Collision
                 if (nextX > 1.3f && nextZ < -5.8f && nextZ > -7.2f) {
                     if (camZ >= -5.8f) nextZ = -5.8f;       
                     else if (camX <= 1.3f) nextX = 1.3f;    
@@ -207,7 +199,10 @@ int main() {
         camX = nextX;
         camZ = nextZ;
 
-        // Dropping the camera height dynamically if we are hiding! (-0.8 is standing, -0.4 is crouching)
+        // --- SCOPE FIX FOR DOOR ---
+        // This is evaluated outside the 'hiding' check so it's always ready to draw!
+        bool doorOpen = (camZ < -1.5f);
+
         float currentCamHeight = isHiding ? -0.4f : -0.8f;
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
@@ -232,12 +227,9 @@ int main() {
         else          C3D_DrawArrays(GPU_TRIANGLES, 36, 6);
         C3D_DrawArrays(GPU_TRIANGLES, 48, 48);
         
-        // CABINET RENDERING TRICK
         if (!isHiding) {
-            // Draw all 24 vertices of the cabinet block
             C3D_DrawArrays(GPU_TRIANGLES, 96, 24); 
         } else {
-            // Skip the first 6 vertices (the front face) so we can peek out of the box!
             C3D_DrawArrays(GPU_TRIANGLES, 102, 18); 
         }
 
