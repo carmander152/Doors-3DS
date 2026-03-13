@@ -1,14 +1,13 @@
 ; Basic 3DS Projection Shader
-.set out_pos, out
-.set out_clr, out
 
-; Inputs from our code (Position and Color)
-.set in_pos, v0
-.set in_clr, v1
+; Uniforms (The Camera Matrix)
+.fvec proj_mtx[4]
 
-; The Camera Matrix
-.set proj_mtx, c0
+; Inputs from our C++ code (v0 = Position, v1 = Color)
+.alias in_pos v0
+.alias in_clr v1
 
+; Outputs to the screen
 .out out_pos position
 .out out_clr color
 
