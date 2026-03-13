@@ -13,62 +13,63 @@
 typedef struct { float pos[4]; float clr[4]; } vertex;
 
 static const vertex level_mesh[] = {
-    // --- 1. THE HALLWAY (Vertices 0 to 17) ---
-    // Floor
+    // --- 1. THE HALLWAY (0 to 17) ---
     {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }},
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }},
-    // Left Wall
     {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }},
     {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 1.5f,  0.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }},
-    // Right Wall
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
 
-    // --- 2. THE DOORWAY FRAME (Vertices 18 to 35) ---
-    // Left Segment (Beside the door)
+    // --- 2. DOORWAY FRAME (18 to 35) ---
     {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -0.5f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
     {{ -0.5f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -0.5f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
-    // Right Segment (Beside the door)
     {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.5f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.5f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
-    // Top Segment (Above the door)
     {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.5f, 1.3f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -0.5f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
     {{  0.5f, 1.3f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.5f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -0.5f, 1.5f, -3.0f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
 
-    // --- 3. CLOSED DOOR (Vertices 36 to 41) ---
+    // --- 3. CLOSED DOOR (36 to 41) ---
     {{ -0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
 
-    // --- 4. OPEN DOOR (Vertices 42 to 47) --- (Swung open 90 degrees into the room!)
+    // --- 4. OPEN DOOR (42 to 47) ---
     {{ -0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 0.0f, -4.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{ -0.5f, 0.0f, -4.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -4.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
 
-    // --- 5. THE ROOM (Vertices 48 to 83) ---
-    // Floor
+    // --- 5. THE ROOM (48 to 83) ---
     {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }},
     {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }},
-    // Left Wall
     {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }},
     {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }},
-    // Right Wall
     {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }},
     {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }},
-    // Back Wall
     {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }},
     {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }},
-    // Front Inner Walls 
     {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
     {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
     {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
 
-    // --- 6. THE ROOFS (Vertices 84 to 95) ---
-    // Hallway Roof
+    // --- 6. THE ROOFS (84 to 95) ---
     {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 1.5f,  0.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
     {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 1.5f,  0.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 1.5f,  0.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
-    // Room Roof
     {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
     {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
+
+    // --- 7. NEW: THE CABINET (96 to 119) ---
+    // Front Face (We skip drawing this when hiding so you can see out!)
+    {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    // Left Face
+    {{  1.5f, 0.0f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
+    {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
+    // Right Face
+    {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 0.0f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }},
+    {{  2.5f, 0.0f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }},
+    // Top Face
+    {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  2.5f, 1.5f, -7.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }},
+    {{  2.5f, 1.5f, -7.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.3f, 0.2f, 0.1f, 1.0f }},
 };
 
 int main() {
@@ -113,6 +114,9 @@ int main() {
     float camYaw = 0.0f;   
     float camPitch = 0.0f; 
 
+    // THE HIDING STATE
+    bool isHiding = false;
+
     const float playerRadius = 0.2f;
 
     while (aptMainLoop()) {
@@ -123,12 +127,11 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
-        // --- C-STICK: LOOKING AROUND ---
+        // --- C-STICK (FIXED AXIS!) ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        
-        // FIX: The Yaw matches the math now. Sensitivity boosted to 0.15f!
-        if (abs(cStick.dx) > 10) camYaw += cStick.dx / 1560.0f * 0.15f;
+        // Reversed the sign here to `-=` so Left is actually Left!
+        if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f; 
         
         if (kHeld & KEY_DLEFT)   camYaw -= 0.05f;
@@ -139,51 +142,74 @@ int main() {
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
+        // --- INTERACTION LOGIC (THE CABINET) ---
+        bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
+        
+        if ((kDown & KEY_X) && nearCabinet) {
+            isHiding = !isHiding; // Toggle hiding state!
+            
+            // If we just popped OUT of the cabinet, push us back into the room
+            if (!isHiding) {
+                camX = 1.0f;
+                camZ = -5.5f;
+            }
+        }
+
         float nextX = camX;
         float nextZ = camZ;
 
-        // --- CIRCLE PAD: WALKING (FIXED MATH!) ---
-        circlePosition circlePad;
-        hidCircleRead(&circlePad);
-        
-        // Pushing Forward/Backward moves you perfectly along your head's angle!
-        if (abs(circlePad.dy) > 10) {
-            float speed = (circlePad.dy / 1560.0f) * 0.15f; 
-            nextX += sinf(camYaw) * speed; 
-            nextZ -= cosf(camYaw) * speed; 
-        }
-        if (abs(circlePad.dx) > 10) {
-            float speed = (circlePad.dx / 1560.0f) * 0.15f; 
-            nextX += cosf(camYaw) * speed; 
-            nextZ += sinf(camYaw) * speed;
-        }
+        // If you are hiding, lock movement. If not, read the Circle Pad!
+        if (isHiding) {
+            nextX = 2.0f;  // Inside the cabinet
+            nextZ = -6.5f;
+        } else {
+            circlePosition circlePad;
+            hidCircleRead(&circlePad);
+            
+            if (abs(circlePad.dy) > 10) {
+                float speed = (circlePad.dy / 1560.0f) * 0.15f; 
+                nextX += sinf(camYaw) * speed; 
+                nextZ -= cosf(camYaw) * speed; 
+            }
+            if (abs(circlePad.dx) > 10) {
+                float speed = (circlePad.dx / 1560.0f) * 0.15f; 
+                nextX += cosf(camYaw) * speed; 
+                nextZ += sinf(camYaw) * speed;
+            }
 
-        // --- ZONE COLLISION ---
-        bool doorOpen = (nextZ < -1.5f); 
+            // --- COLLISION ---
+            bool doorOpen = (nextZ < -1.5f); 
 
-        // Zone 1: Hallway
-        if (nextZ > -3.0f + playerRadius) {
-            if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
-            if (nextX >  1.0f - playerRadius) nextX =  1.0f - playerRadius;
-            if (nextZ >  1.5f - playerRadius) nextZ =  1.5f - playerRadius;
-            if (!doorOpen && nextZ < -2.8f + playerRadius) nextZ = -2.8f + playerRadius;
-        } 
-        // Zone 2: Doorway Frame
-        else if (nextZ <= -3.0f + playerRadius && nextZ >= -3.0f - playerRadius) {
-            if (nextX < -0.8f) nextX = -0.8f;
-            if (nextX >  0.8f) nextX =  0.8f;
-        }
-        // Zone 3: The Big Room
-        else {
-            if (nextX < -3.0f + playerRadius) nextX = -3.0f + playerRadius;
-            if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
-            if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
+            if (nextZ > -3.0f + playerRadius) {
+                if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
+                if (nextX >  1.0f - playerRadius) nextX =  1.0f - playerRadius;
+                if (nextZ >  1.5f - playerRadius) nextZ =  1.5f - playerRadius;
+                if (!doorOpen && nextZ < -2.8f + playerRadius) nextZ = -2.8f + playerRadius;
+            } 
+            else if (nextZ <= -3.0f + playerRadius && nextZ >= -3.0f - playerRadius) {
+                if (nextX < -0.8f) nextX = -0.8f;
+                if (nextX >  0.8f) nextX =  0.8f;
+            }
+            else {
+                if (nextX < -3.0f + playerRadius) nextX = -3.0f + playerRadius;
+                if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
+                if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
+                
+                // NEW: Block the player from walking THROUGH the cabinet
+                if (nextX > 1.3f && nextZ < -5.8f && nextZ > -7.2f) {
+                    if (camZ >= -5.8f) nextZ = -5.8f;       
+                    else if (camX <= 1.3f) nextX = 1.3f;    
+                    else if (camZ <= -7.2f) nextZ = -7.2f;  
+                }
+            }
         }
 
         camX = nextX;
         camZ = nextZ;
 
-        // --- RENDERING ---
+        // Dropping the camera height dynamically if we are hiding! (-0.8 is standing, -0.4 is crouching)
+        float currentCamHeight = isHiding ? -0.4f : -0.8f;
+
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
@@ -195,24 +221,25 @@ int main() {
         Mtx_Identity(&view);
         Mtx_RotateX(&view, -camPitch, true); 
         Mtx_RotateY(&view, -camYaw, true);   
-        Mtx_Translate(&view, -camX, -0.8f, -camZ, true); 
+        Mtx_Translate(&view, -camX, currentCamHeight, -camZ, true); 
 
         C3D_Mtx projView;
         Mtx_Multiply(&projView, &projection, &view);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projView);
         
-        // Draw Hallway & Frame (First 36 vertices)
         C3D_DrawArrays(GPU_TRIANGLES, 0, 36);
-        
-        // Draw the Door! (Switch between Open/Closed vertices)
-        if (doorOpen) {
-            C3D_DrawArrays(GPU_TRIANGLES, 42, 6); // Open Door 
-        } else {
-            C3D_DrawArrays(GPU_TRIANGLES, 36, 6); // Closed Door
-        }
-
-        // Draw Room & Roofs (Last 48 vertices)
+        if (doorOpen) C3D_DrawArrays(GPU_TRIANGLES, 42, 6);
+        else          C3D_DrawArrays(GPU_TRIANGLES, 36, 6);
         C3D_DrawArrays(GPU_TRIANGLES, 48, 48);
+        
+        // CABINET RENDERING TRICK
+        if (!isHiding) {
+            // Draw all 24 vertices of the cabinet block
+            C3D_DrawArrays(GPU_TRIANGLES, 96, 24); 
+        } else {
+            // Skip the first 6 vertices (the front face) so we can peek out of the box!
+            C3D_DrawArrays(GPU_TRIANGLES, 102, 18); 
+        }
 
         C3D_FrameEnd(0);
     }
