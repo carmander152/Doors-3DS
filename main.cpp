@@ -13,11 +13,9 @@
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
-
 std::vector<vertex> world_mesh;
 bool hasKey = false;
 
-// Helper to build the room geometry safely
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
@@ -32,17 +30,15 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
 }
 
 void buildLobby() {
-    // Floor & Ceiling
-    addBox(-6, 0, 5, 12, 0.01f, -15, 0.2f, 0.15f, 0.1f); 
-    addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.12f, 0.12f, 0.12f);
-    
+    world_mesh.clear();
+    // Lobby Floor (Reddish Carpet)
+    addBox(-6, 0, 5, 12, 0.01f, -15, 0.25f, 0.1f, 0.05f); 
     // Front Desk
-    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.25f, 0.18f, 0.1f); 
-    addBox(-5.5f, 0.7f, -2, 4.5f, 0.05f, -1.2f, 0.35f, 0.25f, 0.15f); 
-    
-    // Key Hook & The Golden Key
-    addBox(-5.9f, 1.0f, -3.0f, 0.05f, 0.05f, 0.05f, 0.5f, 0.5f, 0.5f); // Hook
-    if(!hasKey) addBox(-5.88f, 0.85f, -3.0f, 0.03f, 0.15f, 0.03f, 1.0f, 0.84f, 0.0f); // Key
+    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.2f, 0.1f, 0.05f); 
+    // Key Rack & Hooks
+    addBox(-5.9f, 0.8f, -4.5f, 0.1f, 0.6f, 2.0f, 0.1f, 0.05f, 0.02f);
+    // The Golden Key (only if not collected)
+    if(!hasKey) addBox(-5.85f, 1.0f, -4.0f, 0.05f, 0.15f, 0.02f, 1.0f, 0.85f, 0.0f);
 }
 
 int main() {
@@ -52,12 +48,12 @@ int main() {
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
     buildLobby();
-    // Generate 10 random rooms after the lobby
+    // Procedural rooms start after Z = -10
     for(int i=0; i<10; i++) {
         float z = -10 - (i * 10);
-        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); // Floor
-        if(rand()%2==0) addBox(1.2f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f); // Cabinet
-        else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f); // Bed
+        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
+        if(rand()%2==0) addBox(1.3f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f);
+        else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f);
     }
 
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
@@ -80,11 +76,21 @@ int main() {
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
-        if (hidKeysDown() & KEY_START) break;
+        u32 kDown = hidKeysDown();
+        if (kDown & KEY_START) break;
+
+        // Collect Key interaction
+        if (!hasKey && camX < -4.0f && camZ < -3.0f && camZ > -5.0f && (kDown & KEY_A)) {
+            hasKey = true;
+            // Regenerate world to remove key visually
+            buildLobby(); 
+            for(int i=0; i<10; i++) { /* ... same loop as above ... */ }
+            memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
+            GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+        }
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
-        
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
         if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
