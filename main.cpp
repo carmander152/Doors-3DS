@@ -4,6 +4,12 @@
 #include <stdlib.h> 
 #include "vshader_shbin.h"
 
+// 2D Transfer Flags
+#define DISPLAY_TRANSFER_FLAGS \
+    (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | \
+    GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
+    GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
+
 typedef struct { float pos[4]; float clr[4]; } vertex;
 
 static const vertex hallway_mesh[] = {
@@ -42,13 +48,10 @@ static const vertex hallway_mesh[] = {
 
 int main() {
     gfxInitDefault();
-    
-    // FIX 1: Turn off Stereoscopic 3D so the Right Eye doesn't flash garbage!
-    gfxSet3D(false);
-
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+    
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
-    C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, 0x01001000);
+    C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
     shaderProgram_s program;
@@ -64,6 +67,11 @@ int main() {
 
     void* vbo_data = linearAlloc(sizeof(hallway_mesh));
     memcpy(vbo_data, hallway_mesh, sizeof(hallway_mesh));
+    
+    // --- THE MAGIC REAL HARDWARE FIX ---
+    // This physically forces the CPU to hand the geometry to the 3DS GPU
+    GSPGPU_FlushDataCache(vbo_data, sizeof(hallway_mesh)); 
+
     C3D_BufInfo* bufInfo = C3D_GetBufInfo();
     BufInfo_Init(bufInfo);
     BufInfo_Add(bufInfo, vbo_data, sizeof(vertex), 2, 0x10);
@@ -82,23 +90,26 @@ int main() {
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
-        u32 kHeld = hidKeysHeld(); // We need this to read if you are holding the D-Pad!
+        u32 kHeld = hidKeysHeld();
+        
+        // Press START to quit the game
         if (kDown & KEY_START) break;
 
-        // Circle Pad Logic (for real 3DS)
         circlePosition circlePad;
         hidCircleRead(&circlePad);
         if (abs(circlePad.dy) > 10) camZ -= circlePad.dy / 1560.0f; 
         if (abs(circlePad.dx) > 10) camX -= circlePad.dx / 1560.0f;
 
-        // FIX 2: D-Pad Logic (so you can move in Citra with arrow keys)
+        // D-Pad Support
         if (kHeld & KEY_DUP)    camZ -= 0.1f;
         if (kHeld & KEY_DDOWN)  camZ += 0.1f;
         if (kHeld & KEY_DLEFT)  camX -= 0.1f;
         if (kHeld & KEY_DRIGHT) camX += 0.1f;
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x102030FF, 0); 
+        
+        // Changed to Sky Blue so you can clearly see the screen is active!
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x68B0D8FF, 0); 
         C3D_FrameDrawOn(target);
 
         C3D_Mtx projection;
