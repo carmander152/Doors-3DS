@@ -1,13 +1,10 @@
-# Name of your output file
 TARGET      := Doors3DS
 SOURCES     := .
 INCLUDES    := .
 
-# LIBRARIES AND PATHS
-# This tells the compiler where to find 3ds.h
-LIBCTRU		:= $(DEVKITPRO)/libctru
-CINCLUDES	:= $(INCLUDES) $(LIBCTRU)/include
-LIBS    	:= -lcitro3d -lctru -lm
+# PATHS
+LIBCTRU     := $(DEVKITPRO)/libctru
+LIBS        := -lcitro3d -lctru -lm
 
 # Standard devkitPro Rules
 ifeq ($(strip $(DEVKITARM)),)
@@ -16,11 +13,13 @@ endif
 
 include $(DEVKITARM)/3ds_rules
 
-# Use the correct include paths during compilation
-CFLAGS	+= -I$(LIBCTRU)/include
-CXXFLAGS += -I$(LIBCTRU)/include
+# Tell the Linker where to look for the -lcitro3d and -lctru files
+LDFLAGS += -L$(LIBCTRU)/lib -L$(DEVKITPRO)/libcitro3d/lib
 
-# Build rules
+# Tell the Compiler where to look for headers
+CFLAGS   += -I$(LIBCTRU)/include -I$(DEVKITPRO)/libcitro3d/include
+CXXFLAGS += -I$(LIBCTRU)/include -I$(DEVKITPRO)/libcitro3d/include
+
 all: $(TARGET).3dsx
 
 $(TARGET).3dsx: $(TARGET).elf
