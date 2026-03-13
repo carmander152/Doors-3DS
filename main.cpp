@@ -59,7 +59,7 @@ static const vertex level_mesh[] = {
 
     // --- 7. THE CABINET (96 to 119) ---
     {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
-    {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 1.5f, -6.0f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{  1.5f, 0.0f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
     {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
     {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 0.0f, -7.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.15f, 0.05f, 0.0f, 1.0f }},
@@ -121,53 +121,52 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
+        // --- C-STICK: CAMERA ROTATION ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        // FIX: Flipped back to -= so Right is Right and Left is Left!
+        // Standard Look Axis
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f; 
         
         if (kHeld & KEY_DLEFT)   camYaw -= 0.05f;
         if (kHeld & KEY_DRIGHT)  camYaw += 0.05f;
-        if (kHeld & KEY_DUP)     camPitch += 0.05f;
-        if (kHeld & KEY_DDOWN)   camPitch -= 0.05f;
 
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
+        // --- HIDING INTERACTION ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
-        
         if ((kDown & KEY_X) && nearCabinet) {
             isHiding = !isHiding; 
-            if (!isHiding) {
-                camX = 1.0f;
-                camZ = -5.5f;
-            }
+            if (!isHiding) { camX = 1.0f; camZ = -5.5f; }
         }
 
         float nextX = camX;
         float nextZ = camZ;
 
         if (isHiding) {
-            nextX = 2.0f;  
-            nextZ = -6.5f;
+            nextX = 2.0f;  nextZ = -6.5f;
         } else {
+            // --- FIXED FPS MOVEMENT MATH ---
             circlePosition circlePad;
             hidCircleRead(&circlePad);
             
-            if (abs(circlePad.dy) > 10) {
-                float speed = (circlePad.dy / 1560.0f) * 0.15f; 
-                nextX += sinf(camYaw) * speed; 
-                nextZ -= cosf(camYaw) * speed; 
-            }
-            if (abs(circlePad.dx) > 10) {
-                float speed = (circlePad.dx / 1560.0f) * 0.15f; 
-                nextX += cosf(camYaw) * speed; 
-                nextZ += sinf(camYaw) * speed;
+            if (abs(circlePad.dy) > 10 || abs(circlePad.dx) > 10) {
+                float moveSpeed = 0.12f;
+                float stickY = circlePad.dy / 1560.0f;
+                float stickX = circlePad.dx / 1560.0f;
+
+                // Move Forward/Backward based on exactly where you look
+                nextX += sinf(camYaw) * stickY * moveSpeed;
+                nextZ -= cosf(camYaw) * stickY * moveSpeed;
+
+                // Strafe Left/Right
+                nextX += cosf(camYaw) * stickX * moveSpeed;
+                nextZ += sinf(camYaw) * stickX * moveSpeed;
             }
 
+            // --- COLLISION ---
             bool isDoorOpenCollision = (nextZ < -1.5f); 
-
             if (nextZ > -3.0f + playerRadius) {
                 if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
                 if (nextX >  1.0f - playerRadius) nextX =  1.0f - playerRadius;
@@ -182,7 +181,6 @@ int main() {
                 if (nextX < -3.0f + playerRadius) nextX = -3.0f + playerRadius;
                 if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
                 if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
-                
                 if (nextX > 1.3f && nextZ < -5.8f && nextZ > -7.2f) {
                     if (camZ >= -5.8f) nextZ = -5.8f;       
                     else if (camX <= 1.3f) nextX = 1.3f;    
@@ -194,6 +192,7 @@ int main() {
         camX = nextX;
         camZ = nextZ;
 
+        // Render door based on camera Z
         bool doorOpen = (camZ < -1.5f);
         float currentCamHeight = isHiding ? -0.4f : -0.8f;
 
@@ -219,11 +218,8 @@ int main() {
         else          C3D_DrawArrays(GPU_TRIANGLES, 36, 6);
         C3D_DrawArrays(GPU_TRIANGLES, 48, 48);
         
-        if (!isHiding) {
-            C3D_DrawArrays(GPU_TRIANGLES, 96, 24); 
-        } else {
-            C3D_DrawArrays(GPU_TRIANGLES, 102, 18); 
-        }
+        if (!isHiding) C3D_DrawArrays(GPU_TRIANGLES, 96, 24); 
+        else           C3D_DrawArrays(GPU_TRIANGLES, 102, 18); 
 
         C3D_FrameEnd(0);
     }
