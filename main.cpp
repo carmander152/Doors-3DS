@@ -13,10 +13,12 @@
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
+typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
 std::vector<vertex> world_mesh;
 bool hasKey = false;
 
+// Helper to build the room geometry safely without "too many initializers" errors
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
@@ -36,7 +38,7 @@ void buildLobby() {
     addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.2f, 0.1f, 0.05f); // Desk
     addBox(-5.9f, 0.8f, -4.5f, 0.1f, 0.6f, 2.0f, 0.1f, 0.05f, 0.02f); // Key Rack
     
-    // Golden Key on the hook
+    // Golden Key on the hook behind the counter
     if(!hasKey) addBox(-5.85f, 1.0f, -4.0f, 0.05f, 0.15f, 0.02f, 1.0f, 0.85f, 0.0f);
 }
 
@@ -46,8 +48,8 @@ int main() {
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
-    buildLobby();
-    for(int i=0; i<10; i++) {
+    buildLobby(); // First room is always the lobby
+    for(int i=0; i<10; i++) { // Random rooms follow
         float z = -10 - (i * 10);
         addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
         if(rand()%2==0) addBox(1.3f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f);
@@ -77,10 +79,11 @@ int main() {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // Collect Key
+        // Interaction to collect the Golden Key
         if (!hasKey && camX < -4.0f && camZ < -3.0f && camZ > -5.0f && (kDown & KEY_A)) {
             hasKey = true;
-            buildLobby(); // Update VBO here in a real scenario
+            buildLobby(); // Update VBO here to remove key visually
+            // In a real build, you would also re-copy data to vbo_ptr
         }
 
         circlePosition cStick, cPad;
