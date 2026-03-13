@@ -121,7 +121,6 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
-        // --- C-STICK: CAMERA ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
@@ -130,7 +129,6 @@ int main() {
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
-        // --- HIDING ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
         if ((kDown & KEY_X) && nearCabinet) {
             isHiding = !isHiding; 
@@ -143,7 +141,6 @@ int main() {
         if (isHiding) {
             nextX = 2.0f;  nextZ = -6.5f;
         } else {
-            // --- UPDATED POLAR MOVEMENT ---
             circlePosition circlePad;
             hidCircleRead(&circlePad);
             
@@ -152,14 +149,12 @@ int main() {
                 float stickY = circlePad.dy / 1560.0f;
                 float stickX = circlePad.dx / 1560.0f;
 
-                // Rotated vector movement:
-                // nextX moves based on Forward(sin) and Strafe(cos)
-                // nextZ moves based on Forward(cos) and Strafe(sin)
-                nextX += (sinf(camYaw) * stickY + cosf(camYaw) * stickX) * moveSpeed;
-                nextZ -= (cosf(camYaw) * stickY - sinf(camYaw) * stickX) * moveSpeed;
+                // --- THE ROTATION FIX ---
+                // Vertical movement is now subtracted from Z and added to X to align with the negative-Z forward.
+                nextX -= (sinf(camYaw) * stickY - cosf(camYaw) * stickX) * moveSpeed;
+                nextZ += (cosf(camYaw) * stickY + sinf(camYaw) * stickX) * moveSpeed;
             }
 
-            // --- COLLISION ---
             bool isDoorOpenCollision = (nextZ < -1.5f); 
             if (nextZ > -3.0f + playerRadius) {
                 if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
