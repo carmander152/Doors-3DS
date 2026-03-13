@@ -152,8 +152,9 @@ int main() {
                 float stickY = circlePad.dy / 1560.0f; 
                 float stickX = circlePad.dx / 1560.0f; 
 
-                // Rotate the movement vector (stickX, stickY) by camYaw
-                // This forces Up to ALWAYS be "forward from facing"
+                // UPDATED CALCULATION:
+                // nextX uses sin of yaw for forward and cos for strafe
+                // nextZ uses cos of yaw for forward and sin for strafe
                 nextX += (sinf(camYaw) * stickY + cosf(camYaw) * stickX) * moveSpeed;
                 nextZ -= (cosf(camYaw) * stickY - sinf(camYaw) * stickX) * moveSpeed;
             }
