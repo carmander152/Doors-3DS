@@ -19,10 +19,12 @@ all: $(TARGET).3dsx
 
 $(TARGET).3dsx: $(TARGET).elf
 
-$(TARGET).elf: main.o vshader.shbin.o
+$(TARGET).elf: vshader.shbin.o main.o
 	$(CXX) $^ $(MY_LDFLAGS) $(MY_LIBS) -o $@
 
-# FIX: Notice it is vshader_shbin.h with an UNDERSCORE now!
+# FIX: We literally just tell Make that the header is created by the shader!
+vshader_shbin.h: vshader.shbin.o
+
 main.o: main.cpp vshader_shbin.h
 	$(CXX) $(MY_CXXFLAGS) -c $< -o $@
 
