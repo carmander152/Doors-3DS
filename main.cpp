@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdlib.h> 
 #include <math.h> 
+#include <vector>
+#include <time.h>
 #include "vshader_shbin.h"
 
 #define DISPLAY_TRANSFER_FLAGS \
@@ -13,168 +15,120 @@
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
-static const vertex level_mesh[] = {
-    // --- HALLWAY (0-17) ---
-    {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{ -1.0f, 0.0f,  3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }},
-    {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{  1.0f, 0.0f,  3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{ -1.0f, 0.0f,  3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }},
-    {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 0.0f,  3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }},
-    {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 1.5f,  3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }}, {{ -1.0f, 0.0f,  3.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }},
-    {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f,  3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
-    {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f,  3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f,  3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
+std::vector<vertex> world_vbo;
 
-    // --- ROOM (18-53) ---
-    {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.3f, 0.1f, 1.0f }}, {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.3f, 0.1f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.3f, 0.1f, 1.0f }},
-    {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.3f, 0.1f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.3f, 0.1f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.3f, 0.1f, 1.0f }},
-    {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }},
-    {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }},
-    {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }},
-    {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.4f, 1.0f }},
-    {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.1f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.1f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.1f, 1.0f }},
-    {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.1f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.1f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.1f, 1.0f }},
+void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b) {
+    float x2 = x + w, y2 = y + h, z2 = z + d;
+    vertex v[] = {
+        // Front
+        {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
+        {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
+        // Back
+        {{x, y, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        {{x2, y, z2, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        // Left
+        {{x, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
+        {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
+        // Right
+        {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}},
+        {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}
+    };
+    for(int i=0; i<24; i++) world_vbo.push_back(v[i]);
+}
 
-    // --- ELEVATOR (54-89) ---
-    {{ -1.0f, 0.0f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 0.0f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
-    {{  1.0f, 0.0f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
-    {{ -1.0f, 0.0f, 5.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f, 5.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{ -1.0f, 1.5f, 5.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
-    {{  1.0f, 0.0f, 5.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f, 5.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{ -1.0f, 1.5f, 5.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
-    {{ -1.0f, 0.0f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 1.5f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
-    {{ -1.0f, 1.5f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 1.5f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
-    {{  1.0f, 0.0f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 1.5f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
-    {{  1.0f, 1.5f, 3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 1.5f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 0.0f, 5.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
+void buildSpawnLobby() {
+    // Floor & Ceiling
+    addBox(-5, 0, 3, 10, 0.01f, -13, 0.15f, 0.08f, 0.05f); // Dark Carpet
+    addBox(-5, 1.5f, 3, 10, 0.01f, -13, 0.1f, 0.1f, 0.1f);   // Ceiling
+    
+    // Front Desk (Left side like the image)
+    addBox(-4.5f, 0, -2, 4, 0.6f, -1.5f, 0.25f, 0.15f, 0.05f); 
+    addBox(-4.5f, 0.6f, -2, 4, 0.05f, -1.5f, 0.35f, 0.25f, 0.15f); // Counter top
+    
+    // Key Rack behind desk
+    addBox(-4.9f, 0.7f, -3.8f, 0.1f, 0.6f, 1.2f, 0.1f, 0.05f, 0.02f);
+    
+    // Lobby Walls
+    addBox(-5, 0, 3, 0.1f, 1.5f, -13, 0.15f, 0.2f, 0.15f); // Left wall
+    addBox(5, 0, 3, 0.1f, 1.5f, -13, 0.15f, 0.2f, 0.15f);  // Right wall
+}
 
-    // --- ELEVATOR DOORS (90-101) ---
-    {{ -1.0f, 0.0f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.0f, 0.0f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -1.0f, 1.5f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
-    {{  0.0f, 0.0f, 3.01f, 1.0f }, {  0.0f, 1.5f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{ -1.0f, 1.5f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
-    {{  0.0f, 0.0f, 3.01f, 1.0f }, {  1.0f, 0.0f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.0f, 1.5f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
-    {{  1.0f, 0.0f, 3.01f, 1.0f }, {  1.0f, 1.5f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }}, {{  0.0f, 1.5f, 3.01f, 1.0f }, { 0.4f, 0.4f, 0.4f, 1.0f }},
-
-    // --- CABINET (102-137) ---
-    {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.05f, 1.0f }}, {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.05f, 1.0f }},
-    {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.05f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.05f, 1.0f }},
-    // Cabinet Doors (with Crack)
-    {{  1.52f, 0.0f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }}, {{  1.98f, 0.0f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }}, {{  1.52f, 1.5f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }},
-    {{  1.98f, 0.0f, -5.95f, 1.0f }, { 1.98f, 1.5f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }}, {{  1.52f, 1.5f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }},
-    {{  2.02f, 0.0f, -5.95f, 1.0f }, { 2.48f, 0.0f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }}, {{  2.02f, 1.5f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }},
-    {{  2.48f, 0.0f, -5.95f, 1.0f }, { 2.48f, 1.5f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }}, {{  2.02f, 1.5f, -5.95f, 1.0f }, { 0.3f, 0.15f, 0.1f, 1.0f }},
-
-    // --- BED (138-161) ---
-    {{ -2.8f, 0.0f, -7.0f, 1.0f }, { 0.4f, 0.1f, 0.1f, 1.0f }}, {{ -1.2f, 0.0f, -7.0f, 1.0f }, { 0.4f, 0.1f, 0.1f, 1.0f }}, {{ -2.8f, 0.4f, -7.0f, 1.0f }, { 0.4f, 0.1f, 0.1f, 1.0f }},
-    {{ -1.2f, 0.0f, -7.0f, 1.0f }, { -1.2f, 0.4f, -7.0f, 1.0f }, { 0.4f, 0.1f, 0.1f, 1.0f }}, {{ -2.8f, 0.4f, -7.0f, 1.0f }, { 0.4f, 0.1f, 0.1f, 1.0f }},
-    {{ -2.8f, 0.4f, -7.0f, 1.0f }, { -1.2f, 0.4f, -7.0f, 1.0f }, { 0.8f, 0.8f, 0.9f, 1.0f }}, {{ -2.8f, 0.4f, -5.0f, 1.0f }, { 0.8f, 0.8f, 0.9f, 1.0f }},
-    {{ -1.2f, 0.4f, -7.0f, 1.0f }, { -1.2f, 0.4f, -5.0f, 1.0f }, { 0.8f, 0.8f, 0.9f, 1.0f }}, {{ -2.8f, 0.4f, -5.0f, 1.0f }, { 0.8f, 0.8f, 0.9f, 1.0f }},
-};
+void buildRandomRoom(float startZ) {
+    // Basic Hallway Connector
+    addBox(-2, 0, startZ, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
+    addBox(-2, 1.5f, startZ, 4, 0.01f, -10, 0.1f, 0.1f, 0.1f);
+    
+    int type = rand() % 2;
+    if (type == 0) {
+        // Cabinet Room
+        addBox(1.2f, 0, startZ - 4, 0.6f, 1.3f, -0.6f, 0.2f, 0.1f, 0.05f);
+    } else {
+        // Bed Room
+        addBox(-1.8f, 0, startZ - 5, 1.2f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f);
+    }
+}
 
 int main() {
-    gfxInitDefault();
-    gfxSet3D(false); 
-    irrstInit(); 
+    gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
+    // GENERATE WORLD
+    buildSpawnLobby();
+    for(int i=0; i<10; i++) buildRandomRoom(-10 - (i*10));
+
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
-    shaderProgram_s program;
-    shaderProgramInit(&program);
-    shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]);
-    C3D_BindProgram(&program);
+    shaderProgram_s program; shaderProgramInit(&program);
+    shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
 
     int uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx");
-    int uLoc_model = shaderInstanceGetUniformLocation(program.vertexShader, "model_mtx");
+    C3D_AttrInfo* attrInfo = C3D_GetAttrInfo(); AttrInfo_Init(attrInfo);
+    AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 4); 
 
-    C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
-    AttrInfo_Init(attrInfo);
-    AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); 
-    AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 4); 
+    void* vbo_data = linearAlloc(world_vbo.size() * sizeof(vertex));
+    memcpy(vbo_data, world_vbo.data(), world_vbo.size() * sizeof(vertex));
+    GSPGPU_FlushDataCache(vbo_data, world_vbo.size() * sizeof(vertex)); 
 
-    void* vbo_data = linearAlloc(sizeof(level_mesh));
-    memcpy(vbo_data, level_mesh, sizeof(level_mesh));
-    GSPGPU_FlushDataCache(vbo_data, sizeof(level_mesh)); 
-
-    C3D_BufInfo* bufInfo = C3D_GetBufInfo();
-    BufInfo_Init(bufInfo);
+    C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
     BufInfo_Add(bufInfo, vbo_data, sizeof(vertex), 2, 0x10);
-
-    C3D_TexEnv* env = C3D_GetTexEnv(0);
-    C3D_TexEnvInit(env);
-    C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
 
-    float camX = 0.0f, camZ = 4.0f, camYaw = 0.0f, camPitch = 0.0f, doorSlide = 0.0f;
-    int frames = 0;
-    HideState hideState = NOT_HIDING;
-
+    float camX = 0, camZ = 4, camYaw = 0, camPitch = 0;
+    
     while (aptMainLoop()) {
-        hidScanInput();
-        irrstScanInput(); 
-        u32 kDown = hidKeysDown();
-        if (kDown & KEY_START) break;
+        hidScanInput(); irrstScanInput();
+        if (hidKeysDown() & KEY_START) break;
 
-        frames++;
-        if (frames > 60 && doorSlide < 0.9f) doorSlide += 0.015f;
-
-        bool nearCab = (camX > 1.0f && camZ < -5.0f && camZ > -7.0f);
-        bool nearBed = (camX < -1.0f && camZ < -5.0f && camZ > -8.0f);
-
-        if (kDown & KEY_X) {
-            if (hideState == NOT_HIDING) {
-                if (nearCab) { hideState = IN_CABINET; camX = 2.0f; camZ = -6.45f; camYaw = 0.0f; }
-                else if (nearBed) { hideState = UNDER_BED; camX = -2.0f; camZ = -6.5f; camYaw = 1.57f; }
-            } else { hideState = NOT_HIDING; camZ += 1.0f; }
+        circlePosition cStick, cPad;
+        irrstCstickRead(&cStick); hidCircleRead(&cPad);
+        
+        if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
+        if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
+        
+        if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
+            float s = 0.12f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
+            camX -= (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
+            camZ -= (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
         }
-
-        float curH = -0.8f;
-        if (hideState == NOT_HIDING && frames > 140) {
-            circlePosition cStick, cPad;
-            irrstCstickRead(&cStick);
-            hidCircleRead(&cPad);
-            if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
-            if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
-            if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                float s = 0.1f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
-                camX -= (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
-                camZ -= (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
-            }
-        } else if (hideState == IN_CABINET) curH = -0.6f;
-        else if (hideState == UNDER_BED) curH = -0.15f;
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
 
-        C3D_Mtx proj, view, model;
+        C3D_Mtx proj, view;
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         Mtx_Identity(&view);
         Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
-        Mtx_Translate(&view, -camX, curH, -camZ, true);
-        Mtx_Multiply(&model, &proj, &view);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &model);
+        Mtx_Translate(&view, -camX, -0.7f, -camZ, true);
+        Mtx_Multiply(&view, &proj, &view);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &view);
         
-        Mtx_Identity(&model);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_model, &model);
-
-        C3D_DrawArrays(GPU_TRIANGLES, 0, 18);   // Hallway
-        C3D_DrawArrays(GPU_TRIANGLES, 18, 36);  // Room
-        C3D_DrawArrays(GPU_TRIANGLES, 54, 36);  // Elevator Interior
-        C3D_DrawArrays(GPU_TRIANGLES, 102, 6);  // Cab Body
-        C3D_DrawArrays(GPU_TRIANGLES, 108, 12); // Cab Doors
-        C3D_DrawArrays(GPU_TRIANGLES, 138, 12); // Bed
-
-        // Elevator Doors
-        Mtx_Identity(&model); Mtx_Translate(&model, -doorSlide, 0, 0, true);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_model, &model);
-        C3D_DrawArrays(GPU_TRIANGLES, 90, 6); 
-        
-        Mtx_Identity(&model); Mtx_Translate(&model, doorSlide, 0, 0, true);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_model, &model);
-        C3D_DrawArrays(GPU_TRIANGLES, 96, 6); 
-
+        C3D_DrawArrays(GPU_TRIANGLES, 0, world_vbo.size());
         C3D_FrameEnd(0);
     }
     linearFree(vbo_data);
-    shaderProgramFree(&program);
-    C3D_Fini();
-    gfxExit();
+    C3D_Fini(); gfxExit();
     return 0;
 }
