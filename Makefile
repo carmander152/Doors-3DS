@@ -2,12 +2,13 @@ ifeq ($(strip $(DEVKITPRO)),)
 $(error "Please set DEVKITPRO in your environment.")
 endif
 
+TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
-# Added explicit paths for libraries
-LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
+# Explicitly linking the libraries in the correct order
+LIBS := -lcitro3d -lctru -lm
 
 .PHONY: all clean
 
@@ -25,7 +26,7 @@ main.o: main.cpp vshader_shbin.h
 vshader.shbin.o: vshader.v.pica
 	picasso -o vshader.shbin $<
 	bin2s vshader.shbin > vshader.shbin.s
-	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -c vshader.shbin.s -o $@
+	$(AS) -march=armv6k -mtune=mpcore -mfloat-abi=hard -o $@ vshader.shbin.s
 
 vshader_shbin.h: vshader.shbin
 	echo "extern const u8 vshader_shbin[];" > $@
