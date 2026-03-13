@@ -10,13 +10,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install 3DS Libraries
-        run: |
-          sudo dkp-pacman -Syu --noconfirm 3ds-dev
-
       - name: Compile
-        run: make
-
+        run: |
+          # We use the built-in paths for devkitPro
+          export PATH=$PATH:$DEVKITPRO/tools/bin
+          make
+        
       - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
