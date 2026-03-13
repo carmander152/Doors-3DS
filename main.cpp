@@ -49,9 +49,13 @@ int main() {
     BufInfo_Init(bufInfo);
     BufInfo_Add(bufInfo, vbo_data, sizeof(vertex), 2, 0x10);
 
-    // FIX 1: Turn off Face Culling so we don't accidentally hide the walls
+    // 3. FIX: Turn on the TexEnv so the 3DS actually draws the colors!
+    C3D_TexEnv* env = C3D_GetTexEnv(0);
+    C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+
     C3D_CullFace(GPU_CULL_NONE);
-    // FIX 2: Enable the Depth Buffer so 3D shapes overlap correctly
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
 
     while (aptMainLoop()) {
@@ -59,24 +63,21 @@ int main() {
         if (hidKeysDown() & KEY_START) break;
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        // FIX 3: Change background to a dark spooky blue instead of pitch black
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x102030FF, 0); 
         C3D_FrameDrawOn(target);
 
-        // --- CAMERA MATH ---
+        // 4. FIX: The Camera Matrix
         C3D_Mtx projection;
         Mtx_PerspTilt(&projection, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         
-        // Move the camera back and slightly up so we aren't standing inside the geometry
         C3D_Mtx view;
         Mtx_Identity(&view);
-        Mtx_Translate(&view, 0.0f, -0.5f, 1.5f, true); 
+        // Move world DOWN (-1.0) and FORWARD (-2.5) so our eyes step up and back!
+        Mtx_Translate(&view, 0.0f, -1.0f, -2.5f, true); 
 
-        // Combine the Lens (Projection) and the Position (View)
         C3D_Mtx projView;
         Mtx_Multiply(&projView, &projection, &view);
 
-        // Send to Shader and Draw 12 Vertices (6 for floor, 6 for wall)
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projView);
         C3D_DrawArrays(GPU_TRIANGLES, 0, 12);
 
