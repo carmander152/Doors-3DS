@@ -121,18 +121,16 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
+        // --- C-STICK: CAMERA ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f; 
         
-        if (kHeld & KEY_DLEFT)   camYaw -= 0.05f;
-        if (kHeld & KEY_DRIGHT)  camYaw += 0.05f;
-
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
+        // --- HIDING ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
         if ((kDown & KEY_X) && nearCabinet) {
             isHiding = !isHiding; 
@@ -145,6 +143,7 @@ int main() {
         if (isHiding) {
             nextX = 2.0f;  nextZ = -6.5f;
         } else {
+            // --- UPDATED POLAR MOVEMENT ---
             circlePosition circlePad;
             hidCircleRead(&circlePad);
             
@@ -153,17 +152,14 @@ int main() {
                 float stickY = circlePad.dy / 1560.0f;
                 float stickX = circlePad.dx / 1560.0f;
 
-                // --- FIX: FLIPPED SIGNS FOR FORWARD/BACKWARD ---
-                // Previously, Forward was adding/subtracting the wrong way.
-                // Up on the stick (positive stickY) now moves you forward.
-                nextX -= sinf(camYaw) * stickY * moveSpeed;
-                nextZ += cosf(camYaw) * stickY * moveSpeed;
-
-                // Strafe Left/Right
-                nextX += cosf(camYaw) * stickX * moveSpeed;
-                nextZ += sinf(camYaw) * stickX * moveSpeed;
+                // Rotated vector movement:
+                // nextX moves based on Forward(sin) and Strafe(cos)
+                // nextZ moves based on Forward(cos) and Strafe(sin)
+                nextX += (sinf(camYaw) * stickY + cosf(camYaw) * stickX) * moveSpeed;
+                nextZ -= (cosf(camYaw) * stickY - sinf(camYaw) * stickX) * moveSpeed;
             }
 
+            // --- COLLISION ---
             bool isDoorOpenCollision = (nextZ < -1.5f); 
             if (nextZ > -3.0f + playerRadius) {
                 if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
@@ -179,11 +175,6 @@ int main() {
                 if (nextX < -3.0f + playerRadius) nextX = -3.0f + playerRadius;
                 if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
                 if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
-                if (nextX > 1.3f && nextZ < -5.8f && nextZ > -7.2f) {
-                    if (camZ >= -5.8f) nextZ = -5.8f;       
-                    else if (camX <= 1.3f) nextX = 1.3f;    
-                    else if (camZ <= -7.2f) nextZ = -7.2f;  
-                }
             }
         }
 
