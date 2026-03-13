@@ -13,6 +13,7 @@
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
+
 std::vector<vertex> world_mesh;
 bool hasKey = false;
 
@@ -31,13 +32,11 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
 
 void buildLobby() {
     world_mesh.clear();
-    // Lobby Floor (Reddish Carpet)
-    addBox(-6, 0, 5, 12, 0.01f, -15, 0.25f, 0.1f, 0.05f); 
-    // Front Desk
-    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.2f, 0.1f, 0.05f); 
-    // Key Rack & Hooks
-    addBox(-5.9f, 0.8f, -4.5f, 0.1f, 0.6f, 2.0f, 0.1f, 0.05f, 0.02f);
-    // The Golden Key (only if not collected)
+    addBox(-6, 0, 5, 12, 0.01f, -15, 0.25f, 0.1f, 0.05f); // Floor
+    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.2f, 0.1f, 0.05f); // Desk
+    addBox(-5.9f, 0.8f, -4.5f, 0.1f, 0.6f, 2.0f, 0.1f, 0.05f, 0.02f); // Key Rack
+    
+    // Golden Key on the hook
     if(!hasKey) addBox(-5.85f, 1.0f, -4.0f, 0.05f, 0.15f, 0.02f, 1.0f, 0.85f, 0.0f);
 }
 
@@ -48,7 +47,6 @@ int main() {
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
     buildLobby();
-    // Procedural rooms start after Z = -10
     for(int i=0; i<10; i++) {
         float z = -10 - (i * 10);
         addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
@@ -79,14 +77,10 @@ int main() {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // Collect Key interaction
+        // Collect Key
         if (!hasKey && camX < -4.0f && camZ < -3.0f && camZ > -5.0f && (kDown & KEY_A)) {
             hasKey = true;
-            // Regenerate world to remove key visually
-            buildLobby(); 
-            for(int i=0; i<10; i++) { /* ... same loop as above ... */ }
-            memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
-            GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+            buildLobby(); // Update VBO here in a real scenario
         }
 
         circlePosition cStick, cPad;
