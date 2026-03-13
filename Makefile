@@ -3,7 +3,7 @@ TARGET      := Doors3DS
 SOURCES     := .
 INCLUDES    := .
 
-# Libraries for 3D and System
+# 3DS Libraries for 3D and Graphics
 LIBS    := -lcitro3d -lctru -lm
 
 # Standard devkitPro Rules
@@ -13,7 +13,7 @@ endif
 
 include $(DEVKITARM)/3ds_rules
 
-# Build rules
+# Build instructions
 all: $(TARGET).3dsx
 
 $(TARGET).3dsx: $(TARGET).elf
