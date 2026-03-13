@@ -29,7 +29,8 @@ vshader.shbin: vshader.v.pica
 
 # Step 2: Turn binary into an object file and generate the header
 vshader.shbin.o: vshader.shbin
-	bin2s $< | $(AS) $(MY_ARCH) -o $@
+	bin2s $< > vshader.shbin.s
+	$(CXX) $(MY_ARCH) -c vshader.shbin.s -o $@
 	echo "extern const u8 vshader_shbin[];" > vshader_shbin.h
 	echo "extern const u32 vshader_shbin_size;" >> vshader_shbin.h
 
@@ -40,4 +41,4 @@ main.o: main.cpp vshader_shbin.h
 	$(CXX) $(MY_CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *.elf *.3dsx *.shbin *.h
+	rm -f *.o *.elf *.3dsx *.shbin *.h *.s
