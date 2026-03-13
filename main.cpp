@@ -57,7 +57,7 @@ static const vertex level_mesh[] = {
     {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
     {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
 
-    // --- 7. NEW: THE CABINET (96 to 119) ---
+    // --- 7. THE CABINET (96 to 119) ---
     {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{  2.5f, 0.0f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  2.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  1.5f, 1.5f, -6.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{  1.5f, 0.0f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 0.0f, -6.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }}, {{  1.5f, 1.5f, -7.0f, 1.0f }, { 0.2f, 0.1f, 0.02f, 1.0f }},
@@ -121,11 +121,10 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
-        // --- C-STICK (FIXED AXIS!) ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        // FIX: Swapped back to += so it's correct for your device!
-        if (abs(cStick.dx) > 10) camYaw += cStick.dx / 1560.0f * 0.15f;
+        // FIX: Flipped back to -= so Right is Right and Left is Left!
+        if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f; 
         
         if (kHeld & KEY_DLEFT)   camYaw -= 0.05f;
@@ -136,12 +135,10 @@ int main() {
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
-        // --- INTERACTION LOGIC ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
         
         if ((kDown & KEY_X) && nearCabinet) {
             isHiding = !isHiding; 
-            
             if (!isHiding) {
                 camX = 1.0f;
                 camZ = -5.5f;
@@ -169,7 +166,6 @@ int main() {
                 nextZ += sinf(camYaw) * speed;
             }
 
-            // Local collision variable
             bool isDoorOpenCollision = (nextZ < -1.5f); 
 
             if (nextZ > -3.0f + playerRadius) {
@@ -187,7 +183,6 @@ int main() {
                 if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
                 if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
                 
-                // Cabinet Collision
                 if (nextX > 1.3f && nextZ < -5.8f && nextZ > -7.2f) {
                     if (camZ >= -5.8f) nextZ = -5.8f;       
                     else if (camX <= 1.3f) nextX = 1.3f;    
@@ -199,10 +194,7 @@ int main() {
         camX = nextX;
         camZ = nextZ;
 
-        // --- SCOPE FIX FOR DOOR ---
-        // This is evaluated outside the 'hiding' check so it's always ready to draw!
         bool doorOpen = (camZ < -1.5f);
-
         float currentCamHeight = isHiding ? -0.4f : -0.8f;
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
