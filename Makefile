@@ -22,7 +22,18 @@ $(TARGET).3dsx: $(TARGET).elf
 $(TARGET).elf: vshader.shbin.o main.o
 	$(CXX) $^ $(MY_LDFLAGS) $(MY_LIBS) -o $@
 
-# FIX: We literally just tell Make that the header is created by the shader!
+# --- EXPLICIT SHADER RULES ---
+# Step 1: Turn text into a shader binary
+vshader.shbin: vshader.v.pica
+	picasso -o $@ $<
+
+# Step 2: Turn binary into an object file and generate the header
+vshader.shbin.o: vshader.shbin
+	bin2s $< | $(AS) $(MY_ARCH) -o $@
+	echo "extern const u8 vshader_shbin[];" > vshader_shbin.h
+	echo "extern const u32 vshader_shbin_size;" >> vshader_shbin.h
+
+# Step 3: Tell main.o to wait for the header
 vshader_shbin.h: vshader.shbin.o
 
 main.o: main.cpp vshader_shbin.h
