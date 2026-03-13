@@ -121,6 +121,7 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
+        // --- C-STICK: CAMERA ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
@@ -129,6 +130,7 @@ int main() {
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
+        // --- INTERACTION ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
         if ((kDown & KEY_X) && nearCabinet) {
             isHiding = !isHiding; 
@@ -147,13 +149,13 @@ int main() {
             
             if (abs(circlePad.dy) > 10 || abs(circlePad.dx) > 10) {
                 float moveSpeed = 0.12f;
-                float stickY = circlePad.dy / 1560.0f; // Forward/Backward relative to stick
-                float stickX = circlePad.dx / 1560.0f; // Left/Right relative to stick
+                // Normalize inputs to -1 to 1 range
+                float stickY = circlePad.dy / 1560.0f; 
+                float stickX = circlePad.dx / 1560.0f; 
 
-                // WE CALCULATE MOVEMENT RELATIVE TO THE HEAD (camYaw)
-                // This formula ensures that no matter where you look:
-                // Circle Pad UP = move in the direction of your nose
-                // Circle Pad LEFT = move to the direction of your left ear
+                // We calculate movement by projecting stick input relative to camYaw.
+                // Circle Pad Up (stickY) always moves you in the direction of your nose.
+                // Circle Pad Right (stickX) always moves you to the right of your nose.
                 nextX += (sinf(camYaw) * stickY + cosf(camYaw) * stickX) * moveSpeed;
                 nextZ -= (cosf(camYaw) * stickY - sinf(camYaw) * stickX) * moveSpeed;
             }
