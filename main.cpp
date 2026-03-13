@@ -12,9 +12,9 @@
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 
-// We now have 60 vertices! (Hallway + Door + Room)
+// The mesh now has 72 vertices! (We added 12 for the Roofs)
 static const vertex level_mesh[] = {
-    // --- THE HALLWAY ---
+    // --- 1. THE HALLWAY (0 to 17) ---
     // Floor
     {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }},
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }}, {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.4f, 0.2f, 0.1f, 1.0f }},
@@ -25,33 +25,36 @@ static const vertex level_mesh[] = {
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }}, {{  1.0f, 1.5f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
 
-    // --- THE DOOR (Vertices 18 to 23) ---
+    // --- 2. THE DOOR (18 to 23) ---
     {{ -0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
     {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{  0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }}, {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
 
-    // --- THE NEW ROOM ---
-    // Room Floor (Green, extending from Z=-3 to Z=-8, Width X=-3 to X=3)
+    // --- 3. THE ROOM (24 to 59) ---
+    // Floor
     {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }},
     {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.4f, 0.1f, 1.0f }},
-    
-    // Room Left Wall (Blue)
+    // Left Wall
     {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }},
     {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }}, {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.5f, 1.0f }},
-
-    // Room Right Wall (Blue)
+    // Right Wall
     {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }},
     {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.2f, 0.4f, 1.0f }},
-
-    // Room Back Wall (Blue)
+    // Back Wall
     {{ -3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }},
     {{  3.0f, 0.0f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }}, {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.2f, 0.6f, 1.0f }},
-    
-    // Front Inner Walls (Beside the door, so you can't look out into the void)
+    // Front Inner Walls 
     {{ -3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
     {{ -1.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
-    
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
     {{  3.0f, 0.0f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.3f, 0.5f, 1.0f }},
+
+    // --- 4. THE ROOFS (60 to 71) ---
+    // Hallway Roof (Dark Grey)
+    {{ -1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 1.5f,  0.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
+    {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{  1.0f, 1.5f,  0.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }}, {{ -1.0f, 1.5f,  0.0f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }},
+    // Room Roof (Dark Blue)
+    {{ -3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
+    {{  3.0f, 1.5f, -8.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{  3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }}, {{ -3.0f, 1.5f, -3.0f, 1.0f }, { 0.1f, 0.1f, 0.3f, 1.0f }},
 };
 
 int main() {
@@ -75,7 +78,6 @@ int main() {
     AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); 
     AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 4); 
 
-    // Update memory allocation for the larger level_mesh!
     void* vbo_data = linearAlloc(sizeof(level_mesh));
     memcpy(vbo_data, level_mesh, sizeof(level_mesh));
     GSPGPU_FlushDataCache(vbo_data, sizeof(level_mesh)); 
@@ -94,9 +96,9 @@ int main() {
 
     float camX = 0.0f;
     float camZ = 1.0f; 
-    float camYaw = 0.0f; 
+    float camYaw = 0.0f;   // Looking Left/Right
+    float camPitch = 0.0f; // NEW: Looking Up/Down
 
-    // Define collision bounds
     const float playerRadius = 0.2f;
 
     while (aptMainLoop()) {
@@ -107,23 +109,39 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
+        // --- THE LOOKING CAMERA (C-STICK) ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        if (abs(cStick.dx) > 10) camYaw += cStick.dx / 1560.0f * 0.05f;
-        if (kHeld & KEY_DLEFT)   camYaw -= 0.05f;
-        if (kHeld & KEY_DRIGHT)  camYaw += 0.05f;
+        
+        // FIX: Inverted C-Stick X so left is left and right is right!
+        if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.05f;
+        // NEW: Pitch Up and Down with C-Stick Y
+        if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.05f; 
+        
+        // D-Pad looking backup
+        if (kHeld & KEY_DLEFT)   camYaw += 0.05f;
+        if (kHeld & KEY_DRIGHT)  camYaw -= 0.05f;
+        if (kHeld & KEY_DUP)     camPitch += 0.05f;
+        if (kHeld & KEY_DDOWN)   camPitch -= 0.05f;
+
+        // Stop the player from breaking their neck looking too far up or down!
+        if (camPitch > 1.5f)  camPitch = 1.5f;
+        if (camPitch < -1.5f) camPitch = -1.5f;
 
         float nextX = camX;
         float nextZ = camZ;
 
+        // --- TRUE FPS MOVEMENT (CIRCLE PAD) ---
         circlePosition circlePad;
         hidCircleRead(&circlePad);
         
+        // Moving Forward/Backward based on exactly where you are looking!
         if (abs(circlePad.dy) > 10) {
             float speed = (circlePad.dy / 1560.0f) * 0.1f;
-            nextZ -= cosf(camYaw) * speed;
             nextX += sinf(camYaw) * speed; 
+            nextZ -= cosf(camYaw) * speed; 
         }
+        // Strafing Left/Right
         if (abs(circlePad.dx) > 10) {
             float speed = (circlePad.dx / 1560.0f) * 0.1f;
             nextX += cosf(camYaw) * speed; 
@@ -131,64 +149,58 @@ int main() {
         }
 
         // --- ZONE-BASED COLLISION ---
-        bool doorOpen = (nextZ < -1.5f); // Door opens when you get close!
+        bool doorOpen = (nextZ < -1.5f); 
 
-        // Zone 1: The Hallway (Z is greater than -3.0)
+        // Zone 1: Hallway
         if (nextZ > -3.0f + playerRadius) {
             if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
             if (nextX >  1.0f - playerRadius) nextX =  1.0f - playerRadius;
-            if (nextZ >  1.5f - playerRadius) nextZ =  1.5f - playerRadius; // Start wall
-            
-            // If the door is closed, don't let them reach Z=-3.0
-            if (!doorOpen && nextZ < -2.8f + playerRadius) {
-                nextZ = -2.8f + playerRadius;
-            }
+            if (nextZ >  1.5f - playerRadius) nextZ =  1.5f - playerRadius;
+            if (!doorOpen && nextZ < -2.8f + playerRadius) nextZ = -2.8f + playerRadius;
         } 
-        // Zone 2: The Doorway frame (Crossing between hall and room)
+        // Zone 2: Doorway Frame
         else if (nextZ <= -3.0f + playerRadius && nextZ >= -3.0f - playerRadius) {
-            // Force them to squeeze through the door gap (X between -1 and 1)
             if (nextX < -0.8f) nextX = -0.8f;
             if (nextX >  0.8f) nextX =  0.8f;
         }
-        // Zone 3: The New Room (Z is less than -3.0)
+        // Zone 3: The Big Room
         else {
             if (nextX < -3.0f + playerRadius) nextX = -3.0f + playerRadius;
             if (nextX >  3.0f - playerRadius) nextX =  3.0f - playerRadius;
-            if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; // Back wall
+            if (nextZ < -8.0f + playerRadius) nextZ = -8.0f + playerRadius; 
         }
 
-        // Apply calculated movement
         camX = nextX;
         camZ = nextZ;
 
+        // --- DRAW THE FRAME ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x68B0D8FF, 0); 
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); // Back to black background!
         C3D_FrameDrawOn(target);
 
         C3D_Mtx projection;
         Mtx_PerspTilt(&projection, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         
+        // FIX: The Magic Matrix Order!
         C3D_Mtx view;
         Mtx_Identity(&view);
-        Mtx_RotateY(&view, -camYaw, true); 
-        Mtx_Translate(&view, -camX, -0.8f, -camZ, true); 
+        Mtx_RotateX(&view, -camPitch, true); // 1. Pitch the world
+        Mtx_RotateY(&view, -camYaw, true);   // 2. Yaw the world
+        Mtx_Translate(&view, -camX, -0.8f, -camZ, true); // 3. Shift the world!
 
         C3D_Mtx projView;
         Mtx_Multiply(&projView, &projection, &view);
 
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projView);
         
-        // --- DRAWING LOGIC ---
-        // 1. Draw Hallway (Vertices 0 to 18)
+        // 1. Draw Hallway
         C3D_DrawArrays(GPU_TRIANGLES, 0, 18);
-        
-        // 2. Draw Door? (Vertices 18 to 24)
-        if (!doorOpen) {
-            C3D_DrawArrays(GPU_TRIANGLES, 18, 6);
-        }
-
-        // 3. Draw Room (Vertices 24 to 60)
+        // 2. Draw Door?
+        if (!doorOpen) C3D_DrawArrays(GPU_TRIANGLES, 18, 6);
+        // 3. Draw Room
         C3D_DrawArrays(GPU_TRIANGLES, 24, 36);
+        // 4. Draw Roofs
+        C3D_DrawArrays(GPU_TRIANGLES, 60, 12);
 
         C3D_FrameEnd(0);
     }
