@@ -12,7 +12,7 @@ jobs:
 
       - name: Compile
         run: |
-          # We use the built-in paths for devkitPro
+          # Use pre-installed devkitPro tools
           export PATH=$PATH:$DEVKITPRO/tools/bin
           make
         
