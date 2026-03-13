@@ -121,10 +121,9 @@ int main() {
         u32 kHeld = hidKeysHeld();
         if (kDown & KEY_START) break;
 
-        // --- C-STICK: CAMERA ROTATION ---
         circlePosition cStick;
         irrstCstickRead(&cStick);
-        // Standard Look Axis
+        
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f; 
         
@@ -134,7 +133,6 @@ int main() {
         if (camPitch > 1.5f)  camPitch = 1.5f;
         if (camPitch < -1.5f) camPitch = -1.5f;
 
-        // --- HIDING INTERACTION ---
         bool nearCabinet = (camX > 0.5f && camZ < -5.0f && camZ > -8.0f);
         if ((kDown & KEY_X) && nearCabinet) {
             isHiding = !isHiding; 
@@ -147,7 +145,6 @@ int main() {
         if (isHiding) {
             nextX = 2.0f;  nextZ = -6.5f;
         } else {
-            // --- FIXED FPS MOVEMENT MATH ---
             circlePosition circlePad;
             hidCircleRead(&circlePad);
             
@@ -156,16 +153,17 @@ int main() {
                 float stickY = circlePad.dy / 1560.0f;
                 float stickX = circlePad.dx / 1560.0f;
 
-                // Move Forward/Backward based on exactly where you look
-                nextX += sinf(camYaw) * stickY * moveSpeed;
-                nextZ -= cosf(camYaw) * stickY * moveSpeed;
+                // --- FIX: FLIPPED SIGNS FOR FORWARD/BACKWARD ---
+                // Previously, Forward was adding/subtracting the wrong way.
+                // Up on the stick (positive stickY) now moves you forward.
+                nextX -= sinf(camYaw) * stickY * moveSpeed;
+                nextZ += cosf(camYaw) * stickY * moveSpeed;
 
                 // Strafe Left/Right
                 nextX += cosf(camYaw) * stickX * moveSpeed;
                 nextZ += sinf(camYaw) * stickX * moveSpeed;
             }
 
-            // --- COLLISION ---
             bool isDoorOpenCollision = (nextZ < -1.5f); 
             if (nextZ > -3.0f + playerRadius) {
                 if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
@@ -192,7 +190,6 @@ int main() {
         camX = nextX;
         camZ = nextZ;
 
-        // Render door based on camera Z
         bool doorOpen = (camZ < -1.5f);
         float currentCamHeight = isHiding ? -0.4f : -0.8f;
 
