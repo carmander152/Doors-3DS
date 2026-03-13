@@ -1,12 +1,13 @@
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment.")
 endif
 
-include $(DEVKITARM)/3ds_rules
+include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
-LIBS := -lcitro3d -lctru -lm
+# Added explicit paths for libraries
+LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 
 .PHONY: all clean
 
