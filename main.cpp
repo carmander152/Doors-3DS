@@ -4,7 +4,7 @@
 #include <stdlib.h> // Needed for the abs() math function
 #include "vshader_shbin.h"
 
-// FIX: We use 4 floats (X, Y, Z, W) to stop the GPU from tearing triangles apart!
+// 4 coordinates (X, Y, Z, W) stops the GPU from tearing triangles apart
 typedef struct { float pos[4]; float clr[4]; } vertex;
 
 static const vertex hallway_mesh[] = {
@@ -24,13 +24,21 @@ static const vertex hallway_mesh[] = {
     {{ -1.0f, 1.5f,  0.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }},
     {{ -1.0f, 0.0f,  0.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f }},
 
-    // Right Wall (Darker Grey so we can see the corner!)
+    // Right Wall (Darker Grey)
     {{  1.0f, 0.0f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 1.5f, -3.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 0.0f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
     {{  1.0f, 1.5f,  0.0f, 1.0f }, { 0.3f, 0.3f, 0.3f, 1.0f }},
+
+    // The Door (Dark Wood Color)
+    {{ -0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{  0.5f, 0.0f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{  0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
+    {{ -0.5f, 1.3f, -3.0f, 1.0f }, { 0.25f, 0.15f, 0.05f, 1.0f }},
 };
 
 int main() {
@@ -48,7 +56,6 @@ int main() {
     int uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx");
     C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
     AttrInfo_Init(attrInfo);
-    // Tell GPU we are explicitly sending 4 coordinates now
     AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); 
     AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 4); 
 
@@ -66,20 +73,21 @@ int main() {
     C3D_CullFace(GPU_CULL_NONE);
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
 
-    // --- CAMERA VARIABLES ---
+    // --- CAMERA POSITION VARIABLES ---
     float camX = 0.0f;
-    float camZ = 1.0f; // Start just outside the hallway
+    float camZ = 1.0f; 
 
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // --- READ THE CIRCLE PAD ---
+        // --- CIRCLE PAD LOGIC ---
         circlePosition circlePad;
         hidCircleRead(&circlePad);
         
-        // Divide by 1560 to convert raw Circle Pad data into a smooth walking speed
+        // The "10" is a deadzone so it doesn't drift. 
+        // 1560.0f slows down the raw analog stick data so you don't fly at lightspeed!
         if (abs(circlePad.dy) > 10) camZ -= circlePad.dy / 1560.0f; 
         if (abs(circlePad.dx) > 10) camX -= circlePad.dx / 1560.0f;
 
@@ -90,21 +98,24 @@ int main() {
         C3D_Mtx projection;
         Mtx_PerspTilt(&projection, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         
+        // --- APPLY MOVEMENT TO WORLD ---
         C3D_Mtx view;
         Mtx_Identity(&view);
-        // Move the world exactly opposite to our camera variables
+        // We move the world in the reverse direction of our camera to simulate walking
         Mtx_Translate(&view, -camX, -0.8f, -camZ, true); 
 
         C3D_Mtx projView;
         Mtx_Multiply(&projView, &projection, &view);
 
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projView);
-        // Draw all 18 vertices (3 shapes * 6 points)
-        C3D_DrawArrays(GPU_TRIANGLES, 0, 18);
+        
+        // Draw 24 vertices (4 shapes * 6 points)
+        C3D_DrawArrays(GPU_TRIANGLES, 0, 24);
 
         C3D_FrameEnd(0);
     }
 
+    // Cleanup
     linearFree(vbo_data);
     shaderProgramFree(&program);
     DVLB_Free(vshader_dvlb);
