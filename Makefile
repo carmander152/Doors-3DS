@@ -33,10 +33,10 @@ all: $(TARGET).3dsx
 $(TARGET).3dsx: $(TARGET).elf
 
 $(TARGET).elf: main.o
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBPATHS) $(LIBS)
+$(CXX) $(LDFLAGS) -o $@ $^ $(LIBPATHS) $(LIBS)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 clean:
 	rm -f *.o *.elf *.3dsx *.map
