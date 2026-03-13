@@ -141,20 +141,24 @@ int main() {
         if (isHiding) {
             nextX = 2.0f;  nextZ = -6.5f;
         } else {
+            // --- THE TRUE CIRCLE PAD FIX ---
             circlePosition circlePad;
             hidCircleRead(&circlePad);
             
             if (abs(circlePad.dy) > 10 || abs(circlePad.dx) > 10) {
                 float moveSpeed = 0.12f;
-                float stickY = circlePad.dy / 1560.0f;
-                float stickX = circlePad.dx / 1560.0f;
+                float stickY = circlePad.dy / 1560.0f; // Forward/Backward relative to stick
+                float stickX = circlePad.dx / 1560.0f; // Left/Right relative to stick
 
-                // --- THE ROTATION FIX ---
-                // Vertical movement is now subtracted from Z and added to X to align with the negative-Z forward.
-                nextX -= (sinf(camYaw) * stickY - cosf(camYaw) * stickX) * moveSpeed;
-                nextZ += (cosf(camYaw) * stickY + sinf(camYaw) * stickX) * moveSpeed;
+                // WE CALCULATE MOVEMENT RELATIVE TO THE HEAD (camYaw)
+                // This formula ensures that no matter where you look:
+                // Circle Pad UP = move in the direction of your nose
+                // Circle Pad LEFT = move to the direction of your left ear
+                nextX += (sinf(camYaw) * stickY + cosf(camYaw) * stickX) * moveSpeed;
+                nextZ -= (cosf(camYaw) * stickY - sinf(camYaw) * stickX) * moveSpeed;
             }
 
+            // --- COLLISION ---
             bool isDoorOpenCollision = (nextZ < -1.5f); 
             if (nextZ > -3.0f + playerRadius) {
                 if (nextX < -1.0f + playerRadius) nextX = -1.0f + playerRadius;
