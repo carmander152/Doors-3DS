@@ -12,7 +12,7 @@ jobs:
 
       - name: Install 3DS Libraries
         run: |
-          sudo dkp-pacman -Syu --noconfirm 3ds-dev 3ds-libctru 3ds-citro3d
+          sudo dkp-pacman -Syu --noconfirm 3ds-dev
 
       - name: Compile
         run: make
