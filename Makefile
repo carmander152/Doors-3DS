@@ -1,3 +1,9 @@
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+endif
+
+include $(DEVKITARM)/3ds_rules
+
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
 LIBS := -lcitro3d -lctru -lm
