@@ -8,7 +8,7 @@ jobs:
 
       - name: Install 3DS Libraries
         run: |
-          # Sync and install 3DS development heart
+          # Synchronize and install core 3DS development tools and libraries
           dkp-pacman -Syyu --noconfirm
           dkp-pacman -S --noconfirm 3ds-dev 3ds-libcitro3d
 
