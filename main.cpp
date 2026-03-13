@@ -13,11 +13,10 @@
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
-typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
 std::vector<vertex> world_mesh;
+bool hasKey = false;
 
-// Helper to build boxes safely without initializer errors
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
@@ -32,22 +31,20 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
 }
 
 void buildLobby() {
-    // Floor, Ceiling, and Walls for the Spawn Room
-    addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f); // Lobby Floor
+    addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f); // Floor
     addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f); // Ceiling
-    
-    // Front Desk (Matching the image)
-    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.25f, 0.18f, 0.1f); 
+    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.25f, 0.18f, 0.1f); // Desk
     addBox(-5.5f, 0.7f, -2, 4.5f, 0.05f, -1.2f, 0.35f, 0.25f, 0.15f); // Countertop
     
-    // Key Rack behind desk
-    addBox(-5.9f, 0.8f, -4.0f, 0.15f, 0.7f, 1.5f, 0.12f, 0.08f, 0.05f);
+    // The Key Hook & Key behind the counter
+    addBox(-5.9f, 0.9f, -3.0f, 0.1f, 0.1f, 0.1f, 0.5f, 0.5f, 0.5f); // Hook
+    if(!hasKey) addBox(-5.85f, 0.8f, -3.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f); // Golden Key
 }
 
 void buildRandomRoom(float z) {
-    addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); // Floor
-    if(rand() % 2 == 0) addBox(1.2f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f); // Cabinet
-    else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f); // Bed
+    addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
+    if(rand() % 2 == 0) addBox(1.2f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f); 
+    else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f); 
 }
 
 int main() {
@@ -56,7 +53,6 @@ int main() {
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
-    // Initial Lobby then Procedural Hallway
     buildLobby();
     for(int i=0; i<15; i++) buildRandomRoom(-10 - (i * 10));
 
@@ -80,14 +76,19 @@ int main() {
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
-        if (hidKeysDown() & KEY_START) break;
+        u32 kDown = hidKeysDown();
+        if (kDown & KEY_START) break;
+
+        // Key Collection Logic
+        if ((kDown & KEY_A) && !hasKey && camX < -4.0f && camZ < -2.0f && camZ > -4.0f) {
+            hasKey = true;
+            // Note: In a full game, we would re-generate the VBO here to remove the key visually
+        }
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
-        
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
-        
         if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
             float s = 0.11f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
             camX -= (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
