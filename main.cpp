@@ -17,6 +17,7 @@ typedef struct { float pos[4]; float clr[4]; } vertex;
 std::vector<vertex> world_mesh;
 bool hasKey = false;
 
+// Helper to build the room geometry safely
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
@@ -31,20 +32,17 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
 }
 
 void buildLobby() {
-    addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f); // Floor
-    addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f); // Ceiling
-    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.25f, 0.18f, 0.1f); // Desk
-    addBox(-5.5f, 0.7f, -2, 4.5f, 0.05f, -1.2f, 0.35f, 0.25f, 0.15f); // Countertop
+    // Floor & Ceiling
+    addBox(-6, 0, 5, 12, 0.01f, -15, 0.2f, 0.15f, 0.1f); 
+    addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.12f, 0.12f, 0.12f);
     
-    // The Key Hook & Key behind the counter
-    addBox(-5.9f, 0.9f, -3.0f, 0.1f, 0.1f, 0.1f, 0.5f, 0.5f, 0.5f); // Hook
-    if(!hasKey) addBox(-5.85f, 0.8f, -3.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f); // Golden Key
-}
-
-void buildRandomRoom(float z) {
-    addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
-    if(rand() % 2 == 0) addBox(1.2f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f); 
-    else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f); 
+    // Front Desk
+    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.25f, 0.18f, 0.1f); 
+    addBox(-5.5f, 0.7f, -2, 4.5f, 0.05f, -1.2f, 0.35f, 0.25f, 0.15f); 
+    
+    // Key Hook & The Golden Key
+    addBox(-5.9f, 1.0f, -3.0f, 0.05f, 0.05f, 0.05f, 0.5f, 0.5f, 0.5f); // Hook
+    if(!hasKey) addBox(-5.88f, 0.85f, -3.0f, 0.03f, 0.15f, 0.03f, 1.0f, 0.84f, 0.0f); // Key
 }
 
 int main() {
@@ -54,7 +52,13 @@ int main() {
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
     buildLobby();
-    for(int i=0; i<15; i++) buildRandomRoom(-10 - (i * 10));
+    // Generate 10 random rooms after the lobby
+    for(int i=0; i<10; i++) {
+        float z = -10 - (i * 10);
+        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); // Floor
+        if(rand()%2==0) addBox(1.2f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f); // Cabinet
+        else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f); // Bed
+    }
 
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
     shaderProgram_s program; shaderProgramInit(&program);
@@ -76,21 +80,15 @@ int main() {
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
-        u32 kDown = hidKeysDown();
-        if (kDown & KEY_START) break;
-
-        // Key Collection Logic
-        if ((kDown & KEY_A) && !hasKey && camX < -4.0f && camZ < -2.0f && camZ > -4.0f) {
-            hasKey = true;
-            // Note: In a full game, we would re-generate the VBO here to remove the key visually
-        }
+        if (hidKeysDown() & KEY_START) break;
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
+        
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
         if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-            float s = 0.11f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
+            float s = 0.12f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
             camX -= (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
             camZ -= (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
         }
