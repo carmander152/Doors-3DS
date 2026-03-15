@@ -12,7 +12,7 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-#define MAX_VERTS 10000 // Safely pre-allocate memory for up to 10,000 vertices
+#define MAX_VERTS 10000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minZ, maxX, maxZ; } BBox;
@@ -21,7 +21,7 @@ std::vector<vertex> world_mesh;
 std::vector<BBox> collisions;
 
 bool hasKey = false;
-int roomSequence[100]; // Stores the layout of the next 100 rooms
+int roomSequence[100]; 
 
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
@@ -37,31 +37,40 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide) collisions.push_back({fmin(x,x2), fmin(z,z2), fmax(x,x2), fmax(z,z2)});
 }
 
+// Helper to build a dividing wall with a hole in the middle for a door
+void addWallWithDoor(float z) {
+    // Left side of the door
+    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.1f, 0.2f, 0.15f, 0.1f, true);
+    // Right side of the door
+    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.1f, 0.2f, 0.15f, 0.1f, true);
+    // Top piece (above the doorway)
+    addBox(-0.6f, 1.2f, z, 1.2f, 0.6f, -0.1f, 0.2f, 0.15f, 0.1f, false);
+}
+
 bool checkCollision(float x, float z) {
-    float r = 0.2f; // Player radius
+    float r = 0.2f; 
     for(auto& b : collisions) {
         if(x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) return true;
     }
     return false;
 }
 
-// Builds ONLY the chunks (rooms) near the player
 void buildWorld(int currentChunk) {
     world_mesh.clear(); 
     collisions.clear();
     
-    // Always render Lobby if we are near the start (Chunk 0 or 1)
+    // The Starting Lobby
     if (currentChunk < 2) {
-        addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); // Lobby Floor
-        addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); // Lobby Ceiling
+        addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); // Floor
+        addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); // Ceiling
         addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); // Left Wall
         addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  // Right Wall
-        addBox(-5.5f, 0, -2, 4.5f, 0.75f, -1.2f, 0.25f, 0.15f, 0.1f, true); // Desk
         
+        // Front Desk & Key
+        addBox(-5.5f, 0, -2, 4.5f, 0.75f, -1.2f, 0.25f, 0.15f, 0.1f, true); 
         if(!hasKey) addBox(-5.8f, 1.0f, -4.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false);
     }
 
-    // Load only the rooms immediately around the player (current, previous, next two)
     int startRoom = currentChunk - 1;
     int endRoom = currentChunk + 2;
     if (startRoom < 0) startRoom = 0;
@@ -70,13 +79,16 @@ void buildWorld(int currentChunk) {
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
         
-        // Hallway Structure (Floor, Ceiling, Walls)
-        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); // Floor
-        addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); // Ceiling
-        addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); // Left Wall
-        addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); // Right Wall
+        // Add the cross-wall to separate this room from the previous one
+        addWallWithDoor(z);
 
-        // Furniture based on pre-rolled sequence
+        // Room Shell (Floor, Ceiling, Outer Walls)
+        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); 
+        addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); 
+        addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
+        addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
+
+        // Furniture
         if(roomSequence[i] == 0) {
             addBox(1.3f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f, true); // Cabinet
         } else {
@@ -91,7 +103,6 @@ int main() {
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
-    // Pre-roll the next 100 rooms
     for(int i=0; i<100; i++) roomSequence[i] = rand() % 2;
 
     int currentChunk = 0;
@@ -105,7 +116,6 @@ int main() {
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr);
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 4);
 
-    // Allocate memory ONCE to prevent crashing when moving between rooms
     void* vbo_ptr = linearAlloc(MAX_VERTS * sizeof(vertex));
     memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
@@ -114,7 +124,6 @@ int main() {
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
 
-    // TexEnv Fix so the screen isn't pitch black
     C3D_TexEnv* env = C3D_GetTexEnv(0);
     C3D_TexEnvInit(env);
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
@@ -127,7 +136,6 @@ int main() {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // Key Pickup Logic
         if(!hasKey && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f) {
             hasKey = true; 
             buildWorld(currentChunk);
@@ -135,22 +143,17 @@ int main() {
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
-        // --- Dynamic Room Loading Logic ---
-        // Calculate which chunk (10-unit section) the player is currently in
         int newChunk = 0;
         if (camZ < -10.0f) {
             newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
         }
         
-        // If the player entered a new chunk, rebuild the world mesh around them!
         if (newChunk != currentChunk) {
             currentChunk = newChunk;
             buildWorld(currentChunk);
-            // Overwrite the existing VBO memory with the new local rooms
             memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
-        // -----------------------------------
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
