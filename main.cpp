@@ -51,7 +51,33 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide) collisions.push_back({fmin(x,x2), fmin(y,y2), fmin(z,z2), fmax(x,x2), fmax(y,y2), fmax(z,z2)});
 }
 
-// True 3D Collision! (Checks X, Z, and Y Head Clearance)
+// Swinging Doors with attached Gold Plaques!
+void addWallWithDoor(float z, bool isOpen, int roomIndex) {
+    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true); 
+    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);  
+    addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false); 
+
+    if (!isOpen) {
+        // CLOSED DOOR
+        addBox(-0.6f, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true);
+        
+        // Gold Plaque flat against the closed door
+        addBox(-0.2f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false);
+
+        // Padlock on the very first door
+        if (roomIndex == 0 && !firstDoorUnlocked) {
+            addBox(-0.1f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.6f, 0.6f, 0.6f, false);
+        }
+    } else {
+        // OPEN DOOR (Swung 90 degrees inwards)
+        addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true);
+        
+        // Gold Plaque attached to the side of the open door!
+        addBox(-0.5f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false);
+    }
+}
+
+// 3D Collision 
 bool checkCollision(float x, float y, float z, float h) {
     float r = 0.2f; 
     for(auto& b : collisions) {
@@ -75,11 +101,11 @@ void buildWorld(int currentChunk) {
         addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); 
         addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  
         
-        // Front Transition Walls (Enclosing the Lobby!)
-        addBox(-6.0f, 0, -10.0f, 4.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); // Left of door
-        addBox(2.0f, 0, -10.0f, 4.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); // Right of door
+        // --- MISSING LOBBY WALLS (Connecting to Door 001) ---
+        addBox(-6.0f, 0, -10.0f, 5.4f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); // Left Fill Wall
+        addBox(0.6f, 0, -10.0f, 5.4f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  // Right Fill Wall
 
-        // --- ELEVATOR WALL ---
+        // Back Elevator Wall
         addBox(-6.0f, 0, 5.0f, 2.4f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
         addBox(-3.6f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
         addBox(-3.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
@@ -91,18 +117,21 @@ void buildWorld(int currentChunk) {
         addBox(2.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
         addBox(3.6f, 0, 5.0f, 2.4f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
         
-        // --- THE KEY TRAP ---
-        // Desk (Moved to seal the right side of the trap)
-        addBox(-4.2f, 0.0f, -8.0f, 3.0f, 0.75f, -2.0f, 0.25f, 0.15f, 0.1f, true); 
+        // --- THE RECEPTION KEY TRAP ---
+        // L-Shaped Desk locking the corner
+        addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); // Front Face
+        addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); // Side return 
 
-        // Luggage Trolley (Forms the tunnel between the Left Wall and the Desk)
-        addBox(-5.8f, 0.1f, -8.0f, 1.6f, 0.1f, -1.8f, 0.7f, 0.6f, 0.1f, false); // Base
-        addBox(-5.8f, 0.6f, -8.0f, 1.6f, 1.0f, -1.8f, 0.4f, 0.2f, 0.2f, true);  // Luggage (Solid Block!)
+        // Trolley blocks the only gap to get behind the desk
+        addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.1f, -1.4f, 0.7f, 0.6f, 0.1f, false); // Base
+        addBox(-2.4f, 0.2f, -8.7f, 0.05f, 0.4f, 0.05f, 0.8f, 0.8f, 0.8f, false); // Strut
+        addBox(-1.6f, 0.2f, -8.7f, 0.05f, 0.4f, 0.05f, 0.8f, 0.8f, 0.8f, false); // Strut
+        addBox(-2.5f, 0.6f, -8.6f, 1.0f, 1.0f, -1.4f, 0.4f, 0.2f, 0.2f, true); // Luggage
 
-        // The Key (Trapped behind the trolley!)
+        // Key trapped on the back wall
         if(!hasKey && !firstDoorUnlocked) {
-            addBox(-5.2f, 0.8f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); // Hook
-            addBox(-5.1f, 0.6f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); // Golden Key
+            addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); // Hook
+            addBox(-4.7f, 0.7f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); // Golden Key
         }
     }
 
@@ -114,24 +143,10 @@ void buildWorld(int currentChunk) {
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
         
-        // --- DOORWAY & ROOM PLAQUES ---
-        addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true); 
-        addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);  
-        addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false); 
-        
-        // Gold Room Number Plaque above the door
-        addBox(-0.2f, 1.25f, z+0.05f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false);
+        // Doorway Builder
+        addWallWithDoor(z, doorOpen[i], i);
 
-        if (!doorOpen[i]) {
-            addBox(-0.6f, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true);
-            // Padlock on Door 001
-            if (i == 0 && !firstDoorUnlocked) {
-                addBox(-0.1f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.7f, 0.7f, 0.7f, false);
-            }
-        } else {
-            addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true);
-        }
-
+        // Room Shell
         addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); 
         addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); 
         addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
@@ -203,27 +218,23 @@ int main() {
         if (kDown & KEY_START) break;
 
         bool needsVBOUpdate = false;
-
-        // UI Math for Room Numbers
         int roomNumber = (camZ > -10.0f) ? 0 : (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
 
         printf("\x1b[1;1H"); 
         printf("==============================\n");
         printf("       PLAYER STATUS          \n");
         printf("==============================\n\n");
-        if (roomNumber == 0) {
-            printf(" Current Room : 000 (Lobby) \n");
-        } else {
-            printf(" Current Room : %03d         \n", roomNumber);
-        }
+        if (roomNumber == 0) printf(" Current Room : 000 (Lobby) \n");
+        else printf(" Current Room : %03d         \n", roomNumber);
+        
         printf(" Next Door    : %03d         \n\n", roomNumber + 1);
         printf(" Hiding State : %s         \n", hideState == NOT_HIDING ? "None" : (hideState == IN_CABINET ? "In Cabinet" : "Under Bed"));
         printf(" Posture      : %s         \n", isCrouching ? "Crouching" : "Standing");
         printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
         printf("\n\nControls:\n - Circle Pad: Move\n - C-Stick: Look\n - A: Interact\n - B: Toggle Crouch\n - X: Hide/Unhide");
 
-        // 1. Key Collection (Trapped behind trolley!)
-        if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -4.5f && camZ < -8.5f && hideState == NOT_HIDING) {
+        // 1. Key Collection (Only grab it if you're in the back-left corner trap)
+        if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -3.5f && camZ < -8.5f && hideState == NOT_HIDING) {
             hasKey = true; 
             needsVBOUpdate = true;
         }
@@ -237,19 +248,17 @@ int main() {
             }
         }
 
-        // 3. Crouching Toggle with "Stand-Up Collision Prevention"
+        // 3. Crouching Toggle with "Stand-Up Clearance Check"
         if ((kDown & KEY_B) && hideState == NOT_HIDING) {
             if (isCrouching) {
-                // Before standing up, check if your head (1.1f tall) will hit the ceiling/trolley!
-                if (!checkCollision(camX, 0.0f, camZ, 1.1f)) {
-                    isCrouching = false;
-                }
+                // Prevents you from standing up and getting stuck in the luggage!
+                if (!checkCollision(camX, 0.0f, camZ, 1.1f)) isCrouching = false;
             } else {
                 isCrouching = true;
             }
         }
 
-        // 4. Room Chunking
+        // 4. Chunk Loading
         int newChunk = 0;
         if (camZ < -10.0f) {
             newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
@@ -259,7 +268,7 @@ int main() {
             needsVBOUpdate = true;
         }
 
-        // 5. Proximity Auto-Doors
+        // 5. Proximity Doors
         int startRoom = currentChunk - 1;
         int endRoom = currentChunk + 2;
         if (startRoom < 0) startRoom = 0;
@@ -276,7 +285,7 @@ int main() {
             }
         }
 
-        // 6. Hitboxes for Hiding (Greatly Expanded!)
+        // 6. Touch-To-Hide Hitboxes
         int roomIndex = (int)((abs(camZ) - 5.0f) / 10.0f);
         if (roomIndex < 0) roomIndex = 0;
         
@@ -284,31 +293,28 @@ int main() {
         bool nearCabinet = false;
         bool nearBed = false;
 
-        // Expanded aura check
+        // "Touch" auras! Matches the exact dimensions of the furniture with a small bumper.
         if (roomSequence[roomIndex] == 0) {
-            if (camX >= 0.5f && camX <= 2.5f && camZ >= baseZ - 6.5f && camZ <= baseZ - 4.5f) nearCabinet = true;
+            if (camX >= 0.9f && camX <= 2.2f && camZ >= baseZ - 6.3f && camZ <= baseZ - 4.7f) nearCabinet = true;
         } else {
-            if (camX >= -2.5f && camX <= 0.0f && camZ >= baseZ - 9.5f && camZ <= baseZ - 5.5f) nearBed = true;
+            if (camX >= -2.2f && camX <= -0.2f && camZ >= baseZ - 9.3f && camZ <= baseZ - 6.2f) nearBed = true;
         }
 
         if (kDown & KEY_X) {
             if (hideState == NOT_HIDING) {
                 if (nearCabinet) { 
                     hideState = IN_CABINET; 
-                    camX = 1.35f; camZ = baseZ - 5.5f; 
-                    camYaw = 1.57f; 
+                    camX = 1.35f; camZ = baseZ - 5.5f; camYaw = 1.57f; 
                     isCrouching = false; 
                 }
                 else if (nearBed) { 
                     hideState = UNDER_BED; 
-                    camX = -1.2f; camZ = baseZ - 7.7f; 
-                    camYaw = -1.57f; 
+                    camX = -1.2f; camZ = baseZ - 7.7f; camYaw = -1.57f; 
                     isCrouching = false; 
                 }
             } else {
                 hideState = NOT_HIDING; 
-                camX = 0.0f; 
-                camYaw = 0.0f; 
+                camX = 0.0f; camYaw = 0.0f; 
             }
         }
 
@@ -318,7 +324,7 @@ int main() {
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
-        // --- 3D HEIGHT & PHYSICS ---
+        // Camera Heights
         float curH = -0.9f; 
         float playerH = 1.1f; 
 
@@ -342,7 +348,6 @@ int main() {
                 float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                 float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
                 
-                // Passes height to calculate 3D head clearance!
                 if(!checkCollision(nextX, 0.0f, camZ, playerH)) camX = nextX;
                 if(!checkCollision(camX, 0.0f, nextZ, playerH)) camZ = nextZ;
             }
