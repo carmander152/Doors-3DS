@@ -36,7 +36,7 @@ struct RoomSetup {
 
 // --- GAME STATE VARIABLES ---
 int playerHealth = 100;
-int flashRedFrames = 0; // Controls the damage screen-flash
+int flashRedFrames = 0; 
 bool hasKey = false;
 bool firstDoorUnlocked = false;
 bool doorOpen[100] = {false}; 
@@ -140,11 +140,8 @@ void buildWorld(int currentChunk) {
     world_mesh.clear(); 
     collisions.clear();
     
-    // --- DRAW SCREECH IF ACTIVE ---
     if (screechActive) {
-        // Floating black mass
         addBox(screechX - 0.2f, 0.8f, screechZ - 0.2f, 0.4f, 0.4f, 0.4f, 0.05f, 0.05f, 0.05f, false);
-        // Spooky bright white teeth ring
         addBox(screechX - 0.22f, 0.9f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
         addBox(screechX - 0.22f, 1.05f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
     }
@@ -162,7 +159,6 @@ void buildWorld(int currentChunk) {
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
 
-        // EMPTY TROLLEY
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
@@ -210,19 +206,18 @@ void buildWorld(int currentChunk) {
             else if (type == 4) buildBed(zCenter, false);
         }
 
-        // PAINTINGS WITH CORRECTED 3D DEPTH
         for(int p=0; p<rooms[i].pCount; p++) {
             float pZ = z - rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
             float pW = rooms[i].pW[p];
             float pY = rooms[i].pY[p];
 
-            if (rooms[i].pSide[p] == 0) { // Left Wall
-                addBox(-2.9f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); // Frame sticks out to -2.86
-                addBox(-2.87f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); // Canvas sticks out to -2.85
-            } else { // Right Wall
-                addBox(2.86f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); // Frame sticks out to 2.86
-                addBox(2.85f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); // Canvas sticks out to 2.85
+            if (rooms[i].pSide[p] == 0) { 
+                addBox(-2.9f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); 
+                addBox(-2.87f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+            } else { 
+                addBox(2.86f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); 
+                addBox(2.85f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
             }
         }
     }
@@ -270,6 +265,23 @@ void generateRooms() {
 int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     consoleInit(GFX_BOTTOM, NULL);
+
+    // --- AUDIO SYSTEM INIT (FOR SYNTHETIC "PSST" SOUND!) ---
+    ndspInit();
+    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+    ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
+    ndspChnSetRate(0, 44100);
+    ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
+
+    u32 audioSize = 44100 * 0.2f; // 0.2 second noise burst
+    s16* audioBuffer = (s16*)linearAlloc(audioSize * sizeof(s16));
+    for(u32 i=0; i<audioSize; i++) audioBuffer[i] = (rand() % 32767) - 16384; 
+    DSP_FlushDataCache(audioBuffer, audioSize * sizeof(s16));
+    
+    ndspWaveBuf waveBuf;
+    memset(&waveBuf, 0, sizeof(ndspWaveBuf));
+    waveBuf.data_vaddr = audioBuffer;
+    waveBuf.nsamples = audioSize;
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
@@ -390,20 +402,21 @@ int main() {
         if (!isDead) {
             
             // --- SCREECH SPAWN LOGIC ---
-            // Random chance to spawn when not hiding and past the lobby!
-            if (!screechActive && hideState == NOT_HIDING && roomNumber > 0 && (rand() % 1200 == 0)) {
+            if (!screechActive && hideState == NOT_HIDING && roomNumber > 0 && (rand() % 1000 == 0)) {
                 screechActive = true;
-                screechTimer = 120; // 2 Seconds to look at him!
-                screechX = camX + sinf(camYaw) * 2.0f; // Spawns behind the camera
+                screechTimer = 180; // INCREASED TO 3 SECONDS
+                screechX = camX + sinf(camYaw) * 2.0f; 
                 screechZ = camZ + cosf(camYaw) * 2.0f;
                 needsVBOUpdate = true;
+                
+                // Trigger the "PSST" synthetic white noise!
+                ndspChnWaveBufAdd(0, &waveBuf);
             }
 
             // --- SCREECH SURVIVAL LOGIC ---
             if (screechActive) {
                 screechTimer--;
                 
-                // Check if player is looking at Screech using vector math
                 float fx = -sinf(camYaw);
                 float fz = -cosf(camYaw);
                 float vx = screechX - camX;
@@ -414,14 +427,12 @@ int main() {
                 float dotProduct = (fx * vx) + (fz * vz);
                 
                 if (dotProduct > 0.85f) { 
-                    // Success! You stared him down.
-                    screechActive = false;
+                    screechActive = false; // You stared him down!
                     needsVBOUpdate = true;
                 } else if (screechTimer <= 0) {
-                    // Failed! He bites you.
                     screechActive = false;
                     needsVBOUpdate = true;
-                    playerHealth -= 40;
+                    playerHealth -= 40; // Bite!
                     flashRedFrames = 25;
                     if (playerHealth <= 0) isDead = true;
                 }
@@ -437,7 +448,6 @@ int main() {
                 }
             }
 
-            // --- UPDATED DUPE PENALTY ---
             int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
             if (interactRoom != -1 && !doorOpen[interactRoom] && (kDown & KEY_A)) {
                 float wallZ = -10.0f - (interactRoom * 10.0f);
@@ -450,13 +460,10 @@ int main() {
                     if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
                         doorOpen[interactRoom] = true; needsVBOUpdate = true;
                     } else if (leftT || centerT || rightT) {
-                        // WRONG DOOR PENALTY
                         playerHealth -= 34;
                         flashRedFrames = 25; 
-                        camZ += 2.0f; // Shoves you backward physically!
-                        if (playerHealth <= 0) {
-                            isDead = true; 
-                        }
+                        camZ += 2.0f; 
+                        if (playerHealth <= 0) isDead = true; 
                     }
                 }
             }
@@ -529,13 +536,15 @@ int main() {
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             
             if (hideState == NOT_HIDING) {
-                if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
-                if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
+                // INCREASED CAMERA TURN SPEED
+                if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.25f;
+                if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.25f;
                 if (camPitch > 1.57f) camPitch = 1.57f; 
                 if (camPitch < -1.57f) camPitch = -1.57f;
                 
                 if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                    float s = isCrouching ? 0.08f : 0.15f; 
+                    // INCREASED PLAYER MOVEMENT SPEED
+                    float s = isCrouching ? 0.12f : 0.22f; 
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                     float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
@@ -550,7 +559,6 @@ int main() {
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
 
-        // --- DAMAGE SCREEN FLASH EFFECT ---
         if (flashRedFrames > 0 && !isDead) {
             C3D_TexEnvColor(env, 0xFF0000FF); 
             C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
@@ -572,6 +580,10 @@ int main() {
         C3D_FrameEnd(0);
     }
     
+    // --- AUDIO SYSTEM CLEANUP ---
+    ndspExit();
+    linearFree(audioBuffer);
+
     linearFree(vbo_ptr); C3D_Fini(); gfxExit();
     return 0;
 }
