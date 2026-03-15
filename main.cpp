@@ -13,7 +13,7 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-#define MAX_VERTS 45000 
+#define MAX_VERTS 55000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
@@ -24,6 +24,10 @@ std::vector<BBox> collisions;
 
 struct RoomSetup {
     int slotType[3]; 
+    bool drawerOpen[3]; // Tracks if a dresser has been opened
+    int keySlot;        // -1 if no key, 0-2 if a key is hidden here!
+    bool isLocked;      // Does this room's door require a key?
+
     int doorPos;     
     int pCount;      
     float pZ[4], pY[4], pW[4], pH[4], pR[4], pG[4], pB[4];
@@ -38,10 +42,14 @@ struct RoomSetup {
 int playerHealth = 100;
 int flashRedFrames = 0; 
 bool hasKey = false;
-bool firstDoorUnlocked = false;
+bool lobbyKeyPickedUp = false;
 bool doorOpen[100] = {false}; 
 bool isCrouching = false;
 bool isDead = false; 
+
+// UI Message Variables
+int messageTimer = 0;
+char uiMessage[50] = "";
 
 // --- SCREECH VARIABLES ---
 bool screechActive = false;
@@ -109,6 +117,22 @@ void buildBed(float zCenter, bool isLeft) {
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
+// --- NEW DRESSER MODEL ---
+void buildDresser(float zCenter, bool isLeft, bool isOpen) {
+    float x = isLeft ? -2.9f : 2.1f;
+    float drawerX = isLeft ? -2.4f : 2.0f; 
+    float openOffset = isOpen ? (isLeft ? 0.4f : -0.4f) : 0.0f; // Pulls out into the room visually!
+
+    // Solid Dresser Frame
+    addBox(x, 0, zCenter - 0.6f, 0.8f, 1.0f, 1.2f, 0.3f, 0.15f, 0.1f, true, 3); 
+    
+    // The Drawer
+    addBox(drawerX + openOffset, 0.4f, zCenter - 0.5f, 0.4f, 0.4f, 1.0f, 0.25f, 0.12f, 0.08f, false);
+    
+    // The Drawer Handle
+    addBox(drawerX + (isLeft ? 0.4f : -0.05f) + openOffset, 0.55f, zCenter - 0.1f, 0.05f, 0.1f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+}
+
 void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bool centerOpen, bool rightDoor, bool rightOpen, int roomIndex) {
     addBox(-3.0f, 0, z, 0.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
     if(!leftDoor) addBox(-2.6f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
@@ -121,19 +145,20 @@ void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bo
     else addBox(1.4f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false);
     addBox(2.6f, 0, z, 0.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
 
-    auto drawDoor = [&](float dx, bool isOpen, bool isFirst) {
+    auto drawDoor = [&](float dx, bool isOpen) {
         if (!isOpen) {
             addBox(dx, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true); 
             addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false); 
-            if(isFirst && !firstDoorUnlocked) addBox(dx+0.5f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.6f, 0.6f, 0.6f, false); 
+            // Draw a Padlock if this room is locked!
+            if(rooms[roomIndex].isLocked) addBox(dx+0.5f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false); 
         } else {
             addBox(dx, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true); 
             addBox(dx+0.1f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false); 
         }
     };
-    if(leftDoor) drawDoor(-2.6f, leftOpen, false);
-    if(centerDoor) drawDoor(-0.6f, centerOpen, (roomIndex==0));
-    if(rightDoor) drawDoor(1.4f, rightOpen, false);
+    if(leftDoor) drawDoor(-2.6f, leftOpen);
+    if(centerDoor) drawDoor(-0.6f, centerOpen);
+    if(rightDoor) drawDoor(1.4f, rightOpen);
 }
 
 void buildWorld(int currentChunk) {
@@ -166,7 +191,7 @@ void buildWorld(int currentChunk) {
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
-        if(!hasKey && !firstDoorUnlocked) {
+        if(!lobbyKeyPickedUp) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
             addBox(-4.7f, 0.7f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); 
         }
@@ -197,13 +222,16 @@ void buildWorld(int currentChunk) {
         addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
         addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
 
+        // --- FIXED FURNITURE TRAP SPACING (-3.5f buffer from door) ---
         for(int s=0; s<3; s++) {
-            float zCenter = z - 2.5f - (s * 2.5f); 
+            float zCenter = z - 3.5f - (s * 2.0f); 
             int type = rooms[i].slotType[s];
             if (type == 1) buildCabinet(zCenter, true);
             else if (type == 2) buildCabinet(zCenter, false);
             else if (type == 3) buildBed(zCenter, true);
             else if (type == 4) buildBed(zCenter, false);
+            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s]);
+            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s]);
         }
 
         for(int p=0; p<rooms[i].pCount; p++) {
@@ -224,8 +252,14 @@ void buildWorld(int currentChunk) {
 }
 
 void generateRooms() {
+    // 1. BASE GENERATION
     for(int i=0; i<100; i++) {
         rooms[i].doorPos = rand() % 3; 
+        rooms[i].keySlot = -1;
+        rooms[i].isLocked = false;
+        
+        for(int s=0; s<3; s++) rooms[i].drawerOpen[s] = false;
+
         rooms[i].isDupeRoom = (i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
             rooms[i].correctDupePos = rand() % 3;
@@ -238,14 +272,18 @@ void generateRooms() {
             rooms[i].dupeNumbers[2] = nextRoomNumber + 5;
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = nextRoomNumber;
         }
+
         for(int s=0; s<3; s++) {
             int r = rand() % 100;
-            if (r < 15) rooms[i].slotType[s] = 1; 
-            else if (r < 30) rooms[i].slotType[s] = 2; 
-            else if (r < 45) rooms[i].slotType[s] = 3; 
-            else if (r < 60) rooms[i].slotType[s] = 4; 
-            else rooms[i].slotType[s] = 0; 
+            if (r < 15) rooms[i].slotType[s] = 1;      // Cab L
+            else if (r < 30) rooms[i].slotType[s] = 2; // Cab R
+            else if (r < 45) rooms[i].slotType[s] = 3; // Bed L
+            else if (r < 60) rooms[i].slotType[s] = 4; // Bed R
+            else if (r < 75) rooms[i].slotType[s] = 5; // Dresser L
+            else if (r < 90) rooms[i].slotType[s] = 6; // Dresser R
+            else rooms[i].slotType[s] = 0;             // Empty
         }
+
         rooms[i].pCount = rand() % 4; 
         for(int p=0; p<rooms[i].pCount; p++) {
             rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; 
@@ -258,30 +296,28 @@ void generateRooms() {
             rooms[i].pSide[p] = rand() % 2; 
         }
     }
+    
+    // 2. LOCK & KEY PASS
     rooms[0].doorPos = 1; 
     rooms[0].isDupeRoom = false; 
+    rooms[0].isLocked = true; // Lobby door is always locked
+    
+    // Randomly lock normal rooms and hide the key in the previous room
+    for(int i=2; i<98; i++) {
+        if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && (rand() % 5 == 0)) {
+            rooms[i].isLocked = true;
+            
+            // Force a dresser to spawn in the room BEFORE the locked door
+            int s = rand() % 3;
+            rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6;
+            rooms[i-1].keySlot = s; // The key is in this specific drawer!
+        }
+    }
 }
 
 int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     consoleInit(GFX_BOTTOM, NULL);
-
-    // --- AUDIO SYSTEM INIT (FOR SYNTHETIC "PSST" SOUND!) ---
-    ndspInit();
-    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
-    ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
-    ndspChnSetRate(0, 44100);
-    ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
-
-    u32 audioSize = 44100 * 0.2f; // 0.2 second noise burst
-    s16* audioBuffer = (s16*)linearAlloc(audioSize * sizeof(s16));
-    for(u32 i=0; i<audioSize; i++) audioBuffer[i] = (rand() % 32767) - 16384; 
-    DSP_FlushDataCache(audioBuffer, audioSize * sizeof(s16));
-    
-    ndspWaveBuf waveBuf;
-    memset(&waveBuf, 0, sizeof(ndspWaveBuf));
-    waveBuf.data_vaddr = audioBuffer;
-    waveBuf.nsamples = audioSize;
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
@@ -324,9 +360,10 @@ int main() {
         
         if (kDown & KEY_START) {
             if (isDead) {
-                isDead = false; hasKey = false; firstDoorUnlocked = false;
+                isDead = false; hasKey = false; lobbyKeyPickedUp = false;
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
+                messageTimer = 0;
                 camX = 0.0f; camZ = 4.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
                 for(int i=0; i<100; i++) doorOpen[i] = false;
@@ -346,6 +383,8 @@ int main() {
         
         bool isGlitching = (rooms[roomNumber].isDupeRoom && !doorOpen[roomNumber]) || 
                            (rooms[roomNumber + 1].isDupeRoom && doorOpen[roomNumber]);
+
+        if (messageTimer > 0) messageTimer--;
 
         printf("\x1b[1;1H"); 
         printf("==============================\n");
@@ -397,57 +436,79 @@ int main() {
 
             printf(" Health       : %d / 100   \n", playerHealth);
             printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
+            
+            if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
+            else printf("\n                           \n");
         }
 
         if (!isDead) {
             
-            // --- SCREECH SPAWN LOGIC ---
-            if (!screechActive && hideState == NOT_HIDING && roomNumber > 0 && (rand() % 1000 == 0)) {
+            // --- SCREECH (No longer spawns in Lobby or Room 1) ---
+            if (!screechActive && hideState == NOT_HIDING && roomNumber > 1 && (rand() % 1000 == 0)) {
                 screechActive = true;
-                screechTimer = 180; // INCREASED TO 3 SECONDS
+                screechTimer = 180; 
                 screechX = camX + sinf(camYaw) * 2.0f; 
                 screechZ = camZ + cosf(camYaw) * 2.0f;
                 needsVBOUpdate = true;
-                
-                // Trigger the "PSST" synthetic white noise!
-                ndspChnWaveBufAdd(0, &waveBuf);
             }
 
-            // --- SCREECH SURVIVAL LOGIC ---
             if (screechActive) {
                 screechTimer--;
-                
-                float fx = -sinf(camYaw);
-                float fz = -cosf(camYaw);
-                float vx = screechX - camX;
-                float vz = screechZ - camZ;
+                float fx = -sinf(camYaw); float fz = -cosf(camYaw);
+                float vx = screechX - camX; float vz = screechZ - camZ;
                 float dist = sqrt(vx*vx + vz*vz);
                 if (dist > 0.0f) { vx /= dist; vz /= dist; }
                 
                 float dotProduct = (fx * vx) + (fz * vz);
-                
                 if (dotProduct > 0.85f) { 
-                    screechActive = false; // You stared him down!
-                    needsVBOUpdate = true;
+                    screechActive = false; needsVBOUpdate = true;
                 } else if (screechTimer <= 0) {
-                    screechActive = false;
-                    needsVBOUpdate = true;
-                    playerHealth -= 40; // Bite!
-                    flashRedFrames = 25;
+                    screechActive = false; needsVBOUpdate = true;
+                    playerHealth -= 40; flashRedFrames = 25;
                     if (playerHealth <= 0) isDead = true;
                 }
             }
 
-            if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -3.5f && camZ < -8.5f && hideState == NOT_HIDING) {
-                hasKey = true; needsVBOUpdate = true;
+            // --- LOBBY KEY ---
+            if(!lobbyKeyPickedUp && rooms[0].isLocked && (kDown & KEY_A) && camX < -3.5f && camZ < -8.5f && hideState == NOT_HIDING) {
+                lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true;
+                sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
             }
 
-            if(hasKey && !firstDoorUnlocked && (kDown & KEY_A) && hideState == NOT_HIDING) {
-                if (abs(camZ - (-10.0f)) < 1.8f && camX > -1.0f && camX < 1.0f) { 
-                    firstDoorUnlocked = true; hasKey = false; needsVBOUpdate = true; 
+            // --- DRAWER INTERACTION ---
+            if ((kDown & KEY_A) && hideState == NOT_HIDING) {
+                for(int s=0; s<3; s++) {
+                    float zCenter = (-10.0f - (roomNumber * 10.0f)) - 3.5f - (s * 2.0f);
+                    if (abs(camZ - zCenter) < 1.5f) {
+                        int type = rooms[roomNumber].slotType[s];
+                        if ((type == 5 || type == 6) && !rooms[roomNumber].drawerOpen[s]) {
+                            // Only open if on the correct side of the room
+                            if ((type == 5 && camX < -1.0f) || (type == 6 && camX > 1.0f)) {
+                                rooms[roomNumber].drawerOpen[s] = true;
+                                needsVBOUpdate = true;
+                                if (rooms[roomNumber].keySlot == s) {
+                                    hasKey = true;
+                                    sprintf(uiMessage, "Found a Golden Key!"); messageTimer = 90;
+                                } else {
+                                    sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
+            // --- UNLOCKING DOORS ---
+            int nextR = roomNumber + 1;
+            float doorZ = -10.0f - (nextR * 10.0f);
+            if (hasKey && rooms[nextR].isLocked && (kDown & KEY_A) && abs(camZ - doorZ) < 2.0f && abs(camX) < 1.5f) {
+                rooms[nextR].isLocked = false;
+                hasKey = false;
+                needsVBOUpdate = true;
+                sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
+            }
+
+            // --- DUPE ROOM DOOR LOGIC ---
             int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
             if (interactRoom != -1 && !doorOpen[interactRoom] && (kDown & KEY_A)) {
                 float wallZ = -10.0f - (interactRoom * 10.0f);
@@ -460,9 +521,7 @@ int main() {
                     if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
                         doorOpen[interactRoom] = true; needsVBOUpdate = true;
                     } else if (leftT || centerT || rightT) {
-                        playerHealth -= 34;
-                        flashRedFrames = 25; 
-                        camZ += 2.0f; 
+                        playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
                         if (playerHealth <= 0) isDead = true; 
                     }
                 }
@@ -485,10 +544,13 @@ int main() {
 
             for(int i = startRoom; i <= endRoom; i++) {
                 if (rooms[i].isDupeRoom) continue; 
-                float doorZ = -10.0f - (i * 10.0f);
+                float wallZ = -10.0f - (i * 10.0f);
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                bool shouldBeOpen = (abs(camZ - doorZ) < 1.5f && abs(camX - targetX) < 1.5f);
-                if (i == 0 && !firstDoorUnlocked) shouldBeOpen = false; 
+                
+                // Doors will only auto-open if they are NOT locked
+                bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
+                if (rooms[i].isLocked) shouldBeOpen = false; 
+                
                 if (doorOpen[i] != shouldBeOpen) {
                     doorOpen[i] = shouldBeOpen; needsVBOUpdate = true;
                 }
@@ -501,18 +563,13 @@ int main() {
                         if (b.type == 1 || b.type == 2) { 
                             if (camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
                                 if (b.type == 1) { 
-                                    hideState = IN_CABINET; 
-                                    camZ = (b.minZ + b.maxZ) / 2.0f;
-                                    if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } 
-                                    else { camX = 1.65f; camYaw = 1.57f; } 
+                                    hideState = IN_CABINET; camZ = (b.minZ + b.maxZ) / 2.0f;
+                                    if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } else { camX = 1.65f; camYaw = 1.57f; } 
                                 } else { 
-                                    hideState = UNDER_BED; 
-                                    camZ = (b.minZ + b.maxZ) / 2.0f; 
-                                    if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } 
-                                    else { camX = 2.2f; camYaw = 1.57f; } 
+                                    hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; 
+                                    if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } else { camX = 2.2f; camYaw = 1.57f; } 
                                 }
-                                isCrouching = false;
-                                break; 
+                                isCrouching = false; break; 
                             }
                         }
                     }
@@ -536,14 +593,12 @@ int main() {
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             
             if (hideState == NOT_HIDING) {
-                // INCREASED CAMERA TURN SPEED
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.25f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.25f;
                 if (camPitch > 1.57f) camPitch = 1.57f; 
                 if (camPitch < -1.57f) camPitch = -1.57f;
                 
                 if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                    // INCREASED PLAYER MOVEMENT SPEED
                     float s = isCrouching ? 0.12f : 0.22f; 
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
@@ -580,10 +635,6 @@ int main() {
         C3D_FrameEnd(0);
     }
     
-    // --- AUDIO SYSTEM CLEANUP ---
-    ndspExit();
-    linearFree(audioBuffer);
-
     linearFree(vbo_ptr); C3D_Fini(); gfxExit();
     return 0;
 }
