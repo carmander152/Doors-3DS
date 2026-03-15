@@ -17,14 +17,16 @@
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minZ, maxX, maxZ; } BBox;
 
-// Hiding States
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
 std::vector<vertex> world_mesh;
 std::vector<BBox> collisions;
 
+// --- GAME STATE VARIABLES ---
 bool hasKey = false;
+bool firstDoorUnlocked = false;
 int roomSequence[100]; 
+bool doorOpen[100] = {false}; // Tracks which doors are currently swung open
 
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
@@ -46,18 +48,18 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide) collisions.push_back({fmin(x,x2), fmin(z,z2), fmax(x,x2), fmax(z,z2)});
 }
 
-// Builds the wall divider and a distinct visible door
-void addWallWithDoor(float z, bool isFirstDoor, bool playerHasKey) {
+// Dynamically draws the door based on its open/closed state
+void addWallWithDoor(float z, bool isOpen) {
     addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true); // Left wall
     addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);  // Right wall
     addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false); // Top frame
 
-    if (isFirstDoor && !playerHasKey) {
-        // Locked door: Dark brown, blocking the path
+    if (!isOpen) {
+        // Door is closed: Block the doorway
         addBox(-0.6f, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true);
     } else {
-        // Open door: Swung back against the left wall
-        addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, 1.2f, 0.3f, 0.15f, 0.08f, true);
+        // Door is open: Swing it back into the room
+        addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true);
     }
 }
 
@@ -73,14 +75,12 @@ void buildWorld(int currentChunk) {
     world_mesh.clear(); 
     collisions.clear();
     
-    // The Starting Lobby
     if (currentChunk < 2) {
-        addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); // Floor
-        addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); // Ceiling
-        addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); // Left Wall
-        addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  // Right Wall
+        addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); 
+        addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); 
+        addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); 
+        addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  
         
-        // Front Desk & Key
         addBox(-5.5f, 0, -2, 4.5f, 0.75f, -1.2f, 0.25f, 0.15f, 0.1f, true); 
         if(!hasKey) addBox(-5.8f, 1.0f, -4.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false);
     }
@@ -93,21 +93,17 @@ void buildWorld(int currentChunk) {
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
         
-        // Doorway
-        addWallWithDoor(z, (i == 0), hasKey);
+        // Pass the live door state to the builder
+        addWallWithDoor(z, doorOpen[i]);
 
-        // Room Shell
-        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); // Floor
-        addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); // Ceiling
-        addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); // Left Wall
-        addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); // Right Wall
+        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); 
+        addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); 
+        addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
+        addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
 
-        // Furniture
         if(roomSequence[i] == 0) {
-            // Cabinet (Brown box)
             addBox(1.2f, 0, z-5, 0.7f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); 
         } else {
-            // Bed (Reddish blanket over frame)
             addBox(-1.9f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
         }
     }
@@ -138,10 +134,8 @@ int main() {
 
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
-    
-    // --- GRAPHICS FIXES ---
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-    C3D_CullFace(GPU_CULL_NONE); // THE FIX: Disables backface culling so walls are visible from both sides!
+    C3D_CullFace(GPU_CULL_NONE); 
 
     C3D_TexEnv* env = C3D_GetTexEnv(0);
     C3D_TexEnvInit(env);
@@ -156,17 +150,58 @@ int main() {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
+        bool needsVBOUpdate = false; // Flags when the world needs to be redrawn
+
         // --- INTERACTION LOGIC ---
         // 1. Key Collection
         if(!hasKey && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f && hideState == NOT_HIDING) {
             hasKey = true; 
-            buildWorld(currentChunk);
-            memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
-            GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+            needsVBOUpdate = true;
         }
 
-        // 2. Hiding Logic
-        // Determine which room we are currently in based on Z position
+        // 2. Unlocking the First Door
+        if(hasKey && !firstDoorUnlocked && (kDown & KEY_A) && hideState == NOT_HIDING) {
+            if (abs(camZ - (-10.0f)) < 3.0f) { // If near the first door
+                firstDoorUnlocked = true;
+                needsVBOUpdate = true; // Forces the proximity check to open it instantly
+            }
+        }
+
+        // 3. Room Chunking Check
+        int newChunk = 0;
+        if (camZ < -10.0f) {
+            newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
+        }
+        if (newChunk != currentChunk) {
+            currentChunk = newChunk;
+            needsVBOUpdate = true;
+        }
+
+        // 4. Proximity Auto-Doors
+        int startRoom = currentChunk - 1;
+        int endRoom = currentChunk + 2;
+        if (startRoom < 0) startRoom = 0;
+        if (endRoom > 99) endRoom = 99;
+
+        for(int i = startRoom; i <= endRoom; i++) {
+            float doorZ = -10.0f - (i * 10.0f);
+            
+            // Should the door be open? (Is player within 3.5 units?)
+            bool shouldBeOpen = (abs(camZ - doorZ) < 3.5f);
+            
+            // Hard override: If it's the first door and not unlocked, force it closed
+            if (i == 0 && !firstDoorUnlocked) {
+                shouldBeOpen = false; 
+            }
+            
+            // If the door needs to change state, mark for a world rebuild!
+            if (doorOpen[i] != shouldBeOpen) {
+                doorOpen[i] = shouldBeOpen;
+                needsVBOUpdate = true;
+            }
+        }
+
+        // 5. Omnidirectional Hiding Logic
         int roomIndex = (int)((abs(camZ) - 5.0f) / 10.0f);
         if (roomIndex < 0) roomIndex = 0;
         
@@ -174,11 +209,12 @@ int main() {
         bool nearCabinet = false;
         bool nearBed = false;
 
-        // Check if player is near the furniture in this specific room
-        if (abs(camZ - furnitureZ) < 2.0f) {
-            if (roomSequence[roomIndex] == 0 && camX > 0.0f) nearCabinet = true;
-            else if (roomSequence[roomIndex] == 1 && camX < 0.0f) nearBed = true;
-        }
+        // Circular Distance Math! Lets you hide from ANY angle.
+        float distToCab = sqrt(pow(camX - 1.55f, 2) + pow(camZ - furnitureZ, 2));
+        float distToBed = sqrt(pow(camX - (-1.2f), 2) + pow(camZ - furnitureZ, 2));
+
+        if (roomSequence[roomIndex] == 0 && distToCab < 2.5f) nearCabinet = true;
+        else if (roomSequence[roomIndex] == 1 && distToBed < 2.5f) nearBed = true;
 
         if (kDown & KEY_X) {
             if (hideState == NOT_HIDING) {
@@ -186,39 +222,31 @@ int main() {
                 else if (nearBed) { hideState = UNDER_BED; camX = -1.1f; camZ = furnitureZ - 1.2f; camYaw = 1.57f; }
             } else {
                 hideState = NOT_HIDING; 
-                camX = 0.0f; // Step back out into the middle of the hallway
+                camX = 0.0f; // Step back out
             }
         }
 
-        // Determine camera height based on hide state
-        float curH = -0.75f;
-        if (hideState == IN_CABINET) curH = -0.6f;
-        else if (hideState == UNDER_BED) curH = -0.15f;
-
-        // Room Chunking
-        int newChunk = 0;
-        if (camZ < -10.0f) {
-            newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
-        }
-        
-        if (newChunk != currentChunk) {
-            currentChunk = newChunk;
+        // 6. Update VBO only if something changed (saves performance)
+        if (needsVBOUpdate) {
             buildWorld(currentChunk);
             memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
-        // Camera Looking
+        // Camera heights
+        float curH = -0.75f;
+        if (hideState == IN_CABINET) curH = -0.6f;
+        else if (hideState == UNDER_BED) curH = -0.15f;
+
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
         
-        // Only allow looking/moving if NOT hiding
         if (hideState == NOT_HIDING) {
             if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
             if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
             
             if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                float s = 0.2f; // Fast walk speed
+                float s = 0.2f; 
                 float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                 float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                 float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
@@ -227,7 +255,6 @@ int main() {
             }
         }
 
-        // Rendering
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
