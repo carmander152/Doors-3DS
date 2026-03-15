@@ -15,11 +15,14 @@
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
+// Collision Box Structure
+typedef struct { float minX, minZ, maxX, maxZ; } BBox;
+
 std::vector<vertex> world_mesh;
+std::vector<BBox> collisions;
 bool hasKey = false;
 
-// Helper to build the room geometry safely without "too many initializers" errors
-void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b) {
+void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
@@ -30,16 +33,36 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
         {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}}
     };
     for(int i=0; i<18; i++) world_mesh.push_back(v[i]);
+    if(collide) collisions.push_back({fmin(x,x2), fmin(z,z2), fmax(x,x2), fmax(z,z2)});
 }
 
-void buildLobby() {
-    world_mesh.clear();
-    addBox(-6, 0, 5, 12, 0.01f, -15, 0.25f, 0.1f, 0.05f); // Floor
-    addBox(-5.5f, 0, -2, 4.5f, 0.7f, -1.2f, 0.2f, 0.1f, 0.05f); // Desk
-    addBox(-5.9f, 0.8f, -4.5f, 0.1f, 0.6f, 2.0f, 0.1f, 0.05f, 0.02f); // Key Rack
+bool checkCollision(float x, float z) {
+    float r = 0.2f; // Player radius
+    for(auto& b : collisions) {
+        if(x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) return true;
+    }
+    return false;
+}
+
+void buildWorld() {
+    world_mesh.clear(); collisions.clear();
+    // Lobby Floor & Walls
+    addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false);
+    addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); // Left Wall
+    addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  // Right Wall
     
-    // Golden Key on the hook behind the counter
-    if(!hasKey) addBox(-5.85f, 1.0f, -4.0f, 0.05f, 0.15f, 0.02f, 1.0f, 0.85f, 0.0f);
+    // Front Desk
+    addBox(-5.5f, 0, -2, 4.5f, 0.75f, -1.2f, 0.25f, 0.15f, 0.1f, true);
+    // The Key
+    if(!hasKey) addBox(-5.8f, 1.0f, -4.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false);
+
+    // Random Rooms
+    for(int i=0; i<8; i++) {
+        float z = -10 - (i * 10);
+        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); // Floor
+        if(rand()%2==0) addBox(1.3f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f, true); // Cab
+        else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f, true); // Bed
+    }
 }
 
 int main() {
@@ -48,13 +71,7 @@ int main() {
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
 
-    buildLobby(); // First room is always the lobby
-    for(int i=0; i<10; i++) { // Random rooms follow
-        float z = -10 - (i * 10);
-        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f); 
-        if(rand()%2==0) addBox(1.3f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f);
-        else addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f);
-    }
+    buildWorld();
 
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
     shaderProgram_s program; shaderProgramInit(&program);
@@ -79,21 +96,24 @@ int main() {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // Interaction to collect the Golden Key
-        if (!hasKey && camX < -4.0f && camZ < -3.0f && camZ > -5.0f && (kDown & KEY_A)) {
-            hasKey = true;
-            buildLobby(); // Update VBO here to remove key visually
-            // In a real build, you would also re-copy data to vbo_ptr
+        // Key pickup
+        if(!hasKey && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f) {
+            hasKey = true; buildWorld();
+            memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
+            GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
+        
         if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-            float s = 0.12f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
-            camX -= (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
-            camZ -= (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
+            float s = 0.1f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
+            float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
+            float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
+            if(!checkCollision(nextX, camZ)) camX = nextX;
+            if(!checkCollision(camX, nextZ)) camZ = nextZ;
         }
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
