@@ -12,11 +12,13 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-// Increased buffer size since we are drawing full 6-sided boxes now
 #define MAX_VERTS 20000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minZ, maxX, maxZ; } BBox;
+
+// Hiding States
+typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
 std::vector<vertex> world_mesh;
 std::vector<BBox> collisions;
@@ -24,26 +26,19 @@ std::vector<BBox> collisions;
 bool hasKey = false;
 int roomSequence[100]; 
 
-// FIXED: Now draws all 6 sides (36 vertices) of the box!
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
-        // Front
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
-        // Back
         {{x, y, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x2, y, z2, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
-        // Left
         {{x, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
         {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
-        // Right
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}},
         {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}},
-        // Top
         {{x, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
-        // Bottom
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}}
     };
@@ -51,20 +46,18 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide) collisions.push_back({fmin(x,x2), fmin(z,z2), fmax(x,x2), fmax(z,z2)});
 }
 
-// Builds the wall divider and the door itself
+// Builds the wall divider and a distinct visible door
 void addWallWithDoor(float z, bool isFirstDoor, bool playerHasKey) {
-    // Left and Right wall frames
-    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    // Top frame (above the door)
-    addBox(-0.6f, 1.2f, z, 1.2f, 0.6f, -0.2f, 0.2f, 0.15f, 0.1f, false);
+    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true); // Left wall
+    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);  // Right wall
+    addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false); // Top frame
 
     if (isFirstDoor && !playerHasKey) {
-        // Solid locked door blocking the way
-        addBox(-0.6f, 0.0f, z, 1.2f, 1.2f, -0.1f, 0.3f, 0.1f, 0.05f, true);
+        // Locked door: Dark brown, blocking the path
+        addBox(-0.6f, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true);
     } else {
-        // An "open" door swung into the next room
-        addBox(-0.6f, 0.0f, z, 0.1f, 1.2f, -1.2f, 0.3f, 0.1f, 0.05f, true);
+        // Open door: Swung back against the left wall
+        addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, 1.2f, 0.3f, 0.15f, 0.08f, true);
     }
 }
 
@@ -100,7 +93,7 @@ void buildWorld(int currentChunk) {
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
         
-        // Add the doorway! If i == 0, it's the first door and requires the key.
+        // Doorway
         addWallWithDoor(z, (i == 0), hasKey);
 
         // Room Shell
@@ -111,9 +104,11 @@ void buildWorld(int currentChunk) {
 
         // Furniture
         if(roomSequence[i] == 0) {
-            addBox(1.3f, 0, z-5, 0.6f, 1.4f, -0.6f, 0.3f, 0.2f, 0.1f, true); // Cabinet
+            // Cabinet (Brown box)
+            addBox(1.2f, 0, z-5, 0.7f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); 
         } else {
-            addBox(-1.8f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f, true); // Bed
+            // Bed (Reddish blanket over frame)
+            addBox(-1.9f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
         }
     }
 }
@@ -143,7 +138,10 @@ int main() {
 
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
+    
+    // --- GRAPHICS FIXES ---
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+    C3D_CullFace(GPU_CULL_NONE); // THE FIX: Disables backface culling so walls are visible from both sides!
 
     C3D_TexEnv* env = C3D_GetTexEnv(0);
     C3D_TexEnvInit(env);
@@ -151,19 +149,51 @@ int main() {
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
     float camX = 0, camZ = 4, camYaw = 0, camPitch = 0;
+    HideState hideState = NOT_HIDING;
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // Key Collection
-        if(!hasKey && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f) {
+        // --- INTERACTION LOGIC ---
+        // 1. Key Collection
+        if(!hasKey && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f && hideState == NOT_HIDING) {
             hasKey = true; 
             buildWorld(currentChunk);
             memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
+
+        // 2. Hiding Logic
+        // Determine which room we are currently in based on Z position
+        int roomIndex = (int)((abs(camZ) - 5.0f) / 10.0f);
+        if (roomIndex < 0) roomIndex = 0;
+        
+        float furnitureZ = -10.0f - (roomIndex * 10.0f) - 5.0f; 
+        bool nearCabinet = false;
+        bool nearBed = false;
+
+        // Check if player is near the furniture in this specific room
+        if (abs(camZ - furnitureZ) < 2.0f) {
+            if (roomSequence[roomIndex] == 0 && camX > 0.0f) nearCabinet = true;
+            else if (roomSequence[roomIndex] == 1 && camX < 0.0f) nearBed = true;
+        }
+
+        if (kDown & KEY_X) {
+            if (hideState == NOT_HIDING) {
+                if (nearCabinet) { hideState = IN_CABINET; camX = 1.55f; camZ = furnitureZ - 0.4f; camYaw = -1.57f; }
+                else if (nearBed) { hideState = UNDER_BED; camX = -1.1f; camZ = furnitureZ - 1.2f; camYaw = 1.57f; }
+            } else {
+                hideState = NOT_HIDING; 
+                camX = 0.0f; // Step back out into the middle of the hallway
+            }
+        }
+
+        // Determine camera height based on hide state
+        float curH = -0.75f;
+        if (hideState == IN_CABINET) curH = -0.6f;
+        else if (hideState == UNDER_BED) curH = -0.15f;
 
         // Room Chunking
         int newChunk = 0;
@@ -181,19 +211,23 @@ int main() {
         // Camera Looking
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
-        if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
-        if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
         
-        // Movement (Speed increased from 0.1f to 0.2f)
-        if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-            float s = 0.2f; 
-            float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
-            float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
-            float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
-            if(!checkCollision(nextX, camZ)) camX = nextX;
-            if(!checkCollision(camX, nextZ)) camZ = nextZ;
+        // Only allow looking/moving if NOT hiding
+        if (hideState == NOT_HIDING) {
+            if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
+            if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
+            
+            if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
+                float s = 0.2f; // Fast walk speed
+                float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
+                float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
+                float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
+                if(!checkCollision(nextX, camZ)) camX = nextX;
+                if(!checkCollision(camX, nextZ)) camZ = nextZ;
+            }
         }
 
+        // Rendering
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
@@ -202,7 +236,7 @@ int main() {
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         Mtx_Identity(&view);
         Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
-        Mtx_Translate(&view, -camX, -0.75f, -camZ, true);
+        Mtx_Translate(&view, -camX, curH, -camZ, true);
         Mtx_Multiply(&view, &proj, &view);
         
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
