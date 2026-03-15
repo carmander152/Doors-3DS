@@ -9,15 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # THE MAGIC FIX: We use the 3DS-specific image instead of the base ARM one!
-    container: devkitpro/3dsdev:latest
+    # The official image that actually exists!
+    container: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Compile Game
-        # No pacman downloads needed. Just build it!
         run: make
 
       - name: Upload 3DSX Artifact
