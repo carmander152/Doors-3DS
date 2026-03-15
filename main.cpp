@@ -2,7 +2,7 @@
 #include <citro3d.h>
 #include <string.h>
 #include <stdlib.h> 
-#include <stdio.h> // Added for bottom screen text!
+#include <stdio.h> 
 #include <math.h> 
 #include <vector>
 #include <time.h>
@@ -75,11 +75,33 @@ void buildWorld(int currentChunk) {
     collisions.clear();
     
     if (currentChunk < 2) {
+        // Floor & Ceiling
         addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); 
         addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); 
+        
+        // Left & Right Walls
         addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); 
         addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  
         
+        // --- THE ELEVATOR BACK WALL ---
+        addBox(-6.0f, 0, 5.0f, 2.4f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
+        
+        // Left Elevator
+        addBox(-3.6f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
+        addBox(-3.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
+        addBox(-2.4f, 0, 5.0f, 1.8f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
+        
+        // Center Elevator (Player Spawns Here)
+        addBox(-0.6f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
+        addBox(-0.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
+        addBox(0.6f, 0, 5.0f, 1.8f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
+        
+        // Right Elevator
+        addBox(2.4f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
+        addBox(2.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
+        addBox(3.6f, 0, 5.0f, 2.4f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
+        
+        // Front Desk & Key
         addBox(-5.5f, 0, -2, 4.5f, 0.75f, -1.2f, 0.25f, 0.15f, 0.1f, true); 
         if(!hasKey && !firstDoorUnlocked) addBox(-5.8f, 1.0f, -4.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false);
     }
@@ -99,17 +121,33 @@ void buildWorld(int currentChunk) {
         addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
 
         if(roomSequence[i] == 0) {
-            addBox(1.2f, 0, z-5, 0.7f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); 
+            // HOLLOW CABINET WITH A CRACK
+            addBox(1.2f, 0, z-5, 0.7f, 1.5f, -0.1f, 0.3f, 0.18f, 0.1f, true); // Back Wall
+            addBox(1.2f, 0, z-5, 0.1f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); // Left Wall
+            addBox(1.8f, 0, z-5, 0.1f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); // Right Wall
+            addBox(1.2f, 1.5f, z-5, 0.7f, 0.1f, -0.8f, 0.3f, 0.18f, 0.1f, true); // Top
+            
+            // Front doors with a crack
+            addBox(1.2f, 0, z-5.8f, 0.3f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, true); // Left Door
+            addBox(1.6f, 0, z-5.8f, 0.3f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, true); // Right Door
+            collisions.push_back({1.2f, z-5.8f, 1.9f, z-5.0f});
+
         } else {
-            addBox(-1.9f, 0, z-5, 1.4f, 0.4f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
+            // HOLLOW BED WITH LEGS
+            addBox(-1.9f, 0.4f, z-5, 1.4f, 0.1f, -2.5f, 0.4f, 0.1f, 0.1f, true); // Mattress
+            addBox(-1.9f, 0.0f, z-5.0f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true); // Legs
+            addBox(-0.6f, 0.0f, z-5.0f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
+            addBox(-1.9f, 0.0f, z-7.4f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
+            addBox(-0.6f, 0.0f, z-7.4f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
+            // Bed skirt (Leaves gap at the bottom)
+            addBox(-0.6f, 0.2f, z-5, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true);
+            collisions.push_back({-1.9f, z-7.5f, -0.5f, z-5.0f});
         }
     }
 }
 
 int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
-    
-    // Initialize the Bottom Screen for UI text!
     consoleInit(GFX_BOTTOM, NULL);
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -143,7 +181,7 @@ int main() {
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    float camX = 0, camZ = 4, camYaw = 0, camPitch = 0;
+    float camX = 0, camZ = 4.0f, camYaw = 0, camPitch = 0;
     HideState hideState = NOT_HIDING;
 
     while (aptMainLoop()) {
@@ -153,31 +191,26 @@ int main() {
 
         bool needsVBOUpdate = false;
 
-        // --- UI TEXT RENDER (BOTTOM SCREEN) ---
-        // \x1b[1;1H moves the invisible text cursor to row 1, column 1
         printf("\x1b[1;1H"); 
         printf("==============================\n");
         printf("       PLAYER STATUS          \n");
         printf("==============================\n\n");
-        
         printf(" Hiding State : %s         \n", hideState == NOT_HIDING ? "None" : (hideState == IN_CABINET ? "In Cabinet" : "Under Bed"));
         printf(" Posture      : %s         \n", isCrouching ? "Crouching" : "Standing");
         printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
-        printf("\n\nControls:\n - Circle Pad: Move\n - C-Stick: Look\n - A: Interact\n - B: Toggle Crouch\n - X: Hide");
+        printf("\n\nControls:\n - Circle Pad: Move\n - C-Stick: Look\n - A: Interact\n - B: Toggle Crouch\n - X: Hide/Unhide");
 
-        // --- INTERACTION LOGIC ---
-        
         // 1. Key Collection
         if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f && hideState == NOT_HIDING) {
             hasKey = true; 
             needsVBOUpdate = true;
         }
 
-        // 2. Unlocking the First Door (Consumes Key!)
+        // 2. Unlocking the First Door (Consumes Key)
         if(hasKey && !firstDoorUnlocked && (kDown & KEY_A) && hideState == NOT_HIDING) {
-            if (abs(camZ - (-10.0f)) < 1.8f) { // Must be very close to the door now!
+            if (abs(camZ - (-10.0f)) < 1.8f) { 
                 firstDoorUnlocked = true;
-                hasKey = false; // The key is consumed!
+                hasKey = false; 
                 needsVBOUpdate = true; 
             }
         }
@@ -197,7 +230,7 @@ int main() {
             needsVBOUpdate = true;
         }
 
-        // 5. Proximity Auto-Doors (Closer range)
+        // 5. Proximity Auto-Doors
         int startRoom = currentChunk - 1;
         int endRoom = currentChunk + 2;
         if (startRoom < 0) startRoom = 0;
@@ -205,9 +238,7 @@ int main() {
 
         for(int i = startRoom; i <= endRoom; i++) {
             float doorZ = -10.0f - (i * 10.0f);
-            
-            // Player must now be within 1.5 units to open the door
-            bool shouldBeOpen = (abs(camZ - doorZ) < 1.5f);
+            bool shouldBeOpen = (abs(camZ - doorZ) < 1.5f); // Must be very close to trigger
             if (i == 0 && !firstDoorUnlocked) shouldBeOpen = false; 
             
             if (doorOpen[i] != shouldBeOpen) {
@@ -216,7 +247,7 @@ int main() {
             }
         }
 
-        // 6. Omnidirectional Hiding Logic (AABB padding instead of points)
+        // 6. Contact Hitboxes for Hiding!
         int roomIndex = (int)((abs(camZ) - 5.0f) / 10.0f);
         if (roomIndex < 0) roomIndex = 0;
         
@@ -224,35 +255,41 @@ int main() {
         bool nearCabinet = false;
         bool nearBed = false;
 
-        // Create an invisible interaction "bubble" around the furniture
+        // Snug "aura" around the furniture so you must bump it to hide.
         if (roomSequence[roomIndex] == 0) {
-            if (camX > 0.2f && camX < 2.9f && camZ > baseZ - 6.8f && camZ < baseZ - 4.0f) nearCabinet = true;
+            // Cabinet interaction aura
+            if (camX >= 0.8f && camX <= 2.3f && camZ >= baseZ - 6.2f && camZ <= baseZ - 4.6f) nearCabinet = true;
         } else {
-            if (camX > -2.9f && camX < 0.5f && camZ > baseZ - 8.5f && camZ < baseZ - 4.0f) nearBed = true;
+            // Bed interaction aura
+            if (camX >= -2.3f && camX <= -0.1f && camZ >= baseZ - 7.9f && camZ <= baseZ - 4.6f) nearBed = true;
         }
 
+        // MUST PRESS 'X' TO HIDE
         if (kDown & KEY_X) {
             if (hideState == NOT_HIDING) {
-                if (nearCabinet) { hideState = IN_CABINET; camX = 1.55f; camZ = baseZ - 5.4f; camYaw = -1.57f; isCrouching = false; }
-                else if (nearBed) { hideState = UNDER_BED; camX = -1.1f; camZ = baseZ - 6.2f; camYaw = 1.57f; isCrouching = false; }
+                // Dive into Cabinet
+                if (nearCabinet) { hideState = IN_CABINET; camX = 1.55f; camZ = baseZ - 5.4f; camYaw = 1.57f; isCrouching = false; }
+                // Dive under Bed
+                else if (nearBed) { hideState = UNDER_BED; camX = -1.2f; camZ = baseZ - 6.2f; camYaw = -1.57f; isCrouching = false; }
             } else {
+                // Hop back out into the center of the room
                 hideState = NOT_HIDING; 
-                camX = 0.0f; // Step back out
+                camX = 0.0f; 
+                camYaw = 0.0f; 
             }
         }
 
-        // 7. Update GPU memory if geometry changed
         if (needsVBOUpdate) {
             buildWorld(currentChunk);
             memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
-        // --- CAMERA HEIGHT CONTROLS ---
-        float curH = -1.2f; // Increased default viewpoint (taller player)
-        if (isCrouching) curH = -0.6f; // Drops viewpoint when crouching
-        if (hideState == IN_CABINET) curH = -0.8f;
-        else if (hideState == UNDER_BED) curH = -0.15f; // Face nearly touching the floor!
+        // --- DYNAMIC CAMERA HEIGHT ---
+        float curH = -1.05f; // Base height (shorter player)
+        if (isCrouching) curH = -0.5f; // Crouching height
+        if (hideState == IN_CABINET) curH = -0.9f; // Standing inside cabinet
+        else if (hideState == UNDER_BED) curH = -0.15f; // Very low to the floor looking under skirt
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
@@ -262,8 +299,7 @@ int main() {
             if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
             
             if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                // Crouching makes you walk at half speed
-                float s = isCrouching ? 0.1f : 0.2f; 
+                float s = isCrouching ? 0.1f : 0.2f; // Slower if crouching
                 float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                 float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                 float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
@@ -280,7 +316,7 @@ int main() {
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         Mtx_Identity(&view);
         Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
-        Mtx_Translate(&view, -camX, curH, -camZ, true); // Uses the dynamic camera height
+        Mtx_Translate(&view, -camX, curH, -camZ, true); 
         Mtx_Multiply(&view, &proj, &view);
         
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
