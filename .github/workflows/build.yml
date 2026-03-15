@@ -9,20 +9,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
+    # THE MAGIC FIX: We use the 3DS-specific image instead of the base ARM one!
+    container: devkitpro/3dsdev:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install 3DS Dependencies
-        # Removed the invalid '3ds-libcitro3d' package name.
-        # '3ds-dev' includes everything we need!
-        run: |
-          dkp-pacman -Syyu --noconfirm
-          dkp-pacman -S --needed --noconfirm 3ds-dev
-
       - name: Compile Game
+        # No pacman downloads needed. Just build it!
         run: make
 
       - name: Upload 3DSX Artifact
