@@ -6,8 +6,6 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
-
-# The magic fix: explicitly telling the linker exactly where the library folders are
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 
 .PHONY: all clean
@@ -18,7 +16,7 @@ $(TARGET).3dsx: $(TARGET).elf
 	3dsxtool $< $@
 
 $(TARGET).elf: $(OBJS)
-	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
+	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
 
 main.o: main.cpp vshader_shbin.h
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
