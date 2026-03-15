@@ -12,7 +12,8 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-#define MAX_VERTS 10000 
+// Increased buffer size since we are drawing full 6-sided boxes now
+#define MAX_VERTS 20000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minZ, maxX, maxZ; } BBox;
@@ -23,28 +24,48 @@ std::vector<BBox> collisions;
 bool hasKey = false;
 int roomSequence[100]; 
 
+// FIXED: Now draws all 6 sides (36 vertices) of the box!
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
+        // Front
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
+        // Back
         {{x, y, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x2, y, z2, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        // Left
         {{x, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
-        {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}}
+        {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
+        // Right
+        {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}},
+        {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}},
+        // Top
+        {{x, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        {{x2, y2, z, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        // Bottom
+        {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
+        {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}}
     };
-    for(int i=0; i<18; i++) world_mesh.push_back(v[i]);
+    for(int i=0; i<36; i++) world_mesh.push_back(v[i]);
     if(collide) collisions.push_back({fmin(x,x2), fmin(z,z2), fmax(x,x2), fmax(z,z2)});
 }
 
-// Helper to build a dividing wall with a hole in the middle for a door
-void addWallWithDoor(float z) {
-    // Left side of the door
-    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.1f, 0.2f, 0.15f, 0.1f, true);
-    // Right side of the door
-    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.1f, 0.2f, 0.15f, 0.1f, true);
-    // Top piece (above the doorway)
-    addBox(-0.6f, 1.2f, z, 1.2f, 0.6f, -0.1f, 0.2f, 0.15f, 0.1f, false);
+// Builds the wall divider and the door itself
+void addWallWithDoor(float z, bool isFirstDoor, bool playerHasKey) {
+    // Left and Right wall frames
+    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
+    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
+    // Top frame (above the door)
+    addBox(-0.6f, 1.2f, z, 1.2f, 0.6f, -0.2f, 0.2f, 0.15f, 0.1f, false);
+
+    if (isFirstDoor && !playerHasKey) {
+        // Solid locked door blocking the way
+        addBox(-0.6f, 0.0f, z, 1.2f, 1.2f, -0.1f, 0.3f, 0.1f, 0.05f, true);
+    } else {
+        // An "open" door swung into the next room
+        addBox(-0.6f, 0.0f, z, 0.1f, 1.2f, -1.2f, 0.3f, 0.1f, 0.05f, true);
+    }
 }
 
 bool checkCollision(float x, float z) {
@@ -79,14 +100,14 @@ void buildWorld(int currentChunk) {
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
         
-        // Add the cross-wall to separate this room from the previous one
-        addWallWithDoor(z);
+        // Add the doorway! If i == 0, it's the first door and requires the key.
+        addWallWithDoor(z, (i == 0), hasKey);
 
-        // Room Shell (Floor, Ceiling, Outer Walls)
-        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); 
-        addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); 
-        addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
-        addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
+        // Room Shell
+        addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); // Floor
+        addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); // Ceiling
+        addBox(-2, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); // Left Wall
+        addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); // Right Wall
 
         // Furniture
         if(roomSequence[i] == 0) {
@@ -136,6 +157,7 @@ int main() {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
+        // Key Collection
         if(!hasKey && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f) {
             hasKey = true; 
             buildWorld(currentChunk);
@@ -143,6 +165,7 @@ int main() {
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
+        // Room Chunking
         int newChunk = 0;
         if (camZ < -10.0f) {
             newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
@@ -155,13 +178,16 @@ int main() {
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
+        // Camera Looking
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
         if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.15f;
         if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
         
+        // Movement (Speed increased from 0.1f to 0.2f)
         if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-            float s = 0.1f, sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
+            float s = 0.2f; 
+            float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
             float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
             float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
             if(!checkCollision(nextX, camZ)) camX = nextX;
