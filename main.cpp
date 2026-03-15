@@ -13,10 +13,12 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-#define MAX_VERTS 20000 
+#define MAX_VERTS 25000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
-typedef struct { float minX, minZ, maxX, maxZ; } BBox;
+
+// --- UPGRADED: 3D COLLISION BOX ---
+typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; } BBox;
 
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 
@@ -30,6 +32,7 @@ int roomSequence[100];
 bool doorOpen[100] = {false}; 
 bool isCrouching = false;
 
+// Upgraded addBox: Now tracks the Y (Height) limits for 3D physics!
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
@@ -47,25 +50,16 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}}
     };
     for(int i=0; i<36; i++) world_mesh.push_back(v[i]);
-    if(collide) collisions.push_back({fmin(x,x2), fmin(z,z2), fmax(x,x2), fmax(z,z2)});
+    if(collide) collisions.push_back({fmin(x,x2), fmin(y,y2), fmin(z,z2), fmax(x,x2), fmax(y,y2), fmax(z,z2)});
 }
 
-void addWallWithDoor(float z, bool isOpen) {
-    addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true); 
-    addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);  
-    addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false); 
-
-    if (!isOpen) {
-        addBox(-0.6f, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true);
-    } else {
-        addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true);
-    }
-}
-
-bool checkCollision(float x, float z) {
+// True 3D Collision! Includes your height (h)
+bool checkCollision(float x, float y, float z, float h) {
     float r = 0.2f; 
     for(auto& b : collisions) {
-        if(x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) return true;
+        if(x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) {
+            if(y + h > b.minY && y < b.maxY) return true; // Checks if your head hits it!
+        }
     }
     return false;
 }
@@ -75,35 +69,41 @@ void buildWorld(int currentChunk) {
     collisions.clear();
     
     if (currentChunk < 2) {
-        // Floor & Ceiling
-        addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); 
-        addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); 
+        addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); // Floor
+        addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); // Ceiling
+        addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); // Left
+        addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  // Right
         
-        // Left & Right Walls
-        addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); 
-        addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  
-        
-        // --- THE ELEVATOR BACK WALL ---
+        // --- BACK ELEVATOR WALL ---
         addBox(-6.0f, 0, 5.0f, 2.4f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
-        
-        // Left Elevator
         addBox(-3.6f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
         addBox(-3.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
         addBox(-2.4f, 0, 5.0f, 1.8f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
-        
-        // Center Elevator (Player Spawns Here)
         addBox(-0.6f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
         addBox(-0.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
         addBox(0.6f, 0, 5.0f, 1.8f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
-        
-        // Right Elevator
         addBox(2.4f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, true); 
         addBox(2.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, true); 
         addBox(3.6f, 0, 5.0f, 2.4f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
         
-        // Front Desk & Key
-        addBox(-5.5f, 0, -2, 4.5f, 0.75f, -1.2f, 0.25f, 0.15f, 0.1f, true); 
-        if(!hasKey && !firstDoorUnlocked) addBox(-5.8f, 1.0f, -4.0f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false);
+        // --- DESK SCOOTED BACK ---
+        addBox(-5.5f, 0, 1.0f, 4.5f, 0.75f, 1.5f, 0.25f, 0.15f, 0.1f, true); 
+
+        // --- THE SUITCASE TROLLEY OBSTACLE ---
+        // Base (No collision so feet don't snag)
+        addBox(-2.0f, 0.1f, -8.6f, 1.8f, 0.1f, 0.8f, 0.7f, 0.6f, 0.1f, false);
+        // Supports
+        addBox(-1.9f, 0.2f, -8.3f, 0.05f, 0.4f, 0.05f, 0.8f, 0.8f, 0.8f, false);
+        addBox(-0.3f, 0.2f, -8.3f, 0.05f, 0.4f, 0.05f, 0.8f, 0.8f, 0.8f, false);
+        // The Bags! Starts at Y=0.6. Standing hits it. Crouching slides under!
+        addBox(-2.0f, 0.6f, -8.5f, 1.8f, 1.0f, 0.6f, 0.4f, 0.2f, 0.2f, true);
+
+        // --- KEY MOVED TO FRONT WALL ---
+        // Hidden behind the Trolley!
+        if(!hasKey && !firstDoorUnlocked) {
+            addBox(-1.6f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); // Hook
+            addBox(-1.5f, 0.7f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); // Key
+        }
     }
 
     int startRoom = currentChunk - 1;
@@ -113,7 +113,21 @@ void buildWorld(int currentChunk) {
 
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
-        addWallWithDoor(z, doorOpen[i]);
+        
+        // --- DOORWAY & PADLOCK ---
+        addBox(-2.0f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true); 
+        addBox(0.6f, 0.0f, z, 1.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);  
+        addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false); 
+
+        if (!doorOpen[i]) {
+            addBox(-0.6f, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true);
+            // Add Padlock to the first door if not unlocked!
+            if (i == 0 && !firstDoorUnlocked) {
+                addBox(-0.1f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.6f, 0.6f, 0.6f, false);
+            }
+        } else {
+            addBox(-0.6f, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true);
+        }
 
         addBox(-2, 0, z, 4, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); 
         addBox(-2, 1.8f, z, 4, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); 
@@ -121,27 +135,30 @@ void buildWorld(int currentChunk) {
         addBox(1.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
 
         if(roomSequence[i] == 0) {
-            // HOLLOW CABINET WITH A CRACK
-            addBox(1.2f, 0, z-5, 0.7f, 1.5f, -0.1f, 0.3f, 0.18f, 0.1f, true); // Back Wall
-            addBox(1.2f, 0, z-5, 0.1f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); // Left Wall
-            addBox(1.8f, 0, z-5, 0.1f, 1.5f, -0.8f, 0.3f, 0.18f, 0.1f, true); // Right Wall
-            addBox(1.2f, 1.5f, z-5, 0.7f, 0.1f, -0.8f, 0.3f, 0.18f, 0.1f, true); // Top
+            // --- CABINET FACING THE ROOM (-X Direction) ---
+            addBox(1.8f, 0, z-6.0f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false); // Back
+            addBox(1.2f, 1.5f, z-6.0f, 0.7f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false); // Top
+            addBox(1.2f, 0, z-6.0f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); // Left
+            addBox(1.2f, 0, z-5.1f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); // Right
             
-            // Front doors with a crack
-            addBox(1.2f, 0, z-5.8f, 0.3f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, true); // Left Door
-            addBox(1.6f, 0, z-5.8f, 0.3f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, true); // Right Door
-            collisions.push_back({1.2f, z-5.8f, 1.9f, z-5.0f});
+            // Front Doors (Leaves a perfect crack at z-5.5)
+            addBox(1.2f, 0, z-5.9f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
+            addBox(1.2f, 0, z-5.45f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
+            
+            // Hitbox for the entire cabinet
+            collisions.push_back({1.2f, 0.0f, z-6.0f, 1.9f, 1.5f, z-5.0f});
 
         } else {
             // HOLLOW BED WITH LEGS
-            addBox(-1.9f, 0.4f, z-5, 1.4f, 0.1f, -2.5f, 0.4f, 0.1f, 0.1f, true); // Mattress
-            addBox(-1.9f, 0.0f, z-5.0f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true); // Legs
-            addBox(-0.6f, 0.0f, z-5.0f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
-            addBox(-1.9f, 0.0f, z-7.4f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
-            addBox(-0.6f, 0.0f, z-7.4f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
-            // Bed skirt (Leaves gap at the bottom)
-            addBox(-0.6f, 0.2f, z-5, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true);
-            collisions.push_back({-1.9f, z-7.5f, -0.5f, z-5.0f});
+            addBox(-1.9f, 0.4f, z-6.5f, 1.4f, 0.1f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
+            addBox(-1.9f, 0.0f, z-6.5f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true); 
+            addBox(-0.6f, 0.0f, z-6.5f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
+            addBox(-1.9f, 0.0f, z-8.9f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
+            addBox(-0.6f, 0.0f, z-8.9f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
+            
+            // Bed skirt
+            addBox(-0.6f, 0.2f, z-6.5f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true);
+            collisions.push_back({-1.9f, 0.0f, z-9.0f, -0.5f, 0.6f, z-6.5f});
         }
     }
 }
@@ -200,15 +217,15 @@ int main() {
         printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
         printf("\n\nControls:\n - Circle Pad: Move\n - C-Stick: Look\n - A: Interact\n - B: Toggle Crouch\n - X: Hide/Unhide");
 
-        // 1. Key Collection
-        if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -4.0f && camZ < -3.0f && hideState == NOT_HIDING) {
+        // 1. Key Collection (Moved to the back wall area)
+        if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -0.5f && camZ < -8.0f && hideState == NOT_HIDING) {
             hasKey = true; 
             needsVBOUpdate = true;
         }
 
-        // 2. Unlocking the First Door (Consumes Key)
+        // 2. Unlocking the Door (Removes Padlock & Key)
         if(hasKey && !firstDoorUnlocked && (kDown & KEY_A) && hideState == NOT_HIDING) {
-            if (abs(camZ - (-10.0f)) < 1.8f) { 
+            if (abs(camZ - (-10.0f)) < 1.8f && camX > -1.0f) { 
                 firstDoorUnlocked = true;
                 hasKey = false; 
                 needsVBOUpdate = true; 
@@ -220,7 +237,7 @@ int main() {
             isCrouching = !isCrouching;
         }
 
-        // 4. Room Chunking Check
+        // 4. Room Chunking
         int newChunk = 0;
         if (camZ < -10.0f) {
             newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
@@ -238,7 +255,7 @@ int main() {
 
         for(int i = startRoom; i <= endRoom; i++) {
             float doorZ = -10.0f - (i * 10.0f);
-            bool shouldBeOpen = (abs(camZ - doorZ) < 1.5f); // Must be very close to trigger
+            bool shouldBeOpen = (abs(camZ - doorZ) < 1.5f);
             if (i == 0 && !firstDoorUnlocked) shouldBeOpen = false; 
             
             if (doorOpen[i] != shouldBeOpen) {
@@ -247,7 +264,7 @@ int main() {
             }
         }
 
-        // 6. Contact Hitboxes for Hiding!
+        // 6. Contact Hitboxes for Hiding
         int roomIndex = (int)((abs(camZ) - 5.0f) / 10.0f);
         if (roomIndex < 0) roomIndex = 0;
         
@@ -255,24 +272,28 @@ int main() {
         bool nearCabinet = false;
         bool nearBed = false;
 
-        // Snug "aura" around the furniture so you must bump it to hide.
+        // Expanded aura: You can bump it from any side to hide!
         if (roomSequence[roomIndex] == 0) {
-            // Cabinet interaction aura
-            if (camX >= 0.8f && camX <= 2.3f && camZ >= baseZ - 6.2f && camZ <= baseZ - 4.6f) nearCabinet = true;
+            if (camX >= 0.8f && camX <= 2.3f && camZ >= baseZ - 6.5f && camZ <= baseZ - 4.5f) nearCabinet = true;
         } else {
-            // Bed interaction aura
-            if (camX >= -2.3f && camX <= -0.1f && camZ >= baseZ - 7.9f && camZ <= baseZ - 4.6f) nearBed = true;
+            if (camX >= -2.3f && camX <= -0.1f && camZ >= baseZ - 9.5f && camZ <= baseZ - 6.0f) nearBed = true;
         }
 
-        // MUST PRESS 'X' TO HIDE
         if (kDown & KEY_X) {
             if (hideState == NOT_HIDING) {
-                // Dive into Cabinet
-                if (nearCabinet) { hideState = IN_CABINET; camX = 1.55f; camZ = baseZ - 5.4f; camYaw = 1.57f; isCrouching = false; }
-                // Dive under Bed
-                else if (nearBed) { hideState = UNDER_BED; camX = -1.2f; camZ = baseZ - 6.2f; camYaw = -1.57f; isCrouching = false; }
+                if (nearCabinet) { 
+                    hideState = IN_CABINET; 
+                    camX = 1.35f; camZ = baseZ - 5.5f; 
+                    camYaw = 1.57f; // FORCED TO LOOK LEFT (-X) INTO THE ROOM
+                    isCrouching = false; 
+                }
+                else if (nearBed) { 
+                    hideState = UNDER_BED; 
+                    camX = -1.2f; camZ = baseZ - 7.7f; 
+                    camYaw = -1.57f; // FORCED TO LOOK RIGHT (+X) INTO THE ROOM
+                    isCrouching = false; 
+                }
             } else {
-                // Hop back out into the center of the room
                 hideState = NOT_HIDING; 
                 camX = 0.0f; 
                 camYaw = 0.0f; 
@@ -285,11 +306,16 @@ int main() {
             GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
         }
 
-        // --- DYNAMIC CAMERA HEIGHT ---
-        float curH = -1.05f; // Base height (shorter player)
-        if (isCrouching) curH = -0.5f; // Crouching height
-        if (hideState == IN_CABINET) curH = -0.9f; // Standing inside cabinet
-        else if (hideState == UNDER_BED) curH = -0.15f; // Very low to the floor looking under skirt
+        // --- 3D HEIGHT & PHYSICS ---
+        float curH = -0.9f; // Shorter player default!
+        float playerH = 1.1f; // Standing Physics Height
+
+        if (isCrouching) {
+            curH = -0.4f; 
+            playerH = 0.5f; // Crouching Physics Height
+        }
+        if (hideState == IN_CABINET) curH = -0.7f;
+        else if (hideState == UNDER_BED) curH = -0.15f; 
 
         circlePosition cStick, cPad;
         irrstCstickRead(&cStick); hidCircleRead(&cPad);
@@ -299,12 +325,14 @@ int main() {
             if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.15f;
             
             if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                float s = isCrouching ? 0.1f : 0.2f; // Slower if crouching
+                float s = isCrouching ? 0.08f : 0.15f; 
                 float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                 float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                 float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
-                if(!checkCollision(nextX, camZ)) camX = nextX;
-                if(!checkCollision(camX, nextZ)) camZ = nextZ;
+                
+                // Passes playerH to calculate 3D head clearance!
+                if(!checkCollision(nextX, 0.0f, camZ, playerH)) camX = nextX;
+                if(!checkCollision(camX, 0.0f, nextZ, playerH)) camZ = nextZ;
             }
         }
 
