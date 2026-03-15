@@ -34,11 +34,20 @@ struct RoomSetup {
     int dupeNumbers[3]; 
 } rooms[100];
 
+// --- GAME STATE VARIABLES ---
+int playerHealth = 100;
+int flashRedFrames = 0; // Controls the damage screen-flash
 bool hasKey = false;
 bool firstDoorUnlocked = false;
 bool doorOpen[100] = {false}; 
 bool isCrouching = false;
 bool isDead = false; 
+
+// --- SCREECH VARIABLES ---
+bool screechActive = false;
+int screechTimer = 0;
+float screechX = 0.0f;
+float screechZ = 0.0f;
 
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0) {
     float x2 = x + w, y2 = y + h, z2 = z + d;
@@ -71,18 +80,17 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
-// Reverted Cabinets (Flush to wall, facing outward)
 void buildCabinet(float zCenter, bool isLeft) {
     float backX = isLeft ? -2.3f : 2.2f;
     float frontX = isLeft ? -1.7f : 1.6f;
     float topX = isLeft ? -2.3f : 1.6f; 
     
-    addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false); // Back
-    addBox(topX, 1.5f, zCenter - 0.5f, 0.7f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false); // Top
-    addBox(topX, 0, zCenter - 0.5f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); // Side 1
-    addBox(topX, 0, zCenter + 0.4f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); // Side 2
-    addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); // Door 1
-    addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); // Door 2
+    addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
+    addBox(topX, 1.5f, zCenter - 0.5f, 0.7f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
+    addBox(topX, 0, zCenter - 0.5f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
+    addBox(topX, 0, zCenter + 0.4f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
+    addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
+    addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
     
     collisions.push_back({isLeft ? -2.3f : 1.6f, 0.0f, zCenter - 0.5f, isLeft ? -1.6f : 2.3f, 1.5f, zCenter + 0.5f, 1});
 }
@@ -132,6 +140,15 @@ void buildWorld(int currentChunk) {
     world_mesh.clear(); 
     collisions.clear();
     
+    // --- DRAW SCREECH IF ACTIVE ---
+    if (screechActive) {
+        // Floating black mass
+        addBox(screechX - 0.2f, 0.8f, screechZ - 0.2f, 0.4f, 0.4f, 0.4f, 0.05f, 0.05f, 0.05f, false);
+        // Spooky bright white teeth ring
+        addBox(screechX - 0.22f, 0.9f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
+        addBox(screechX - 0.22f, 1.05f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
+    }
+    
     if (currentChunk < 2) {
         addBox(-6, 0, 5, 12, 0.01f, -15, 0.22f, 0.15f, 0.1f, false); 
         addBox(-6, 1.8f, 5, 12, 0.01f, -15, 0.1f, 0.1f, 0.1f, false); 
@@ -142,21 +159,16 @@ void buildWorld(int currentChunk) {
         addBox(-6.0f, 0, 5.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
         addBox(-0.6f, 0, 4.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, false); 
         addBox(-0.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, false); 
-
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
 
-        // TROLLEY UPDATE: Luggage removed, Roof lowered to 0.6 to force crouching!
-        addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); // Base
-        addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); // Poles
+        // EMPTY TROLLEY
+        addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
+        addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); // Lowered Roof (Crouch Block)
-
-        // Luggage placed cleanly on the floor NEXT to the trolley
-        addBox(-1.4f, 0.0f, -9.0f, 0.8f, 0.4f, -0.6f, 0.4f, 0.2f, 0.1f, true); 
-        addBox(-1.4f, 0.4f, -9.0f, 0.8f, 0.4f, -1.0f, 0.3f, 0.3f, 0.3f, true); 
+        addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
         if(!hasKey && !firstDoorUnlocked) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
@@ -198,7 +210,7 @@ void buildWorld(int currentChunk) {
             else if (type == 4) buildBed(zCenter, false);
         }
 
-        // PAINTINGS WITH FRAMES & PADDING
+        // PAINTINGS WITH CORRECTED 3D DEPTH
         for(int p=0; p<rooms[i].pCount; p++) {
             float pZ = z - rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
@@ -206,11 +218,11 @@ void buildWorld(int currentChunk) {
             float pY = rooms[i].pY[p];
 
             if (rooms[i].pSide[p] == 0) { // Left Wall
-                addBox(-2.99f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); // Frame
-                addBox(-2.95f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); // Canvas
+                addBox(-2.9f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); // Frame sticks out to -2.86
+                addBox(-2.87f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); // Canvas sticks out to -2.85
             } else { // Right Wall
-                addBox(2.95f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); // Frame
-                addBox(2.93f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); // Canvas
+                addBox(2.86f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); // Frame sticks out to 2.86
+                addBox(2.85f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); // Canvas sticks out to 2.85
             }
         }
     }
@@ -302,6 +314,7 @@ int main() {
             if (isDead) {
                 isDead = false; hasKey = false; firstDoorUnlocked = false;
                 isCrouching = false; hideState = NOT_HIDING;
+                playerHealth = 100; screechActive = false; flashRedFrames = 0;
                 camX = 0.0f; camZ = 4.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
                 for(int i=0; i<100; i++) doorOpen[i] = false;
@@ -311,7 +324,7 @@ int main() {
                 buildWorld(currentChunk);
                 memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
-                consoleClear(); // FIX FOR STICKY RESTART TEXT
+                consoleClear(); 
                 continue; 
             } else break; 
         }
@@ -319,8 +332,6 @@ int main() {
         bool needsVBOUpdate = false;
         int roomNumber = (camZ > -10.0f) ? 0 : (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
         
-        // --- UPGRADED GLITCH LOGIC ---
-        // Glitches if you are currently IN a dupe room, OR if you just opened the door LEADING to a dupe room!
         bool isGlitching = (rooms[roomNumber].isDupeRoom && !doorOpen[roomNumber]) || 
                            (rooms[roomNumber + 1].isDupeRoom && doorOpen[roomNumber]);
 
@@ -329,12 +340,17 @@ int main() {
         if (isDead) {
             printf("         YOU DIED!            \n");
             printf("==============================\n\n");
-            printf(" You opened the wrong door.   \n");
-            printf(" Pay attention to the numbers!\n\n\n");
+            printf("                              \n");
+            printf("                              \n\n\n");
             printf("    [PRESS START TO RESTART]  \n");
         } else {
-            printf("       PLAYER STATUS          \n");
-            printf("==============================\n\n");
+            if (screechActive) {
+                printf("      !!! PSST !!!            \n");
+                printf("   LOOK AROUND QUICKLY!       \n\n");
+            } else {
+                printf("       PLAYER STATUS          \n");
+                printf("==============================\n\n");
+            }
 
             if (roomNumber == 0) {
                 printf(" Current Room : 000 (Lobby) \n");
@@ -367,12 +383,50 @@ int main() {
                 printf("                           \n\n");
             }
 
-            printf(" Hiding State : %s         \n", hideState == NOT_HIDING ? "None" : (hideState == IN_CABINET ? "In Cabinet" : "Under Bed"));
-            printf(" Posture      : %s         \n", isCrouching ? "Crouching" : "Standing");
+            printf(" Health       : %d / 100   \n", playerHealth);
             printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
         }
 
         if (!isDead) {
+            
+            // --- SCREECH SPAWN LOGIC ---
+            // Random chance to spawn when not hiding and past the lobby!
+            if (!screechActive && hideState == NOT_HIDING && roomNumber > 0 && (rand() % 1200 == 0)) {
+                screechActive = true;
+                screechTimer = 120; // 2 Seconds to look at him!
+                screechX = camX + sinf(camYaw) * 2.0f; // Spawns behind the camera
+                screechZ = camZ + cosf(camYaw) * 2.0f;
+                needsVBOUpdate = true;
+            }
+
+            // --- SCREECH SURVIVAL LOGIC ---
+            if (screechActive) {
+                screechTimer--;
+                
+                // Check if player is looking at Screech using vector math
+                float fx = -sinf(camYaw);
+                float fz = -cosf(camYaw);
+                float vx = screechX - camX;
+                float vz = screechZ - camZ;
+                float dist = sqrt(vx*vx + vz*vz);
+                if (dist > 0.0f) { vx /= dist; vz /= dist; }
+                
+                float dotProduct = (fx * vx) + (fz * vz);
+                
+                if (dotProduct > 0.85f) { 
+                    // Success! You stared him down.
+                    screechActive = false;
+                    needsVBOUpdate = true;
+                } else if (screechTimer <= 0) {
+                    // Failed! He bites you.
+                    screechActive = false;
+                    needsVBOUpdate = true;
+                    playerHealth -= 40;
+                    flashRedFrames = 25;
+                    if (playerHealth <= 0) isDead = true;
+                }
+            }
+
             if(!hasKey && !firstDoorUnlocked && (kDown & KEY_A) && camX < -3.5f && camZ < -8.5f && hideState == NOT_HIDING) {
                 hasKey = true; needsVBOUpdate = true;
             }
@@ -383,6 +437,7 @@ int main() {
                 }
             }
 
+            // --- UPDATED DUPE PENALTY ---
             int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
             if (interactRoom != -1 && !doorOpen[interactRoom] && (kDown & KEY_A)) {
                 float wallZ = -10.0f - (interactRoom * 10.0f);
@@ -395,9 +450,13 @@ int main() {
                     if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
                         doorOpen[interactRoom] = true; needsVBOUpdate = true;
                     } else if (leftT || centerT || rightT) {
-                        isDead = true; 
-                        C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
-                        C3D_TexEnvColor(env, 0xFF0000FF); 
+                        // WRONG DOOR PENALTY
+                        playerHealth -= 34;
+                        flashRedFrames = 25; 
+                        camZ += 2.0f; // Shoves you backward physically!
+                        if (playerHealth <= 0) {
+                            isDead = true; 
+                        }
                     }
                 }
             }
@@ -437,8 +496,8 @@ int main() {
                                 if (b.type == 1) { 
                                     hideState = IN_CABINET; 
                                     camZ = (b.minZ + b.maxZ) / 2.0f;
-                                    if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } // Left cabinet, face right
-                                    else { camX = 1.65f; camYaw = 1.57f; } // Right cabinet, face left
+                                    if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } 
+                                    else { camX = 1.65f; camYaw = 1.57f; } 
                                 } else { 
                                     hideState = UNDER_BED; 
                                     camZ = (b.minZ + b.maxZ) / 2.0f; 
@@ -490,6 +549,15 @@ int main() {
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
+
+        // --- DAMAGE SCREEN FLASH EFFECT ---
+        if (flashRedFrames > 0 && !isDead) {
+            C3D_TexEnvColor(env, 0xFF0000FF); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
+            flashRedFrames--;
+        } else if (!isDead) {
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+        }
 
         C3D_Mtx proj, view;
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
