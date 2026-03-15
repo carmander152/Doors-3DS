@@ -1,16 +1,37 @@
+name: Build 3DS Game
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # This tells GitHub to run the job inside the devkitARM docker container
     container: devkitpro/devkitarm:latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install 3DS Libraries
+      - name: Install 3DS Dependencies
+        # This is the magic step that fixes the "cannot find -lcitro3d" error.
+        # It updates the package list and installs the 3DS development libraries.
         run: |
-          # Synchronize and install core 3DS development tools and libraries
           dkp-pacman -Syyu --noconfirm
           dkp-pacman -S --noconfirm 3ds-dev 3ds-libcitro3d
 
-      - name: Compile
+      - name: Compile Game
+        # Runs the Makefile we fixed earlier
         run: make
+
+      - name: Upload 3DSX Artifact
+        # If the build succeeds, this zips up the game files so you can download them!
+        uses: actions/upload-artifact@v4
+        with:
+          name: DOORS_3DS_Build
+          path: |
+            *.3dsx
+            *.elf
