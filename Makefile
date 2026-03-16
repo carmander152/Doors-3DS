@@ -47,26 +47,24 @@ app.rsf:
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
-	@echo "    - irrst:u" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    0x01: ControlMemory" >> app.rsf
-	@echo "    0x02: QueryMemory" >> app.rsf
-	@echo "    0x03: ExitProcess" >> app.rsf
-	@echo "    0x11: CloseHandle" >> app.rsf
-	@echo "    0x12: WaitSynchronization1" >> app.rsf
-	@echo "    0x13: WaitSynchronizationN" >> app.rsf
-	@echo "    0x17: GetSystemInfo" >> app.rsf
-	@echo "    0x1A: ConnectToPort" >> app.rsf
-	@echo "    0x1F: SendSyncRequest" >> app.rsf
-	@echo "    0x30: CreateThread" >> app.rsf
-	@echo "    0x31: ExitThread" >> app.rsf
-	@echo "    0x32: SleepThread" >> app.rsf
+	@echo "    - ControlMemory" >> app.rsf
+	@echo "    - ExitProcess" >> app.rsf
+	@echo "    - CreateThread" >> app.rsf
+	@echo "    - ExitThread" >> app.rsf
+	@echo "    - SleepThread" >> app.rsf
+	@echo "    - CloseHandle" >> app.rsf
+	@echo "    - WaitSynchronization1" >> app.rsf
+	@echo "    - WaitSynchronizationN" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
 
+# NEW: We strip the ELF file of debug symbols before giving it to makerom
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
-	makerom -f cia -o $@ -elf $< -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
+	arm-none-eabi-strip --strip-debug $< -o stripped_for_cia.elf
+	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
+	rm -f stripped_for_cia.elf
 
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
@@ -84,4 +82,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf stripped_for_cia.elf
