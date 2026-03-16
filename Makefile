@@ -33,7 +33,7 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xF805" >> app.rsf
+	@echo "  UniqueId                : 0xF806" >> app.rsf
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
@@ -49,6 +49,8 @@ app.rsf:
 	@echo "  SystemModeExt           : 124MB" >> app.rsf
 	@echo "  IORegisterMapping:" >> app.rsf
 	@echo "    - 1ff00000-1ff7ffff" >> app.rsf
+	@echo "  FileSystemAccess:" >> app.rsf
+	@echo "    - DirectSdmc" >> app.rsf
 	@echo "  ServiceAccessControl:" >> app.rsf
 	@echo "    - apt:U" >> app.rsf
 	@echo "    - gsp::Gpu" >> app.rsf
