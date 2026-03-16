@@ -37,7 +37,6 @@ app.rsf:
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
-	@echo "  FreeProductCode         : true" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
 	@echo "  CoreVersion             : 2" >> app.rsf
 	@echo "  Priority                : 48" >> app.rsf
@@ -65,9 +64,6 @@ app.rsf:
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
-	@echo "  Dependency:" >> app.rsf
-	@echo "    - 0x0004013000001a02L" >> app.rsf
-	@echo "    - 0x0004013000001b02L" >> app.rsf
 
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	makerom -f cia -o $@ -elf $< -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
