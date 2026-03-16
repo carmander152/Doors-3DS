@@ -38,6 +38,7 @@ app.rsf:
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
+	@echo "  Priority                : 0x30" >> app.rsf
 	@echo "  CoreVersion             : 2" >> app.rsf
 	@echo "  HandleTableSize         : 512" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
