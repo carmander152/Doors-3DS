@@ -9,14 +9,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # --- CHANGED: Using the pre-loaded 3DS container! ---
-    container: devkitpro/3dsdev:latest
+    # Back to the official, existing container!
+    container: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # (We removed the dkp-pacman step completely)
+      # --- THE FIX: Download tools manually to bypass the 403 error ---
+      - name: Install CIA Tools Manually
+        run: |
+          # Download and install makerom
+          curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18/makerom-v0.18-ubuntu_x86_64.zip -o makerom.zip
+          unzip makerom.zip
+          chmod +x makerom
+          cp makerom /usr/local/bin/
+
+          # Download and install bannertool
+          curl -sL https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip -o bannertool.zip
+          unzip bannertool.zip
+          chmod +x linux-x86_64/bannertool
+          cp linux-x86_64/bannertool /usr/local/bin/
 
       - name: Compile Game
         run: make
