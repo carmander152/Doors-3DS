@@ -27,15 +27,18 @@ struct RoomSetup {
     bool drawerOpen[3]; 
     int keySlot;        
     bool isLocked;      
+
     int doorPos;     
     int pCount;      
     float pZ[4], pY[4], pW[4], pH[4], pR[4], pG[4], pB[4];
     int pSide[4];    
+    
     bool isDupeRoom;
     int correctDupePos; 
     int dupeNumbers[3]; 
 } rooms[100];
 
+// --- GAME STATE VARIABLES ---
 int playerHealth = 100;
 int flashRedFrames = 0; 
 bool hasKey = false;
@@ -44,11 +47,14 @@ bool doorOpen[100] = {false};
 bool isCrouching = false;
 bool isDead = false; 
 
+// UI Message Variables
 int messageTimer = 0;
 char uiMessage[50] = "";
 
+// --- SCREECH VARIABLES ---
 bool screechActive = false;
 int screechTimer = 0;
+int screechCooldown = 0; // 30-second safety buffer!
 float screechX = 0.0f;
 float screechZ = 0.0f;
 
@@ -87,12 +93,14 @@ void buildCabinet(float zCenter, bool isLeft) {
     float backX = isLeft ? -2.3f : 2.2f;
     float frontX = isLeft ? -1.7f : 1.6f;
     float topX = isLeft ? -2.3f : 1.6f; 
+    
     addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
     addBox(topX, 1.5f, zCenter - 0.5f, 0.7f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
     addBox(topX, 0, zCenter - 0.5f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
     addBox(topX, 0, zCenter + 0.4f, 0.7f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
     addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
     addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
+    
     collisions.push_back({isLeft ? -2.3f : 1.6f, 0.0f, zCenter - 0.5f, isLeft ? -1.6f : 2.3f, 1.5f, zCenter + 0.5f, 1});
 }
 
@@ -114,6 +122,7 @@ void buildDresser(float zCenter, bool isLeft, bool isOpen) {
     float x = isLeft ? -2.9f : 2.1f;
     float drawerX = isLeft ? -2.4f : 2.0f; 
     float openOffset = isOpen ? (isLeft ? 0.4f : -0.4f) : 0.0f; 
+
     addBox(x, 0, zCenter - 0.6f, 0.8f, 1.0f, 1.2f, 0.3f, 0.15f, 0.1f, true, 3); 
     addBox(drawerX + openOffset, 0.4f, zCenter - 0.5f, 0.4f, 0.4f, 1.0f, 0.25f, 0.12f, 0.08f, false);
     addBox(drawerX + (isLeft ? 0.4f : -0.05f) + openOffset, 0.55f, zCenter - 0.1f, 0.05f, 0.1f, 0.2f, 0.8f, 0.8f, 0.8f, false);
@@ -168,6 +177,7 @@ void buildWorld(int currentChunk) {
         addBox(-0.5f, 0, 4.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, false); 
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
+
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
@@ -176,8 +186,8 @@ void buildWorld(int currentChunk) {
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
         if(!lobbyKeyPickedUp) {
-            addBox(-4.8f, 0.8f, -9.9f, 0.4f, 0.4f, 0.1f, 0.3f, 0.2f, 0.1f, false); 
-            addBox(-4.7f, 0.85f, -9.85f, 0.1f, 0.25f, 0.05f, 1.0f, 0.84f, 0.0f, false); 
+            addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
+            addBox(-4.7f, 0.7f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); 
         }
     }
 
@@ -188,6 +198,7 @@ void buildWorld(int currentChunk) {
 
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
+        
         if (rooms[i].isDupeRoom) {
             bool leftOpen = (rooms[i].correctDupePos == 0 && doorOpen[i]);
             bool centerOpen = (rooms[i].correctDupePos == 1 && doorOpen[i]);
@@ -217,7 +228,11 @@ void buildWorld(int currentChunk) {
         }
 
         for(int p=0; p<rooms[i].pCount; p++) {
-            float pZ = z - rooms[i].pZ[p]; float pH = rooms[i].pH[p]; float pW = rooms[i].pW[p]; float pY = rooms[i].pY[p];
+            float pZ = z - rooms[i].pZ[p]; 
+            float pH = rooms[i].pH[p];
+            float pW = rooms[i].pW[p];
+            float pY = rooms[i].pY[p];
+
             if (rooms[i].pSide[p] == 0) { 
                 addBox(-2.9f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); 
                 addBox(-2.87f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
@@ -231,37 +246,59 @@ void buildWorld(int currentChunk) {
 
 void generateRooms() {
     for(int i=0; i<100; i++) {
-        rooms[i].doorPos = rand() % 3; rooms[i].keySlot = -1; rooms[i].isLocked = false;
+        rooms[i].doorPos = rand() % 3; 
+        rooms[i].keySlot = -1;
+        rooms[i].isLocked = false;
+        
         for(int s=0; s<3; s++) rooms[i].drawerOpen[s] = false;
+
         rooms[i].isDupeRoom = (i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
-            rooms[i].correctDupePos = rand() % 3; int nextRoomNumber = i + 1; 
-            int fake1 = nextRoomNumber + (rand() % 3 + 1); int fake2 = nextRoomNumber - (rand() % 3 + 1);
+            rooms[i].correctDupePos = rand() % 3;
+            int nextRoomNumber = i + 1; 
+            int fake1 = nextRoomNumber + (rand() % 3 + 1);
+            int fake2 = nextRoomNumber - (rand() % 3 + 1);
             if (fake2 <= 0) fake2 = nextRoomNumber + 4; 
-            rooms[i].dupeNumbers[0] = fake1; rooms[i].dupeNumbers[1] = fake2; rooms[i].dupeNumbers[2] = nextRoomNumber + 5;
+            rooms[i].dupeNumbers[0] = fake1;
+            rooms[i].dupeNumbers[1] = fake2;
+            rooms[i].dupeNumbers[2] = nextRoomNumber + 5;
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = nextRoomNumber;
         }
+
         for(int s=0; s<3; s++) {
             int r = rand() % 100;
-            if (r < 15) rooms[i].slotType[s] = 1; else if (r < 30) rooms[i].slotType[s] = 2; 
-            else if (r < 45) rooms[i].slotType[s] = 3; else if (r < 60) rooms[i].slotType[s] = 4; 
-            else if (r < 75) rooms[i].slotType[s] = 5; else if (r < 90) rooms[i].slotType[s] = 6; 
-            else rooms[i].slotType[s] = 0; 
+            if (r < 15) rooms[i].slotType[s] = 1;      
+            else if (r < 30) rooms[i].slotType[s] = 2; 
+            else if (r < 45) rooms[i].slotType[s] = 3; 
+            else if (r < 60) rooms[i].slotType[s] = 4; 
+            else if (r < 75) rooms[i].slotType[s] = 5; 
+            else if (r < 90) rooms[i].slotType[s] = 6; 
+            else rooms[i].slotType[s] = 0;             
         }
+
         rooms[i].pCount = rand() % 4; 
         for(int p=0; p<rooms[i].pCount; p++) {
-            rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; rooms[i].pY[p] = 0.6f + (rand() % 60) / 100.0f; 
-            rooms[i].pW[p] = 0.4f + (rand() % 80) / 100.0f; rooms[i].pH[p] = 0.4f + (rand() % 60) / 100.0f; 
-            rooms[i].pR[p] = (rand() % 100) / 100.0f; rooms[i].pG[p] = (rand() % 100) / 100.0f; rooms[i].pB[p] = (rand() % 100) / 100.0f; 
+            rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; 
+            rooms[i].pY[p] = 0.6f + (rand() % 60) / 100.0f; 
+            rooms[i].pW[p] = 0.4f + (rand() % 80) / 100.0f; 
+            rooms[i].pH[p] = 0.4f + (rand() % 60) / 100.0f; 
+            rooms[i].pR[p] = (rand() % 100) / 100.0f; 
+            rooms[i].pG[p] = (rand() % 100) / 100.0f; 
+            rooms[i].pB[p] = (rand() % 100) / 100.0f; 
             rooms[i].pSide[p] = rand() % 2; 
         }
     }
-    rooms[0].doorPos = 1; rooms[0].isDupeRoom = false; rooms[1].isLocked = true; 
+    
+    rooms[0].doorPos = 1; 
+    rooms[0].isDupeRoom = false; 
+    rooms[0].isLocked = true; 
+    
     for(int i=2; i<98; i++) {
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && (rand() % 5 == 0)) {
             rooms[i].isLocked = true;
-            int s = rand() % 3; rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6;
-            rooms[i-1].keySlot = s;
+            int s = rand() % 3;
+            rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6;
+            rooms[i-1].keySlot = s; 
         }
     }
 }
@@ -269,148 +306,350 @@ void generateRooms() {
 int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     consoleInit(GFX_BOTTOM, NULL);
+
+    // --- AUDIO SYSTEM INIT (FOR SYNTHETIC "PSST" SOUND) ---
+    ndspInit();
+    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+    ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
+    ndspChnSetRate(0, 44100);
+    ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
+
+    u32 audioSize = 44100 * 0.2f; 
+    s16* audioBuffer = (s16*)linearAlloc(audioSize * sizeof(s16));
+    for(u32 i=0; i<audioSize; i++) audioBuffer[i] = (rand() % 32767) - 16384; 
+    DSP_FlushDataCache(audioBuffer, audioSize * sizeof(s16));
+    
+    ndspWaveBuf waveBuf;
+    memset(&waveBuf, 0, sizeof(ndspWaveBuf));
+    waveBuf.data_vaddr = audioBuffer;
+    waveBuf.nsamples = audioSize;
+
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
+
     generateRooms(); 
+
     int currentChunk = 0;
     buildWorld(currentChunk);
+
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
     shaderProgram_s program; shaderProgramInit(&program);
     shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
+
     int uLoc_proj = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx");
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr);
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 4);
+
     void* vbo_ptr = linearAlloc(MAX_VERTS * sizeof(vertex));
     memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
     C3D_CullFace(GPU_CULL_NONE); 
-    C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
+
+    C3D_TexEnv* env = C3D_GetTexEnv(0);
+    C3D_TexEnvInit(env);
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+
     float camX = 0, camZ = 4.0f, camYaw = 0, camPitch = 0;
     HideState hideState = NOT_HIDING;
     const char symbols[] = "@!$#&*%?";
+
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
+        
         if (kDown & KEY_START) {
             if (isDead) {
-                isDead = false; hasKey = false; lobbyKeyPickedUp = false; isCrouching = false; hideState = NOT_HIDING;
-                playerHealth = 100; screechActive = false; flashRedFrames = 0; messageTimer = 0;
-                camX = 0.0f; camZ = 4.0f; camYaw = 0.0f; camPitch = 0.0f; currentChunk = 0;
+                isDead = false; hasKey = false; lobbyKeyPickedUp = false;
+                isCrouching = false; hideState = NOT_HIDING;
+                playerHealth = 100; screechActive = false; flashRedFrames = 0;
+                screechCooldown = 1800; // Give player 30 seconds of peace on spawn
+                messageTimer = 0;
+                camX = 0.0f; camZ = 4.0f; camYaw = 0.0f; camPitch = 0.0f;
+                currentChunk = 0;
                 for(int i=0; i<100; i++) doorOpen[i] = false;
-                generateRooms(); buildWorld(currentChunk);
+                
+                generateRooms(); 
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+                buildWorld(currentChunk);
                 memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
-                consoleClear(); continue; 
+                consoleClear(); 
+                continue; 
             } else break; 
         }
+
         bool needsVBOUpdate = false;
         int roomNumber = (camZ > -10.0f) ? 0 : (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
-        bool isGlitching = (rooms[roomNumber].isDupeRoom && !doorOpen[roomNumber]) || (rooms[roomNumber + 1].isDupeRoom && doorOpen[roomNumber]);
+        
+        bool isGlitching = (rooms[roomNumber].isDupeRoom && !doorOpen[roomNumber]) || 
+                           (rooms[roomNumber + 1].isDupeRoom && doorOpen[roomNumber]);
+
         if (messageTimer > 0) messageTimer--;
+        if (screechCooldown > 0) screechCooldown--;
+
         printf("\x1b[1;1H"); 
+        printf("==============================\n");
         if (isDead) {
-            printf("YOU DIED!\n[PRESS START TO RESTART]");
+            printf("         YOU DIED!            \n");
+            printf("==============================\n\n");
+            printf("                              \n");
+            printf("                              \n\n\n");
+            printf("    [PRESS START TO RESTART]  \n");
         } else {
-            if (screechActive) printf("!!! PSST !!! LOOK AROUND!\n");
-            else printf("PLAYER STATUS\n");
-            printf("Room: %03d | Health: %d/100\nKey: %s\n", roomNumber, playerHealth, hasKey ? "YES" : "NO");
-            if (messageTimer > 0) printf("\n** %s **\n", uiMessage);
-        }
-        if (!isDead) {
-            if (!screechActive && hideState == NOT_HIDING && roomNumber > 1 && (rand() % 1000 == 0)) {
-                screechActive = true; screechTimer = 180; screechX = camX + sinf(camYaw) * 2.0f; screechZ = camZ + cosf(camYaw) * 2.0f; needsVBOUpdate = true;
+            if (screechActive) {
+                printf("      !!! PSST !!!            \n");
+                printf("   LOOK AROUND QUICKLY!       \n\n");
+            } else {
+                printf("       PLAYER STATUS          \n");
+                printf("==============================\n\n");
             }
+
+            if (roomNumber == 0) {
+                printf(" Current Room : 000 (Lobby) \n");
+                if (isGlitching) {
+                    char g2[4]; for(int i=0; i<3; i++) g2[i]=symbols[rand()%8]; g2[3]='\0';
+                    printf(" Next Door    : %s         \n\n", g2);
+                } else {
+                    printf(" Next Door    : 001         \n\n");
+                }
+            } else if (isGlitching) {
+                char g1[4], g2[4];
+                for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; }
+                g1[3]='\0'; g2[3]='\0';
+                printf(" Current Room : %s         \n", g1);
+                printf(" Next Door    : %s         \n\n", g2);
+            } else {
+                printf(" Current Room : %03d         \n", roomNumber);
+                printf(" Next Door    : %03d         \n\n", roomNumber + 1);
+            }
+
+            int plaqueTargetRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
+            float wallZ = -10.0f - (plaqueTargetRoom * 10.0f);
+            
+            if (isGlitching && plaqueTargetRoom != -1 && abs(camZ - wallZ) < 2.0f) {
+                if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[plaqueTargetRoom].dupeNumbers[0]);
+                else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[plaqueTargetRoom].dupeNumbers[1]);
+                else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[plaqueTargetRoom].dupeNumbers[2]);
+                else printf("                           \n\n");
+            } else {
+                printf("                           \n\n");
+            }
+
+            printf(" Health       : %d / 100   \n", playerHealth);
+            printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
+            
+            if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
+            else printf("\n                           \n");
+        }
+
+        if (!isDead) {
+            
+            // --- SCREECH SPAWN LOGIC ---
+            // Much lower chance to spawn, strict 30 second cooldown, not in Lobby or Room 1!
+            if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && roomNumber > 1 && (rand() % 2000 == 0)) {
+                screechActive = true;
+                screechTimer = 180; 
+                screechX = camX + sinf(camYaw) * 2.0f; 
+                screechZ = camZ + cosf(camYaw) * 2.0f;
+                needsVBOUpdate = true;
+                ndspChnWaveBufAdd(0, &waveBuf); // TRIGGER NOISE BURST
+            }
+
             if (screechActive) {
                 screechTimer--;
-                float fx = -sinf(camYaw); float fz = -cosf(camYaw); float vx = screechX - camX; float vz = screechZ - camZ;
-                float dist = sqrt(vx*vx + vz*vz); if (dist > 0.0f) { vx /= dist; vz /= dist; }
-                if ((fx * vx) + (fz * vz) > 0.85f) { screechActive = false; needsVBOUpdate = true; }
-                else if (screechTimer <= 0) { screechActive = false; needsVBOUpdate = true; playerHealth -= 40; flashRedFrames = 25; if (playerHealth <= 0) isDead = true; }
+                float fx = -sinf(camYaw); float fz = -cosf(camYaw);
+                float vx = screechX - camX; float vz = screechZ - camZ;
+                float dist = sqrt(vx*vx + vz*vz);
+                if (dist > 0.0f) { vx /= dist; vz /= dist; }
+                
+                float dotProduct = (fx * vx) + (fz * vz);
+                if (dotProduct > 0.85f) { 
+                    screechActive = false; 
+                    screechCooldown = 1800; // Reset safe timer
+                    needsVBOUpdate = true;
+                } else if (screechTimer <= 0) {
+                    screechActive = false; 
+                    screechCooldown = 1800; // Reset safe timer
+                    needsVBOUpdate = true;
+                    playerHealth -= 40; flashRedFrames = 25;
+                    if (playerHealth <= 0) isDead = true;
+                }
             }
-            if(!lobbyKeyPickedUp && (kDown & KEY_A) && camX < -3.0f && camZ < -8.0f && hideState == NOT_HIDING) {
+
+            // --- LOBBY KEY ---
+            if(!lobbyKeyPickedUp && rooms[0].isLocked && (kDown & KEY_A) && camX < -3.5f && camZ < -8.5f && hideState == NOT_HIDING) {
                 lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true;
                 sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
             }
+
+            // --- DRAWER INTERACTION ---
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
                 for(int s=0; s<3; s++) {
                     float zCenter = (-10.0f - (roomNumber * 10.0f)) - 3.5f - (s * 2.0f);
-                    if (abs(camZ - zCenter) < 1.0f) {
+                    if (abs(camZ - zCenter) < 1.5f) {
                         int type = rooms[roomNumber].slotType[s];
                         if ((type == 5 || type == 6) && !rooms[roomNumber].drawerOpen[s]) {
                             if ((type == 5 && camX < -1.0f) || (type == 6 && camX > 1.0f)) {
-                                rooms[roomNumber].drawerOpen[s] = true; needsVBOUpdate = true;
-                                if (rooms[roomNumber].keySlot == s) { hasKey = true; sprintf(uiMessage, "Found a Golden Key!"); messageTimer = 90; }
-                                else { sprintf(uiMessage, "Empty..."); messageTimer = 60; }
+                                rooms[roomNumber].drawerOpen[s] = true;
+                                needsVBOUpdate = true;
+                                if (rooms[roomNumber].keySlot == s) {
+                                    hasKey = true;
+                                    sprintf(uiMessage, "Found a Golden Key!"); messageTimer = 90;
+                                } else {
+                                    sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
+                                }
                             }
                         }
                     }
                 }
             }
-            int nextR = roomNumber + 1;
-            float doorZ = -10.0f - (nextR * 10.0f);
-            if (hasKey && rooms[nextR].isLocked && (kDown & KEY_A) && abs(camZ - doorZ) < 2.0f && abs(camX) < 1.5f) {
-                rooms[nextR].isLocked = false; hasKey = false; needsVBOUpdate = true; sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
+
+            // --- UNLOCKING THE ROOM YOU ARE IN ---
+            // If the room you are standing in is locked, unlock its exit door!
+            float lockDoorZ = -10.0f - (roomNumber * 10.0f);
+            if (hasKey && rooms[roomNumber].isLocked && (kDown & KEY_A) && abs(camZ - lockDoorZ) < 2.0f && abs(camX) < 1.5f) {
+                rooms[roomNumber].isLocked = false;
+                hasKey = false;
+                needsVBOUpdate = true;
+                sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
             }
+
+            // --- DUPE ROOM DOOR LOGIC ---
             int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
             if (interactRoom != -1 && !doorOpen[interactRoom] && (kDown & KEY_A)) {
                 float wallZ = -10.0f - (interactRoom * 10.0f);
                 if (abs(camZ - wallZ) < 1.8f) {
-                    bool leftT = (camX < -1.4f); bool centerT = (camX >= -1.4f && camX <= 0.6f); bool rightT = (camX > 0.6f);
+                    bool leftT = (camX < -1.4f);
+                    bool centerT = (camX >= -1.4f && camX <= 0.6f);
+                    bool rightT = (camX > 0.6f);
                     int correctPos = rooms[interactRoom].correctDupePos;
-                    if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) { doorOpen[interactRoom] = true; needsVBOUpdate = true; }
-                    else if (leftT || centerT || rightT) { playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; if (playerHealth <= 0) isDead = true; }
+
+                    if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
+                        doorOpen[interactRoom] = true; needsVBOUpdate = true;
+                    } else if (leftT || centerT || rightT) {
+                        playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
+                        if (playerHealth <= 0) isDead = true; 
+                    }
                 }
             }
-            if ((kDown & KEY_B) && hideState == NOT_HIDING) { if (isCrouching) { if (!checkCollision(camX, 0.0f, camZ, 1.1f)) isCrouching = false; } else isCrouching = true; }
-            int newChunk = 0; if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
+
+            if ((kDown & KEY_B) && hideState == NOT_HIDING) {
+                if (isCrouching) {
+                    if (!checkCollision(camX, 0.0f, camZ, 1.1f)) isCrouching = false;
+                } else isCrouching = true;
+            }
+
+            int newChunk = 0;
+            if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
             if (newChunk != currentChunk) { currentChunk = newChunk; needsVBOUpdate = true; }
-            int startRoom = currentChunk - 1, endRoom = currentChunk + 2;
-            if (startRoom < 0) startRoom = 0; if (endRoom > 99) endRoom = 99;
+
+            int startRoom = currentChunk - 1;
+            int endRoom = currentChunk + 2;
+            if (startRoom < 0) startRoom = 0;
+            if (endRoom > 99) endRoom = 99;
+
             for(int i = startRoom; i <= endRoom; i++) {
                 if (rooms[i].isDupeRoom) continue; 
-                float wallZ = -10.0f - (i * 10.0f); float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                float wallZ = -10.0f - (i * 10.0f);
+                float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
-                if (rooms[i].isLocked) shouldBeOpen = false; if (doorOpen[i] != shouldBeOpen) { doorOpen[i] = shouldBeOpen; needsVBOUpdate = true; }
+                if (rooms[i].isLocked) shouldBeOpen = false; // Never auto-open a locked door!
+                
+                if (doorOpen[i] != shouldBeOpen) {
+                    doorOpen[i] = shouldBeOpen; needsVBOUpdate = true;
+                }
             }
+
             if (kDown & KEY_X) {
                 if (hideState == NOT_HIDING) {
+                    float reach = 0.5f; 
                     for(auto& b : collisions) {
-                        if ((b.type == 1 || b.type == 2) && camX + 0.5f > b.minX && camX - 0.5f < b.maxX && camZ + 0.5f > b.minZ && camZ - 0.5f < b.maxZ) {
-                            if (b.type == 1) { hideState = IN_CABINET; camZ = (b.minZ + b.maxZ) / 2.0f; camX = (b.minX < 0) ? -1.65f : 1.65f; camYaw = (b.minX < 0) ? -1.57f : 1.57f; }
-                            else { hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; camX = (b.minX < 0) ? -2.2f : 2.2f; camYaw = (b.minX < 0) ? -1.57f : 1.57f; }
-                            isCrouching = false; break; 
+                        if (b.type == 1 || b.type == 2) { 
+                            if (camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
+                                if (b.type == 1) { 
+                                    hideState = IN_CABINET; camZ = (b.minZ + b.maxZ) / 2.0f;
+                                    if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } else { camX = 1.65f; camYaw = 1.57f; } 
+                                } else { 
+                                    hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; 
+                                    if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } else { camX = 2.2f; camYaw = 1.57f; } 
+                                }
+                                isCrouching = false; break; 
+                            }
                         }
                     }
-                } else { hideState = NOT_HIDING; camX = 0.0f; camYaw = 0.0f; }
+                } else {
+                    hideState = NOT_HIDING; camX = 0.0f; camYaw = 0.0f; 
+                }
             }
-            if (needsVBOUpdate) { buildWorld(currentChunk); memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex)); GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex)); }
-            circlePosition cStick, cPad; irrstCstickRead(&cStick); hidCircleRead(&cPad);
+
+            if (needsVBOUpdate) {
+                buildWorld(currentChunk);
+                memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
+                GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+            }
+
+            float curH = -0.9f; float playerH = 1.1f; 
+            if (isCrouching) { curH = -0.4f; playerH = 0.5f; }
+            if (hideState == IN_CABINET) curH = -0.7f;
+            else if (hideState == UNDER_BED) curH = -0.15f; 
+
+            circlePosition cStick, cPad;
+            irrstCstickRead(&cStick); hidCircleRead(&cPad);
+            
             if (hideState == NOT_HIDING) {
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.25f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.25f;
-                if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
+                if (camPitch > 1.57f) camPitch = 1.57f; 
+                if (camPitch < -1.57f) camPitch = -1.57f;
+                
                 if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                    float s = isCrouching ? 0.12f : 0.22f; float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
+                    float s = isCrouching ? 0.12f : 0.22f; 
+                    float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                     float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
-                    if(!checkCollision(nextX, 0.0f, camZ, 1.1f)) camX = nextX;
-                    if(!checkCollision(camX, 0.0f, nextZ, 1.1f)) camZ = nextZ;
+                    
+                    if(!checkCollision(nextX, 0.0f, camZ, playerH)) camX = nextX;
+                    if(!checkCollision(camX, 0.0f, nextZ, playerH)) camZ = nextZ;
                 }
             }
         }
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
-        if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); flashRedFrames--; }
-        else if (!isDead) { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); }
-        C3D_Mtx proj, view; Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
-        Mtx_Identity(&view); Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
+
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
+        C3D_FrameDrawOn(target);
+
+        if (flashRedFrames > 0 && !isDead) {
+            C3D_TexEnvColor(env, 0xFF0000FF); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
+            flashRedFrames--;
+        } else if (!isDead) {
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+        }
+
+        C3D_Mtx proj, view;
+        Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
+        Mtx_Identity(&view);
+        Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
         Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
-        Mtx_Multiply(&view, &proj, &view); C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size()); C3D_FrameEnd(0);
+        Mtx_Multiply(&view, &proj, &view);
+        
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
+        C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
+        
+        C3D_FrameEnd(0);
     }
-    linearFree(vbo_ptr); C3D_Fini(); gfxExit(); return 0;
+    
+    // --- AUDIO SYSTEM CLEANUP ---
+    ndspExit();
+    linearFree(audioBuffer);
+
+    linearFree(vbo_ptr); C3D_Fini(); gfxExit();
+    return 0;
 }
