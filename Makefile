@@ -19,8 +19,10 @@ $(TARGET).smdh: icon.png
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
+# --- PATCHED 3DSTOOL COMMAND ---
 romfs.bin: $(ROMFS_DIR)
-	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
+	@echo "" > dummy_ignore.txt
+	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR) --ignore-files dummy_ignore.txt
 
 banner.bin: banner.png audio.wav
 	bannertool makebanner -i banner.png -a audio.wav -o $@
@@ -33,7 +35,7 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xF800" >> app.rsf
+	@echo "  UniqueId                : 0xF805" >> app.rsf  # <-- CHANGED TO BUST CACHE
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
@@ -95,4 +97,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf stripped_for_cia.elf
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf stripped_for_cia.elf dummy_ignore.txt
