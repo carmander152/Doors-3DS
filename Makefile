@@ -5,22 +5,19 @@ endif
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := hotel_doors
-# Added the RomFS folder name
-ROMFS  := romfs
-OBJS   := vshader.shbin.o main.o
-LIBS   := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
+OBJS := vshader.shbin.o main.o
+LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
+
+# 1. Define your RomFS directory here
+ROMFS_DIR := romfs
 
 .PHONY: all clean
 
 all: $(TARGET).3dsx
 
-# We generate a temporary SMDH file so the build doesn't fail when packing RomFS
-$(TARGET).smdh:
-	smdhtool --create "Hotel Doors" "3DS Doors Fan Game" "AI Peer" $@
-
-# This line now packs your romfs and uses the smdh we generated
-$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
-	3dsxtool $< $@ --romfs=$(ROMFS) --smdh=$(TARGET).smdh
+# 2. Add the --romfs flag to pack the directory into the final .3dsx file
+$(TARGET).3dsx: $(TARGET).elf
+	3dsxtool $< $@ --romfs=$(ROMFS_DIR)
 
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
@@ -36,7 +33,6 @@ vshader.shbin.o: vshader.v.pica
 vshader_shbin.h: vshader.shbin
 	echo "extern const u8 vshader_shbin[];" > $@
 	echo "extern const u32 vshader_shbin_size;" >> $@
-	echo "" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h
+	rm -f $(TARGET).3dsx $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h
