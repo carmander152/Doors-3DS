@@ -38,33 +38,40 @@ app.rsf:
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
+	@echo "  IdealProcessor          : 0" >> app.rsf
+	@echo "  AffinityMask            : 1" >> app.rsf
+	@echo "  Priority                : 16" >> app.rsf
+	@echo "  MaxCpu                  : 0x9E" >> app.rsf
 	@echo "  CoreVersion             : 2" >> app.rsf
-	@echo "  Priority                : 48" >> app.rsf
+	@echo "  DescVersion             : 2" >> app.rsf
+	@echo "  MemoryType              : Application" >> app.rsf
 	@echo "  HandleTableSize         : 512" >> app.rsf
+	@echo "  SystemModeExt           : 124MB" >> app.rsf
 	@echo "  ServiceAccessControl:" >> app.rsf
 	@echo "    - apt:U" >> app.rsf
 	@echo "    - gsp::Gpu" >> app.rsf
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
+	@echo "    - irrst:u" >> app.rsf
+	@echo "    - cfg:u" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    0x01: ControlMemory" >> app.rsf
-	@echo "    0x02: QueryMemory" >> app.rsf
-	@echo "    0x03: ExitProcess" >> app.rsf
-	@echo "    0x11: CloseHandle" >> app.rsf
-	@echo "    0x12: WaitSynchronization1" >> app.rsf
-	@echo "    0x13: WaitSynchronizationN" >> app.rsf
-	@echo "    0x17: GetSystemInfo" >> app.rsf
-	@echo "    0x1A: ConnectToPort" >> app.rsf
-	@echo "    0x1F: SendSyncRequest" >> app.rsf
-	@echo "    0x30: CreateThread" >> app.rsf
-	@echo "    0x31: ExitThread" >> app.rsf
-	@echo "    0x32: SleepThread" >> app.rsf
+	@echo "    ControlMemory: 1" >> app.rsf
+	@echo "    QueryMemory: 2" >> app.rsf
+	@echo "    ExitProcess: 3" >> app.rsf
+	@echo "    CreateThread: 8" >> app.rsf
+	@echo "    ExitThread: 9" >> app.rsf
+	@echo "    SleepThread: 10" >> app.rsf
+	@echo "    CloseHandle: 35" >> app.rsf
+	@echo "    WaitSynchronization1: 36" >> app.rsf
+	@echo "    WaitSynchronizationN: 37" >> app.rsf
+	@echo "    GetSystemInfo: 42" >> app.rsf
+	@echo "    ConnectToPort: 45" >> app.rsf
+	@echo "    SendSyncRequest: 50" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
 
-# Here is the magic: Strip the ELF first, then feed it to makerom
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	arm-none-eabi-strip --strip-debug $< -o stripped_for_cia.elf
 	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
