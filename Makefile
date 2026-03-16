@@ -47,6 +47,8 @@ app.rsf:
 	@echo "  MemoryType              : Application" >> app.rsf
 	@echo "  HandleTableSize         : 512" >> app.rsf
 	@echo "  SystemModeExt           : 124MB" >> app.rsf
+	@echo "  IORegisterMapping:" >> app.rsf
+	@echo "    - 1ff00000-1ff7ffff" >> app.rsf
 	@echo "  ServiceAccessControl:" >> app.rsf
 	@echo "    - apt:U" >> app.rsf
 	@echo "    - gsp::Gpu" >> app.rsf
@@ -56,18 +58,18 @@ app.rsf:
 	@echo "    - irrst:u" >> app.rsf
 	@echo "    - cfg:u" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    - ControlMemory" >> app.rsf
-	@echo "    - QueryMemory" >> app.rsf
-	@echo "    - ExitProcess" >> app.rsf
-	@echo "    - CreateThread" >> app.rsf
-	@echo "    - ExitThread" >> app.rsf
-	@echo "    - SleepThread" >> app.rsf
-	@echo "    - CloseHandle" >> app.rsf
-	@echo "    - WaitSynchronization1" >> app.rsf
-	@echo "    - WaitSynchronizationN" >> app.rsf
-	@echo "    - GetSystemInfo" >> app.rsf
-	@echo "    - ConnectToPort" >> app.rsf
-	@echo "    - SendSyncRequest" >> app.rsf
+	@echo "    ControlMemory: 1" >> app.rsf
+	@echo "    QueryMemory: 2" >> app.rsf
+	@echo "    ExitProcess: 3" >> app.rsf
+	@echo "    CreateThread: 8" >> app.rsf
+	@echo "    ExitThread: 9" >> app.rsf
+	@echo "    SleepThread: 10" >> app.rsf
+	@echo "    CloseHandle: 35" >> app.rsf
+	@echo "    WaitSynchronization1: 36" >> app.rsf
+	@echo "    WaitSynchronizationN: 37" >> app.rsf
+	@echo "    GetSystemInfo: 42" >> app.rsf
+	@echo "    ConnectToPort: 45" >> app.rsf
+	@echo "    SendSyncRequest: 50" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
