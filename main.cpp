@@ -312,7 +312,6 @@ void generateRooms() {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
         
-        // --- EVEN LESS FREQUENT DARK ROOMS (8% Chance) ---
         if (i > 0 && rand() % 100 < 8) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
         
@@ -514,9 +513,8 @@ int main() {
         if (screechCooldown > 0) screechCooldown--;
         if (rushCooldown > 0) rushCooldown--; 
 
-        printf("\x1b[1;1H"); 
-        for(int i=0; i<15; i++) printf("                                        \n");
-        printf("\x1b[1;1H");
+        // --- HARDWARE-SAFE UI DRAWING ---
+        printf("\x1b[1;1H"); // Jump to top-left (DO NOT clear the whole screen first!)
 
         printf("==============================\n");
         if (isDead) {
@@ -525,6 +523,7 @@ int main() {
             printf("                              \n");
             printf("                              \n\n\n");
             printf("    [PRESS START TO RESTART]  \n");
+            for(int i=0; i<8; i++) printf("                              \n"); // Tail padding
         } else {
             if (screechActive) {
                 printf("  >> SCREECH ATTACK!! <<      \n");
@@ -532,6 +531,7 @@ int main() {
                 printf("     (PSST!)                  \n");
                 printf("    LOOK AROUND QUICKLY!      \n");
                 printf("                              \n");
+                for(int i=0; i<8; i++) printf("                              \n"); // Tail padding
             } else {
                 printf("       PLAYER STATUS          \n");
                 printf("==============================\n\n");
@@ -554,35 +554,36 @@ int main() {
                     printf(" Current Room : %03d         \n", playerCurrentRoom + 1);
                     printf(" Next Door    : %03d         \n\n", playerCurrentRoom + 2);
                 }
-            }
 
-            int nextDoorIndex = playerCurrentRoom + 1;
-            if (nextDoorIndex >= 0 && nextDoorIndex < 100 && !screechActive) {
-                float nextDoorZ = -10.0f - (nextDoorIndex * 10.0f);
-                if (abs(camZ - nextDoorZ) < 4.0f) {
-                    if (isGlitching && targetDupeRoom == nextDoorIndex) {
-                        if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[0]);
-                        else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[1]);
-                        else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[2]);
-                        else printf("                           \n\n");
+                int nextDoorIndex = playerCurrentRoom + 1;
+                if (nextDoorIndex >= 0 && nextDoorIndex < 100 && !screechActive) {
+                    float nextDoorZ = -10.0f - (nextDoorIndex * 10.0f);
+                    if (abs(camZ - nextDoorZ) < 4.0f) {
+                        if (isGlitching && targetDupeRoom == nextDoorIndex) {
+                            if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[0]);
+                            else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[1]);
+                            else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[2]);
+                            else printf("                           \n\n");
+                        } else {
+                            printf(" >> PLAQUE READS: %03d <<  \n\n", nextDoorIndex + 1);
+                        }
                     } else {
-                        printf(" >> PLAQUE READS: %03d <<  \n\n", nextDoorIndex + 1);
+                        printf("                           \n\n");
                     }
-                } else {
+                } else if (!screechActive) {
                     printf("                           \n\n");
                 }
-            } else if (!screechActive) {
-                printf("                           \n\n");
-            }
 
-            if (!screechActive) {
                 printf(" Health       : %d / 100   \n", playerHealth);
                 printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
+                
+                if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
+                else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
+                else printf("\n                                    \n");
+
+                // Tail padding to erase old messages/screech UI without screen tearing
+                for(int i=0; i<4; i++) printf("                                    \n");
             }
-            
-            if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
-            else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
-            else printf("\n                           \n");
         }
 
         if (!isDead) {
@@ -793,7 +794,6 @@ int main() {
             if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
             
             if (newChunk != currentChunk || needsVBOUpdate) { 
-                // --- LESS FREQUENT RUSH (12% Chance) ---
                 if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && rand() % 100 < 12) {
                     rushActive = true;
                     rushState = 1; 
