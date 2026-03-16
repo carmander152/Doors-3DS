@@ -23,7 +23,7 @@ romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
-	bannertool makebanner -i banner.png -a audio.wav -o $@
+	bannertool makebanner -i banner.png -a audio.wav -o banner.bin
 
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
@@ -33,14 +33,33 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0x0F800" >> app.rsf
+	@echo "  UniqueId                : 0xF800" >> app.rsf
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
-	@echo "  Priority                : 48" >> app.rsf
 	@echo "  CoreVersion             : 2" >> app.rsf
+	@echo "  Priority                : 48" >> app.rsf
 	@echo "  HandleTableSize         : 512" >> app.rsf
+	@echo "  ServiceAccessControl:" >> app.rsf
+	@echo "    - apt:U" >> app.rsf
+	@echo "    - gsp::Gpu" >> app.rsf
+	@echo "    - hid:USER" >> app.rsf
+	@echo "    - dsp::DSP" >> app.rsf
+	@echo "    - fs:USER" >> app.rsf
+	@echo "  SystemCallAccess:" >> app.rsf
+	@echo "    0x01: ControlMemory" >> app.rsf
+	@echo "    0x02: QueryMemory" >> app.rsf
+	@echo "    0x03: ExitProcess" >> app.rsf
+	@echo "    0x11: CloseHandle" >> app.rsf
+	@echo "    0x12: WaitSynchronization1" >> app.rsf
+	@echo "    0x13: WaitSynchronizationN" >> app.rsf
+	@echo "    0x17: GetSystemInfo" >> app.rsf
+	@echo "    0x1A: ConnectToPort" >> app.rsf
+	@echo "    0x1F: SendSyncRequest" >> app.rsf
+	@echo "    0x30: CreateThread" >> app.rsf
+	@echo "    0x31: ExitThread" >> app.rsf
+	@echo "    0x32: SleepThread" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  RemasterVersion         : 0" >> app.rsf
