@@ -30,8 +30,8 @@ struct RoomSetup {
 
     int doorPos;     
     int pCount;      
-    float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10];
-    int pSide[10];    
+    float pZ[10], pX[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10];
+    int pSide[10];   // 0=Left, 1=Right, 2=Front, 3=Back
     
     bool isDupeRoom;
     int correctDupePos; 
@@ -47,7 +47,7 @@ bool doorOpen[100] = {false};
 bool isCrouching = false;
 bool isDead = false; 
 bool persistentGlitch = false; 
-HideState hideState = NOT_HIDING; // NOW GLOBAL FOR THE VOID CHECK!
+HideState hideState = NOT_HIDING; 
 
 // UI Message Variables
 int messageTimer = 0;
@@ -104,7 +104,6 @@ void buildCabinet(float zCenter, bool isLeft) {
     addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
     addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
 
-    // ONLY RENDER THE PITCH BLACK VOID IF WE ARE NOT HIDING INSIDE IT!
     if (hideState != IN_CABINET) {
         float voidX = isLeft ? -2.8f : 2.2f;
         addBox(voidX, 0.01f, zCenter - 0.4f, 0.6f, 1.48f, 0.8f, 0.0f, 0.0f, 0.0f, false);
@@ -135,32 +134,32 @@ void buildBed(float zCenter, bool isLeft, int itemType) {
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
-// --- PROTRUDING DRESSERS WITH VISIBLE LOOT TRAY ---
+// --- FIXED DRESSERS (Flush to walls, half-height, fixed handles) ---
 void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType) {
-    float frameX = isLeft ? -2.6f : 2.1f; 
+    float frameX = isLeft ? -2.9f : 2.4f; 
+    float drawerX = isLeft ? -2.9f : 2.4f; 
     
-    // The Drawer is now slightly wider so it always protrudes perfectly past the frame!
-    float drawerX = isLeft ? -2.55f : 2.05f; 
-    float handleX = isLeft ? -2.15f : 2.05f; 
     float openOffset = isOpen ? (isLeft ? 0.35f : -0.35f) : 0.0f;
+    float closedOffset = isLeft ? 0.05f : -0.05f; 
+    float currentOffset = closedOffset + openOffset;
 
-    // Solid Dresser Frame (Width 0.5)
-    addBox(frameX, 0.0f, zCenter - 0.4f, 0.5f, 0.8f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3); 
+    // Solid Dresser Frame (Height is now exactly 0.4f!)
+    addBox(frameX, 0.0f, zCenter - 0.4f, 0.5f, 0.4f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3); 
     
-    // The Drawer (Width 0.5, sitting slightly offset so it sticks out!)
-    // Height is reduced to 0.15f to act like a tray for items.
-    addBox(drawerX + openOffset, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false);
+    // The Drawer Tray
+    addBox(drawerX + currentOffset, 0.1f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false);
     
-    // The Drawer Handle
-    addBox(handleX + openOffset, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+    // The Drawer Handle (Fixed math so it always shows!)
+    float handleX = isLeft ? (drawerX + currentOffset + 0.5f) : (drawerX + currentOffset - 0.05f);
+    addBox(handleX, 0.15f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
 
-    // Items rest clearly ON TOP of the drawer box (Y = 0.46f)
+    // Items
     if (isOpen) {
-        float itemX = isLeft ? -2.4f : 2.25f; 
-        if (itemType == 1) { // Key
-            addBox(itemX + openOffset, 0.46f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
-        } else if (itemType == 2) { // Bandaid
-            addBox(itemX + openOffset, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
+        float itemX = isLeft ? -2.5f : 2.5f; 
+        if (itemType == 1) { 
+            addBox(itemX + openOffset, 0.26f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
+        } else if (itemType == 2) { 
+            addBox(itemX + openOffset, 0.26f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
         }
     }
 }
@@ -222,11 +221,14 @@ void buildWorld(int currentChunk) {
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
-        // LOBBY PAINTINGS!
         addBox(-4.0f, 0.8f, 4.9f, 1.0f, 0.6f, 0.1f, 0.7f, 0.2f, 0.2f, false);
         addBox(3.0f, 0.7f, 4.9f, 1.2f, 0.8f, 0.1f, 0.2f, 0.5f, 0.8f, false);
-        addBox(-5.9f, 0.7f, -2.0f, 0.1f, 0.8f, 1.0f, 0.8f, 0.7f, 0.2f, false);
-        addBox(5.8f, 0.6f, -4.0f, 0.1f, 0.7f, 1.2f, 0.2f, 0.8f, 0.4f, false);
+        
+        // LOBBY ELEVATORS ARE BACK!
+        addBox(-6.0f, 0.0f, -2.5f, 0.1f, 1.4f, 1.2f, 0.5f, 0.5f, 0.5f, false);
+        addBox(-6.0f, 0.0f, -3.7f, 0.1f, 1.4f, 1.2f, 0.5f, 0.5f, 0.5f, false);
+        addBox(5.9f, 0.0f, -2.5f, 0.1f, 1.4f, 1.2f, 0.5f, 0.5f, 0.5f, false);
+        addBox(5.9f, 0.0f, -3.7f, 0.1f, 1.4f, 1.2f, 0.5f, 0.5f, 0.5f, false);
 
         if(!lobbyKeyPickedUp) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
@@ -270,18 +272,26 @@ void buildWorld(int currentChunk) {
             else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
         }
 
+        // --- NEW PAINTING RENDERER (ALL 4 WALLS) ---
         for(int p=0; p<rooms[i].pCount; p++) {
             float pZ = z - rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
             float pW = rooms[i].pW[p];
             float pY = rooms[i].pY[p];
+            float pX = rooms[i].pX[p];
 
-            if (rooms[i].pSide[p] == 0) { 
+            if (rooms[i].pSide[p] == 0) { // Left Wall
                 addBox(-2.9f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); 
                 addBox(-2.87f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
-            } else { 
+            } else if (rooms[i].pSide[p] == 1) { // Right Wall
                 addBox(2.86f, pY - 0.05f, pZ + 0.05f, 0.04f, pH + 0.1f, -(pW + 0.1f), 0.1f, 0.05f, 0.02f, false); 
                 addBox(2.85f, pY, pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+            } else if (rooms[i].pSide[p] == 2) { // Front Wall (Near the next door!)
+                addBox(pX - 0.05f, pY - 0.05f, z + 0.1f, pW + 0.1f, pH + 0.1f, -0.04f, 0.1f, 0.05f, 0.02f, false);
+                addBox(pX, pY, z + 0.07f, pW, pH, -0.02f, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false);
+            } else if (rooms[i].pSide[p] == 3) { // Back Wall (Near the door you just walked through!)
+                addBox(pX - 0.05f, pY - 0.05f, z + 9.9f, pW + 0.1f, pH + 0.1f, 0.04f, 0.1f, 0.05f, 0.02f, false);
+                addBox(pX, pY, z + 9.93f, pW, pH, 0.02f, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false);
             }
         }
     }
@@ -327,27 +337,48 @@ void generateRooms() {
             else rooms[i].slotType[s] = 0;             
         }
 
-        // IMPROVED PAINTINGS: Increased count and strict non-overlap checks!
-        rooms[i].pCount = rand() % 5 + 3; // 3 to 7 paintings
+        // --- NEW PAINTING MATH (4 WALLS + COLLISION) ---
+        rooms[i].pCount = rand() % 5 + 3; 
         for(int p=0; p<rooms[i].pCount; p++) {
             bool overlap;
             int tries = 0;
             do {
                 overlap = false;
+                rooms[i].pSide[p] = rand() % 4; 
                 rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; 
+                rooms[i].pX[p] = -2.5f + (rand() % 50) / 10.0f; 
                 rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; 
                 rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
                 rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
-                rooms[i].pSide[p] = rand() % 2; 
                 
-                for(int op=0; op<p; op++) {
-                    if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
-                        float zDist = abs(rooms[i].pZ[p] - rooms[i].pZ[op]);
-                        float yDist = abs(rooms[i].pY[p] - rooms[i].pY[op]);
-                        // If they are too close to each other, set overlap to true and try again
-                        if (zDist < (rooms[i].pW[p] + rooms[i].pW[op]) * 0.6f && 
-                            yDist < (rooms[i].pH[p] + rooms[i].pH[op]) * 0.6f) {
-                            overlap = true; break;
+                // Door intersection logic for front/back walls
+                if (rooms[i].pSide[p] == 2) {
+                    float doorCenter = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                    if (abs(rooms[i].pX[p] - doorCenter) < 1.2f) overlap = true;
+                } else if (rooms[i].pSide[p] == 3) {
+                    int prevDoorPos = (i > 0) ? rooms[i-1].doorPos : 1;
+                    float doorCenter = (prevDoorPos == 0) ? -2.0f : ((prevDoorPos == 1) ? 0.0f : 2.0f);
+                    if (abs(rooms[i].pX[p] - doorCenter) < 1.2f) overlap = true;
+                }
+
+                if (!overlap) {
+                    for(int op=0; op<p; op++) {
+                        if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
+                            if (rooms[i].pSide[p] < 2) { // Sides
+                                float zDist = abs(rooms[i].pZ[p] - rooms[i].pZ[op]);
+                                float yDist = abs(rooms[i].pY[p] - rooms[i].pY[op]);
+                                if (zDist < (rooms[i].pW[p] + rooms[i].pW[op]) * 0.6f && 
+                                    yDist < (rooms[i].pH[p] + rooms[i].pH[op]) * 0.6f) {
+                                    overlap = true; break;
+                                }
+                            } else { // Front/Back
+                                float xDist = abs(rooms[i].pX[p] - rooms[i].pX[op]);
+                                float yDist = abs(rooms[i].pY[p] - rooms[i].pY[op]);
+                                if (xDist < (rooms[i].pW[p] + rooms[i].pW[op]) * 0.6f && 
+                                    yDist < (rooms[i].pH[p] + rooms[i].pH[op]) * 0.6f) {
+                                    overlap = true; break;
+                                }
+                            }
                         }
                     }
                 }
@@ -659,17 +690,19 @@ int main() {
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                // UNIVERSAL DOOR UNLOCK SYSTEM!
+                // --- FIXED UNIVERSAL KEY LOGIC ---
                 if (hasKey) {
                     for(int i=0; i<100; i++) {
                         if (rooms[i].isLocked) {
                             float doorZ = -10.0f - (i * 10.0f);
-                            if (abs(camZ - doorZ) < 2.5f && abs(camX) < 1.5f) {
+                            float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                            
+                            if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
                                 rooms[i].isLocked = false;
                                 hasKey = false;
                                 needsVBOUpdate = true;
                                 sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
-                                break; // Only unlock one door at a time!
+                                break; 
                             }
                         }
                     }
