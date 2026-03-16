@@ -27,6 +27,7 @@ struct RoomSetup {
     bool drawerOpen[3]; 
     int slotItem[3]; 
     bool isLocked;      
+    float lightLevel; // NEW: Controls the brightness of the entire room!
 
     int doorPos;     
     int pCount;      
@@ -59,7 +60,11 @@ int screechCooldown = 0;
 float screechX = 0.0f;
 float screechZ = 0.0f;
 
-void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0) {
+// NEW: addBox now accepts a light multiplier!
+void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0, float light = 1.0f) {
+    r *= light; g *= light; b *= light; // Apply room lighting!
+    if (r > 1.0f) r = 1.0f; if (g > 1.0f) g = 1.0f; if (b > 1.0f) b = 1.0f;
+
     float x2 = x + w, y2 = y + h, z2 = z + d;
     vertex v[] = {
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
@@ -90,89 +95,89 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
-void buildCabinet(float zCenter, bool isLeft) {
+void buildCabinet(float zCenter, bool isLeft, float L = 1.0f) {
     float backX = isLeft ? -2.95f : 2.85f; 
     float topX = isLeft ? -2.95f : 2.15f;  
     float frontX = isLeft ? -2.25f : 2.15f; 
     
-    addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
-    addBox(topX, 1.5f, zCenter - 0.5f, 0.8f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
-    addBox(topX, 0, zCenter - 0.5f, 0.8f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
-    addBox(topX, 0, zCenter + 0.4f, 0.8f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
-    addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
-    addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
+    addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false, 0, L); 
+    addBox(topX, 1.5f, zCenter - 0.5f, 0.8f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false, 0, L); 
+    addBox(topX, 0, zCenter - 0.5f, 0.8f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false, 0, L); 
+    addBox(topX, 0, zCenter + 0.4f, 0.8f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false, 0, L); 
+    addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false, 0, L); 
+    addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false, 0, L); 
 
     if (hideState != IN_CABINET) {
         float voidX = isLeft ? -2.85f : 2.25f;
-        addBox(voidX, 0.01f, zCenter - 0.4f, 0.6f, 1.48f, 0.8f, 0.0f, 0.0f, 0.0f, false);
+        addBox(voidX, 0.01f, zCenter - 0.4f, 0.6f, 1.48f, 0.8f, 0.0f, 0.0f, 0.0f, false, 0, L);
     }
     
     collisions.push_back({isLeft ? -2.9f : 2.1f, 0.0f, zCenter - 0.5f, isLeft ? -2.1f : 2.9f, 1.5f, zCenter + 0.5f, 1});
 }
 
-void buildBed(float zCenter, bool isLeft, int itemType) {
+void buildBed(float zCenter, bool isLeft, int itemType, float L = 1.0f) {
     float x = isLeft ? -2.95f : 1.55f; 
     float skirtX = isLeft ? -1.65f : 1.55f; 
     float pillowX = isLeft ? -2.65f : 2.15f; 
     
-    addBox(x, 0.4f, zCenter + 1.25f, 1.4f, 0.1f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
-    addBox(x, 0.0f, zCenter + 1.25f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true); 
-    addBox(x + 1.3f, 0.0f, zCenter + 1.25f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
-    addBox(x, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
-    addBox(x + 1.3f, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
-    addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
-    addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false); 
+    addBox(x, 0.4f, zCenter + 1.25f, 1.4f, 0.1f, -2.5f, 0.4f, 0.1f, 0.1f, true, 0, L); 
+    addBox(x, 0.0f, zCenter + 1.25f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, L); 
+    addBox(x + 1.3f, 0.0f, zCenter + 1.25f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, L);
+    addBox(x, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, L);
+    addBox(x + 1.3f, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, L);
+    addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true, 0, L); 
+    addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false, 0, L); 
     
     if (itemType == 1) { 
         float itemX = isLeft ? -2.2f : 2.1f;
-        addBox(itemX, 0.52f, zCenter, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
+        addBox(itemX, 0.52f, zCenter, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false, 0, L);
     }
 
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
-void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType) {
+void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L = 1.0f) {
     float frameX = isLeft ? -2.95f : 2.45f;
     float openOffset = isOpen ? (isLeft ? 0.35f : -0.35f) : 0.0f;
     float trayX = isLeft ? (-2.9f + openOffset) : (2.4f + openOffset); 
     float handleX = isLeft ? (-2.4f + openOffset) : (2.35f + openOffset);
     float itemX = isLeft ? (-2.6f + openOffset) : (2.5f + openOffset);
 
-    addBox(frameX + 0.05f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
-    addBox(frameX + 0.05f, 0.0f, zCenter + 0.3f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
-    addBox(frameX + 0.4f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
-    addBox(frameX + 0.4f, 0.0f, zCenter + 0.3f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
+    addBox(frameX + 0.05f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false, 0, L);
+    addBox(frameX + 0.05f, 0.0f, zCenter + 0.3f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false, 0, L);
+    addBox(frameX + 0.4f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false, 0, L);
+    addBox(frameX + 0.4f, 0.0f, zCenter + 0.3f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false, 0, L);
 
-    addBox(frameX, 0.2f, zCenter - 0.4f, 0.5f, 0.3f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3);
-    addBox(trayX, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false);
-    addBox(handleX, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+    addBox(frameX, 0.2f, zCenter - 0.4f, 0.5f, 0.3f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3, L);
+    addBox(trayX, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false, 0, L);
+    addBox(handleX, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false, 0, L);
 
     if (isOpen) {
-        if (itemType == 1) addBox(itemX, 0.46f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
-        else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
+        if (itemType == 1) addBox(itemX, 0.46f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false, 0, L);
+        else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false, 0, L);
     }
 }
 
-void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bool centerOpen, bool rightDoor, bool rightOpen, int roomIndex) {
-    addBox(-3.0f, 0, z, 0.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    if(!leftDoor) addBox(-2.6f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    else addBox(-2.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false);
-    addBox(-1.4f, 0, z, 0.8f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    if(!centerDoor) addBox(-0.6f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    else addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false);
-    addBox(0.6f, 0, z, 0.8f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    if(!rightDoor) addBox(1.4f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
-    else addBox(1.4f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false);
-    addBox(2.6f, 0, z, 0.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true);
+void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bool centerOpen, bool rightDoor, bool rightOpen, int roomIndex, float L = 1.0f) {
+    addBox(-3.0f, 0, z, 0.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
+    if(!leftDoor) addBox(-2.6f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
+    else addBox(-2.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false, 0, L);
+    addBox(-1.4f, 0, z, 0.8f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
+    if(!centerDoor) addBox(-0.6f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
+    else addBox(-0.6f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false, 0, L);
+    addBox(0.6f, 0, z, 0.8f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
+    if(!rightDoor) addBox(1.4f, 0, z, 1.2f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
+    else addBox(1.4f, 1.4f, z, 1.2f, 0.4f, -0.2f, 0.2f, 0.15f, 0.1f, false, 0, L);
+    addBox(2.6f, 0, z, 0.4f, 1.8f, -0.2f, 0.2f, 0.15f, 0.1f, true, 0, L);
 
     auto drawDoor = [&](float dx, bool isOpen) {
         if (!isOpen) {
-            addBox(dx, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true); 
-            addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false); 
-            if(rooms[roomIndex].isLocked) addBox(dx+0.5f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false); 
+            addBox(dx, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
+            addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); 
+            if(rooms[roomIndex].isLocked) addBox(dx+0.5f, 0.7f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); 
         } else {
-            addBox(dx, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true); 
-            addBox(dx+0.1f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false); 
+            addBox(dx, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true, 0, L); 
+            addBox(dx+0.1f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false, 0, L); 
         }
     };
     if(leftDoor) drawDoor(-2.6f, leftOpen);
@@ -191,16 +196,15 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     }
     
     if (currentChunk < 2) {
-        // --- RESTORED SPACIOUS LOBBY AT Z=5.0f ---
+        // --- LOBBY ALWAYS GETS FULL LIGHT (1.0f) ---
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
         addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
         addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
         addBox(6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  
         addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
         addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  
-        addBox(-6.0f, 0, 5.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Back Wall
+        addBox(-6.0f, 0, 5.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
 
-        // Couches & Trolley
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
@@ -210,7 +214,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
-        // --- 2 ELEVATORS (Left and Right only!) ---
         addBox(-4.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
         addBox(-4.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
         addBox(-3.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
@@ -219,7 +222,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(2.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
         addBox(3.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
 
-        // --- FRONT DESK (Placed cleanly against back wall, WITH collision!) ---
         addBox(-1.0f, 0, 4.9f, 2.0f, 1.5f, -0.4f, 0.4f, 0.2f, 0.1f, true); 
         addBox(-0.9f, 0, 4.5f, 1.8f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
 
@@ -236,6 +238,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
+        float L = rooms[i].lightLevel; // Fetch this room's specific lighting!
         
         if (rooms[i].isDupeRoom) {
             if (playerCurrentRoom >= i) { 
@@ -243,53 +246,51 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 bool isL = (rooms[i].correctDupePos == 0);
                 bool isC = (rooms[i].correctDupePos == 1);
                 bool isR = (rooms[i].correctDupePos == 2);
-                addWallWithDoors(z, isL, (isL && doorIsOpen), isC, (isC && doorIsOpen), isR, (isR && doorIsOpen), i);
+                addWallWithDoors(z, isL, (isL && doorIsOpen), isC, (isC && doorIsOpen), isR, (isR && doorIsOpen), i, L);
             } else {
                 bool leftOpen = (rooms[i].correctDupePos == 0 && doorOpen[i]);
                 bool centerOpen = (rooms[i].correctDupePos == 1 && doorOpen[i]);
                 bool rightOpen = (rooms[i].correctDupePos == 2 && doorOpen[i]);
-                addWallWithDoors(z, true, leftOpen, true, centerOpen, true, rightOpen, i);
+                addWallWithDoors(z, true, leftOpen, true, centerOpen, true, rightOpen, i, L);
             }
         } else {
             bool isL = (rooms[i].doorPos == 0);
             bool isC = (rooms[i].doorPos == 1);
             bool isR = (rooms[i].doorPos == 2);
-            addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i);
+            addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, L);
         }
 
-        addBox(-3, 0, z, 6, 0.01f, -10, 0.2f, 0.1f, 0.05f, false); 
-        addBox(-3, 1.8f, z, 6, 0.01f, -10, 0.15f, 0.15f, 0.15f, false); 
-        addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
-        addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
+        addBox(-3, 0, z, 6, 0.01f, -10, 0.2f, 0.1f, 0.05f, false, 0, L); 
+        addBox(-3, 1.8f, z, 6, 0.01f, -10, 0.15f, 0.15f, 0.15f, false, 0, L); 
+        addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
+        addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
+        
+        // NEW: Ceiling Light Fixture! Note how it ignores 'L' so it stays bright white!
+        addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, 0.9f, 0.9f, 0.8f, false);
 
         for(int s=0; s<3; s++) {
             float zCenter = z - 2.5f - (s * 2.5f); 
             int type = rooms[i].slotType[s];
-            if (type == 1) buildCabinet(zCenter, true);
-            else if (type == 2) buildCabinet(zCenter, false);
-            else if (type == 3) buildBed(zCenter, true, rooms[i].slotItem[s]);
-            else if (type == 4) buildBed(zCenter, false, rooms[i].slotItem[s]);
-            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
-            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
+            if (type == 1) buildCabinet(zCenter, true, L);
+            else if (type == 2) buildCabinet(zCenter, false, L);
+            else if (type == 3) buildBed(zCenter, true, rooms[i].slotItem[s], L);
+            else if (type == 4) buildBed(zCenter, false, rooms[i].slotItem[s], L);
+            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
+            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
         }
 
-        // --- FLAWLESS WALL PAINTINGS (With Frames!) ---
         for(int p=0; p<rooms[i].pCount; p++) {
             float pZ = rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
             float pW = rooms[i].pW[p];
             float pY = rooms[i].pY[p];
 
-            if (rooms[i].pSide[p] == 0) { // Left Wall
-                // Frame Backing
-                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
-                // Canvas (Sticks out 0.01 further to avoid z-fighting, inset 0.05 from frame edges)
-                addBox(-2.94f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
-            } else if (rooms[i].pSide[p] == 1) { // Right Wall
-                // Frame Backing
-                addBox(2.90f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
-                // Canvas 
-                addBox(2.89f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+            if (rooms[i].pSide[p] == 0) {
+                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                addBox(-2.94f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false, 0, L); 
+            } else if (rooms[i].pSide[p] == 1) {
+                addBox(2.90f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                addBox(2.89f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false, 0, L); 
             }
         }
     }
@@ -299,6 +300,7 @@ void generateRooms() {
     for(int i=0; i<100; i++) {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
+        rooms[i].lightLevel = 1.0f; // NEW: Set lighting to default 100% on start!
         
         for(int s=0; s<3; s++) {
             rooms[i].drawerOpen[s] = false;
@@ -496,7 +498,6 @@ int main() {
         if (messageTimer > 0) messageTimer--;
         if (screechCooldown > 0) screechCooldown--;
 
-        // --- BRUTE FORCE CONSOLE WIPE TO PREVENT GHOST TEXT ---
         printf("\x1b[1;1H"); 
         for(int i=0; i<15; i++) printf("                                        \n");
         printf("\x1b[1;1H");
@@ -596,6 +597,7 @@ int main() {
                     screechCooldown = 1800; 
                     needsVBOUpdate = true;
                     playerHealth -= 20; flashRedFrames = 25; 
+                    sprintf(uiMessage, "Screech bit you! (-20 HP)"); messageTimer = 90; // NEW BITE MESSAGE!
                     if (playerHealth <= 0) isDead = true;
                 }
             }
