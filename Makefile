@@ -56,18 +56,18 @@ app.rsf:
 	@echo "    - irrst:u" >> app.rsf
 	@echo "    - cfg:u" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    ControlMemory: 1" >> app.rsf
-	@echo "    QueryMemory: 2" >> app.rsf
-	@echo "    ExitProcess: 3" >> app.rsf
-	@echo "    CreateThread: 8" >> app.rsf
-	@echo "    ExitThread: 9" >> app.rsf
-	@echo "    SleepThread: 10" >> app.rsf
-	@echo "    CloseHandle: 17" >> app.rsf
-	@echo "    WaitSynchronization1: 18" >> app.rsf
-	@echo "    WaitSynchronizationN: 19" >> app.rsf
-	@echo "    GetSystemInfo: 23" >> app.rsf
-	@echo "    ConnectToPort: 26" >> app.rsf
-	@echo "    SendSyncRequest: 31" >> app.rsf
+	@echo "    - ControlMemory" >> app.rsf
+	@echo "    - QueryMemory" >> app.rsf
+	@echo "    - ExitProcess" >> app.rsf
+	@echo "    - CreateThread" >> app.rsf
+	@echo "    - ExitThread" >> app.rsf
+	@echo "    - SleepThread" >> app.rsf
+	@echo "    - CloseHandle" >> app.rsf
+	@echo "    - WaitSynchronization1" >> app.rsf
+	@echo "    - WaitSynchronizationN" >> app.rsf
+	@echo "    - GetSystemInfo" >> app.rsf
+	@echo "    - ConnectToPort" >> app.rsf
+	@echo "    - SendSyncRequest" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
