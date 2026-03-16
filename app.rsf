@@ -16,7 +16,6 @@ AccessControlInfo:
   IdealProcessor          : 0
   AffinityMask            : 1
   SystemMode              : 64MB
-  SharedSystemMode        : 32MB
   StartupCore             : 0
   MemoryType              : Application
   CoreVersion             : 2
