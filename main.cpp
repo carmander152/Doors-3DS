@@ -63,6 +63,7 @@ float screechZ = 0.0f;
 bool rushActive = false;
 int rushState = 0; // 0=Off, 1=Flickering, 2=Rushing
 int rushTimer = 0;
+int rushCooldown = 0; // NEW: 30 Second breather!
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
 
@@ -200,12 +201,11 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(screechX - 0.22f, 1.05f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
     }
 
-    // --- RUSH 3D MODEL ---
     if (rushActive && rushState == 2) {
-        addBox(-1.2f, 0.2f, rushZ - 0.5f, 2.4f, 2.0f, 1.0f, 0.05f, 0.05f, 0.05f, false); // Body Cluster
-        addBox(-0.8f, 1.4f, rushZ - 0.55f, 0.4f, 0.4f, 0.1f, 0.9f, 0.9f, 0.9f, false); // Left Eye
-        addBox(0.4f, 1.4f, rushZ - 0.55f, 0.4f, 0.4f, 0.1f, 0.9f, 0.9f, 0.9f, false);  // Right Eye
-        addBox(-0.6f, 0.5f, rushZ - 0.55f, 1.2f, 0.6f, 0.1f, 0.8f, 0.8f, 0.8f, false); // Screaming Mouth
+        addBox(-1.2f, 0.2f, rushZ - 0.5f, 2.4f, 2.0f, 1.0f, 0.05f, 0.05f, 0.05f, false); 
+        addBox(-0.8f, 1.4f, rushZ - 0.55f, 0.4f, 0.4f, 0.1f, 0.9f, 0.9f, 0.9f, false); 
+        addBox(0.4f, 1.4f, rushZ - 0.55f, 0.4f, 0.4f, 0.1f, 0.9f, 0.9f, 0.9f, false);  
+        addBox(-0.6f, 0.5f, rushZ - 0.55f, 1.2f, 0.6f, 0.1f, 0.8f, 0.8f, 0.8f, false); 
     }
     
     if (currentChunk < 2) {
@@ -277,8 +277,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
         addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
         
-        // Ceiling Light Fixture (Darkens to 0.1f if Rush shatters it, otherwise bright!)
-        addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.1f), (L > 0.5f ? 0.9f : 0.1f), (L > 0.5f ? 0.8f : 0.1f), false);
+        // Ceiling Light Fixture (Darkens slightly to 0.2f if broken)
+        addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.8f : 0.2f), false);
 
         for(int s=0; s<3; s++) {
             float zCenter = z - 2.5f - (s * 2.5f); 
@@ -313,8 +313,8 @@ void generateRooms() {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
         
-        // --- 15% CHANCE FOR NATURAL DARK ROOMS ---
-        if (i > 0 && rand() % 100 < 15) rooms[i].lightLevel = 0.15f; 
+        // --- LESS DARK NATURAL ROOMS (0.3f instead of 0.15f) ---
+        if (i > 0 && rand() % 100 < 15) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
         
         for(int s=0; s<3; s++) {
@@ -478,6 +478,7 @@ int main() {
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
                 screechCooldown = 1800; rushActive = false; rushState = 0;
+                rushCooldown = 0; // Reset Rush cooldown!
                 messageTimer = 0;
                 camX = 0.0f; camZ = -1.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
@@ -512,6 +513,7 @@ int main() {
 
         if (messageTimer > 0) messageTimer--;
         if (screechCooldown > 0) screechCooldown--;
+        if (rushCooldown > 0) rushCooldown--; // NEW: Decrement Rush cooldown
 
         printf("\x1b[1;1H"); 
         for(int i=0; i<15; i++) printf("                                        \n");
@@ -586,7 +588,6 @@ int main() {
 
         if (!isDead) {
             
-            // --- SCREECH SPAWN BUFF IN DARK ROOMS ---
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 2000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && (rand() % screechChance == 0)) {
                 screechActive = true;
@@ -620,39 +621,38 @@ int main() {
                 }
             }
 
-            // --- RUSH LOGIC ---
             if (rushActive) {
-                if (rushState == 1) { // Phase 1: Flickering
+                if (rushState == 1) { 
                     rushTimer--;
-                    if (rushTimer % 10 == 0) { // Force visual flicker!
-                        float flicker = (rand() % 2 == 0) ? 0.1f : 1.0f;
+                    if (rushTimer % 10 == 0) { 
+                        float flicker = (rand() % 2 == 0) ? 0.3f : 1.0f; // NEW: Flickers to 0.3f instead of 0.1f!
                         if (playerCurrentRoom >= 0 && playerCurrentRoom < 100) rooms[playerCurrentRoom].lightLevel = flicker;
                         needsVBOUpdate = true;
                         ndspChnWaveBufAdd(0, &waveBuf); 
                     }
 
                     if (rushTimer <= 0) {
-                        rushState = 2; // Phase 2: He attacks!
-                        rushZ = camZ + 30.0f; // Spawn 3 rooms behind
-                        rushTargetZ = camZ - 20.0f; // Rush 2 rooms ahead
+                        rushState = 2; 
+                        rushZ = camZ + 30.0f; 
+                        rushTargetZ = camZ - 20.0f; 
                     }
-                } else if (rushState == 2) { // Rushing Down Hallway!
-                    rushZ -= 0.6f; // Extremely Fast!
-                    needsVBOUpdate = true; // Redraw his model moving
+                } else if (rushState == 2) { 
+                    rushZ -= 0.6f; 
+                    needsVBOUpdate = true; 
 
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
                     if (rushRoomIndex >= 0 && rushRoomIndex < 100) {
-                        rooms[rushRoomIndex].lightLevel = 0.15f; // Permanently break the lights!
+                        rooms[rushRoomIndex].lightLevel = 0.3f; // NEW: Leaves the room at 0.3f brightness!
                     }
 
-                    // Did he hit the player?
                     if (abs(rushZ - camZ) < 3.0f && hideState == NOT_HIDING) {
                         playerHealth = 0; isDead = true; 
                         flashRedFrames = 50;
                     }
 
-                    if (rushZ < rushTargetZ) { // Reached the end
+                    if (rushZ < rushTargetZ) { 
                         rushActive = false; rushState = 0; needsVBOUpdate = true;
+                        rushCooldown = 1800; // NEW: Starts the 30-second cooldown!
                     }
                 }
             }
@@ -794,11 +794,11 @@ int main() {
             if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
             
             if (newChunk != currentChunk || needsVBOUpdate) { 
-                // --- TRIGGER RUSH ON NEW ROOM (20% Chance past room 2) ---
-                if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rand() % 100 < 20) {
+                // --- NEW: Rush will only trigger if Cooldown is <= 0 ---
+                if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && rand() % 100 < 20) {
                     rushActive = true;
                     rushState = 1; 
-                    rushTimer = 120 + (rand() % 120); // Randomly 2 to 4 seconds of flickering
+                    rushTimer = 180 + (rand() % 120); // NEW: 3 to 5 seconds warning!
                 }
                 currentChunk = newChunk; 
                 needsVBOUpdate = true; 
