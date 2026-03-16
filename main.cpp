@@ -1,9 +1,9 @@
 #include <3ds.h>
 #include <citro3d.h>
 #include <string.h>
-#include <stdlib.h> 
-#include <stdio.h> 
-#include <math.h> 
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 #include <vector>
 #include <time.h>
 #include "vshader_shbin.h"
@@ -75,25 +75,43 @@ ndspWaveBuf loadWav(const char* path) {
     FILE* file = fopen(path, "rb");
     if (!file) {
         printf("Failed to load: %s\n", path);
-        return waveBuf; 
+        return waveBuf;
     }
 
-    fseek(file, 0, SEEK_END);
-    u32 fileSize = ftell(file);
-    
-    fseek(file, 44, SEEK_SET); 
-    u32 dataSize = fileSize - 44;
+    // Skip the initial "RIFF", file size, and "WAVE" header (12 bytes)
+    fseek(file, 12, SEEK_SET);
 
-    s16* buffer = (s16*)linearAlloc(dataSize);
+    char chunkId[4];
+    u32 chunkSize;
+    bool foundData = false;
+
+    // Scan through the chunks until we find the actual audio "data"
+    while (fread(chunkId, 1, 4, file) == 4) {
+        fread(&chunkSize, 4, 1, file);
+        if (strncmp(chunkId, "data", 4) == 0) {
+            foundData = true;
+            break;
+        }
+        fseek(file, chunkSize, SEEK_CUR); // Skip non-audio chunks (metadata, etc.)
+    }
+
+    if (!foundData) {
+        printf("Invalid WAV: %s\n", path);
+        fclose(file);
+        return waveBuf;
+    }
+
+    // Allocate only the exact size of the audio data
+    s16* buffer = (s16*)linearAlloc(chunkSize);
     if (!buffer) { fclose(file); return waveBuf; }
 
-    fread(buffer, 1, dataSize, file);
+    fread(buffer, 1, chunkSize, file);
     fclose(file);
 
-    DSP_FlushDataCache(buffer, dataSize);
+    DSP_FlushDataCache(buffer, chunkSize);
 
     waveBuf.data_vaddr = buffer;
-    waveBuf.nsamples = dataSize / 2; 
+    waveBuf.nsamples = chunkSize / 2; // Divide by 2 because it's 16-bit
     waveBuf.looping = false;
     waveBuf.status = NDSP_WBUF_FREE;
 
@@ -562,7 +580,7 @@ int main() {
                 printf("                              \n");
                 for(int i=0; i<8; i++) printf("                              \n"); 
             } else {
-                printf("       PLAYER STATUS          \n");
+                printf("        PLAYER STATUS         \n");
                 printf("==============================\n\n");
                 
                 if (playerCurrentRoom == -1) {
@@ -625,9 +643,9 @@ int main() {
                 needsVBOUpdate = true;
                 
                 // --- PLAY PSST SOUND ---
-                ndspChnWaveBufClear(0); // Instantly stop anything else on this channel
+                ndspChnWaveBufClear(0); 
                 if (sndPsst.data_vaddr) {
-                    DSP_FlushDataCache(sndPsst.data_vaddr, sndPsst.nsamples * 2);
+                    sndPsst.status = NDSP_WBUF_FREE;
                     ndspChnWaveBufAdd(0, &sndPsst); 
                 }
             }
@@ -649,7 +667,7 @@ int main() {
                     // --- PLAY CAUGHT SOUND ---
                     ndspChnWaveBufClear(0);
                     if (sndCaught.data_vaddr) {
-                        DSP_FlushDataCache(sndCaught.data_vaddr, sndCaught.nsamples * 2);
+                        sndCaught.status = NDSP_WBUF_FREE;
                         ndspChnWaveBufAdd(0, &sndCaught); 
                     }
 
@@ -664,7 +682,7 @@ int main() {
                     // --- PLAY ATTACK SOUND ---
                     ndspChnWaveBufClear(0);
                     if (sndAttack.data_vaddr) {
-                        DSP_FlushDataCache(sndAttack.data_vaddr, sndAttack.nsamples * 2);
+                        sndAttack.status = NDSP_WBUF_FREE;
                         ndspChnWaveBufAdd(0, &sndAttack); 
                     }
                 }
