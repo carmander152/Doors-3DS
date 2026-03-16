@@ -62,12 +62,12 @@ app.rsf:
 	@echo "    CreateThread: 8" >> app.rsf
 	@echo "    ExitThread: 9" >> app.rsf
 	@echo "    SleepThread: 10" >> app.rsf
-	@echo "    CloseHandle: 35" >> app.rsf
-	@echo "    WaitSynchronization1: 36" >> app.rsf
-	@echo "    WaitSynchronizationN: 37" >> app.rsf
-	@echo "    GetSystemInfo: 42" >> app.rsf
-	@echo "    ConnectToPort: 45" >> app.rsf
-	@echo "    SendSyncRequest: 50" >> app.rsf
+	@echo "    CloseHandle: 17" >> app.rsf
+	@echo "    WaitSynchronization1: 18" >> app.rsf
+	@echo "    WaitSynchronizationN: 19" >> app.rsf
+	@echo "    GetSystemInfo: 23" >> app.rsf
+	@echo "    ConnectToPort: 26" >> app.rsf
+	@echo "    SendSyncRequest: 31" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
