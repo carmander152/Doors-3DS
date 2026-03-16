@@ -66,10 +66,6 @@ app.rsf:
 	@echo "  MaxCpu: 0x9E" >> app.rsf
 	@echo "  CoreVersion: 2" >> app.rsf
 	@echo "  HandleTableSize: 512" >> app.rsf
-	@echo "  DisableP3D: false" >> app.rsf
-	@echo "  EnableL2Cache: true" >> app.rsf
-	@echo "  ReleaseKernelMajor: 0" >> app.rsf
-	@echo "  ReleaseKernelMinor: 0" >> app.rsf
 	@echo "  FileSystemAccess:" >> app.rsf
 	@echo "    - CategorySystemApplication" >> app.rsf
 	@echo "    - CategoryHardwareCheck" >> app.rsf
