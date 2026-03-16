@@ -9,21 +9,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # The official image that actually exists!
-    container: devkitpro/devkitarm:latest
+    # --- CHANGED: Using the pre-loaded 3DS container! ---
+    container: devkitpro/3dsdev:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- NEW STEP: Installs makerom, bannertool, and 3dstool ---
-      - name: Install CIA Packaging Tools
-        run: dkp-pacman -Syu 3dstools --noconfirm
+      # (We removed the dkp-pacman step completely)
 
       - name: Compile Game
         run: make
 
-      # --- UPDATED: Now grabs the .cia file too ---
       - name: Upload Game Artifacts
         uses: actions/upload-artifact@v4
         with:
