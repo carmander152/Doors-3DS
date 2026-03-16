@@ -47,6 +47,8 @@ app.rsf:
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
+	@echo "  SystemCallAccess:" >> app.rsf
+	@echo "    - dummy" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
