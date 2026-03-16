@@ -11,7 +11,6 @@ ROMFS_DIR := romfs
 
 .PHONY: all clean
 
-# We want all three: the raw code (.elf), the Homebrew file (.3dsx), and the installable (.cia)
 all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
 $(TARGET).smdh: icon.png
@@ -26,6 +25,7 @@ romfs.bin: $(ROMFS_DIR)
 banner.bin: banner.png audio.wav
 	bannertool makebanner -i banner.png -a audio.wav -o $@
 
+# This RSF is designed specifically for hardware stability
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
 	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
@@ -48,6 +48,9 @@ app.rsf:
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
+	@echo "    - cfg:u" >> app.rsf
+	@echo "    - ac:u" >> app.rsf
+	@echo "    - soc:U" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
 	@echo "    0x01: ControlMemory" >> app.rsf
 	@echo "    0x02: QueryMemory" >> app.rsf
