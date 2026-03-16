@@ -44,6 +44,9 @@ jobs:
           tar -xzf 3dstool.tar.gz
           chmod +x 3dstool
           cp 3dstool /usr/local/bin/
+          
+          echo "Patching 3dstool missing ignore file bug..."
+          touch /usr/local/bin/ignore_3dstool.txt
 
       - name: Build Game
         run: make
