@@ -25,7 +25,7 @@ std::vector<BBox> collisions;
 struct RoomSetup {
     int slotType[3]; 
     bool drawerOpen[3]; 
-    int drawerItem[3]; // 0 = Empty, 1 = Key, 2 = Bandaid
+    int slotItem[3]; // 0 = Empty, 1 = Key, 2 = Bandaid
     bool isLocked;      
 
     int doorPos;     
@@ -46,6 +46,7 @@ bool lobbyKeyPickedUp = false;
 bool doorOpen[100] = {false}; 
 bool isCrouching = false;
 bool isDead = false; 
+bool persistentGlitch = false; // Tracks if you are "infected" by a dupe room!
 
 // UI Message Variables
 int messageTimer = 0;
@@ -104,7 +105,7 @@ void buildCabinet(float zCenter, bool isLeft) {
     collisions.push_back({isLeft ? -2.3f : 1.6f, 0.0f, zCenter - 0.5f, isLeft ? -1.6f : 2.3f, 1.5f, zCenter + 0.5f, 1});
 }
 
-void buildBed(float zCenter, bool isLeft) {
+void buildBed(float zCenter, bool isLeft, int itemType) {
     float x = isLeft ? -2.9f : 1.5f;
     float skirtX = isLeft ? -1.6f : 1.5f;
     float pillowX = isLeft ? -2.6f : 2.0f;
@@ -115,31 +116,38 @@ void buildBed(float zCenter, bool isLeft) {
     addBox(x + 1.3f, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true);
     addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true); 
     addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false); 
+    
+    // BED KEY SPAWN VISUALS
+    if (itemType == 1) { 
+        float itemX = isLeft ? -2.2f : 2.1f;
+        addBox(itemX, 0.52f, zCenter, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
+    }
+
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
-// --- SHRUNK DRESSER & ITEM RENDERING ---
+// --- FIXED DRESSER COORDINATES (ALWAYS CLOSED UNTIL PRESSED) ---
 void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType) {
     float frameX = isLeft ? -2.9f : 2.4f;
-    float drawerX = isLeft ? -2.45f : 2.05f;
-    float handleX = isLeft ? -2.05f : 2.0f;
-    float itemX = isLeft ? -2.3f : 2.15f;
+    float drawerX = isLeft ? -2.85f : 2.45f;
+    float handleX = isLeft ? -2.5f : 2.45f;
+    float itemX = isLeft ? -2.7f : 2.5f;
     float openOffset = isOpen ? (isLeft ? 0.35f : -0.35f) : 0.0f;
 
-    // Main Body (Narrower and shorter)
-    addBox(frameX, 0.0f, zCenter - 0.4f, 0.5f, 0.8f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3);
+    // Solid Dresser Frame
+    addBox(frameX, 0.0f, zCenter - 0.4f, 0.5f, 0.8f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3); 
     
-    // Drawer
+    // The Drawer
     addBox(drawerX + openOffset, 0.3f, zCenter - 0.35f, 0.4f, 0.25f, 0.7f, 0.25f, 0.12f, 0.08f, false);
-
-    // Handle
+    
+    // The Drawer Handle
     addBox(handleX + openOffset, 0.4f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
 
-    // Render items if drawer is open!
+    // Items
     if (isOpen) {
-        if (itemType == 1) { // Golden Key
+        if (itemType == 1) { 
             addBox(itemX + openOffset, 0.35f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
-        } else if (itemType == 2) { // Bandaid (Tan color)
+        } else if (itemType == 2) { 
             addBox(itemX + openOffset, 0.35f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
         }
     }
@@ -238,10 +246,10 @@ void buildWorld(int currentChunk) {
             int type = rooms[i].slotType[s];
             if (type == 1) buildCabinet(zCenter, true);
             else if (type == 2) buildCabinet(zCenter, false);
-            else if (type == 3) buildBed(zCenter, true);
-            else if (type == 4) buildBed(zCenter, false);
-            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].drawerItem[s]);
-            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].drawerItem[s]);
+            else if (type == 3) buildBed(zCenter, true, rooms[i].slotItem[s]);
+            else if (type == 4) buildBed(zCenter, false, rooms[i].slotItem[s]);
+            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
+            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
         }
 
         for(int p=0; p<rooms[i].pCount; p++) {
@@ -268,7 +276,7 @@ void generateRooms() {
         
         for(int s=0; s<3; s++) {
             rooms[i].drawerOpen[s] = false;
-            rooms[i].drawerItem[s] = 0; // Default to empty
+            rooms[i].slotItem[s] = 0; 
         }
 
         rooms[i].isDupeRoom = (i > 1 && (rand() % 100 < 15));
@@ -291,12 +299,12 @@ void generateRooms() {
             else if (r < 45) rooms[i].slotType[s] = 3; 
             else if (r < 60) rooms[i].slotType[s] = 4; 
             else if (r < 75) {
-                rooms[i].slotType[s] = 5; // Left Dresser
-                if (rand() % 100 < 30) rooms[i].drawerItem[s] = 2; // 30% chance for Bandaid
+                rooms[i].slotType[s] = 5; 
+                if (rand() % 100 < 30) rooms[i].slotItem[s] = 2; 
             }
             else if (r < 90) {
-                rooms[i].slotType[s] = 6; // Right Dresser
-                if (rand() % 100 < 30) rooms[i].drawerItem[s] = 2; // 30% chance for Bandaid
+                rooms[i].slotType[s] = 6; 
+                if (rand() % 100 < 30) rooms[i].slotItem[s] = 2; 
             }
             else rooms[i].slotType[s] = 0;             
         }
@@ -318,13 +326,19 @@ void generateRooms() {
     rooms[0].isDupeRoom = false; 
     rooms[0].isLocked = true; 
     
-    // INCREASED LOCK ODDS: Now 33% chance to lock a normal door
     for(int i=2; i<98; i++) {
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
             int s = rand() % 3;
-            rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6;
-            rooms[i-1].drawerItem[s] = 1; // Overwrite item with the Golden Key (ID 1)
+            
+            // 15% Chance for key on a bed, 85% chance in a dresser!
+            if (rand() % 100 < 15) {
+                rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 3 : 4; 
+            } else {
+                rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6; 
+            }
+            
+            rooms[i-1].slotItem[s] = 1; 
         }
     }
 }
@@ -390,7 +404,7 @@ int main() {
         
         if (kDown & KEY_START) {
             if (isDead) {
-                isDead = false; hasKey = false; lobbyKeyPickedUp = false;
+                isDead = false; hasKey = false; lobbyKeyPickedUp = false; persistentGlitch = false;
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
                 screechCooldown = 1800; 
@@ -415,6 +429,12 @@ int main() {
         bool isGlitching = (rooms[roomNumber].isDupeRoom && !doorOpen[roomNumber]) || 
                            (rooms[roomNumber + 1].isDupeRoom && doorOpen[roomNumber]);
 
+        // Glitch Persistence Logic
+        if (isGlitching) persistentGlitch = true;
+        else if (!rooms[roomNumber].isDupeRoom && !rooms[roomNumber + 1].isDupeRoom) persistentGlitch = false;
+        
+        bool displayGlitch = isGlitching || persistentGlitch;
+
         if (messageTimer > 0) messageTimer--;
         if (screechCooldown > 0) screechCooldown--;
 
@@ -437,13 +457,13 @@ int main() {
 
             if (roomNumber == 0) {
                 printf(" Current Room : 000 (Lobby) \n");
-                if (isGlitching) {
+                if (displayGlitch) {
                     char g2[4]; for(int i=0; i<3; i++) g2[i]=symbols[rand()%8]; g2[3]='\0';
                     printf(" Next Door    : %s         \n\n", g2);
                 } else {
                     printf(" Next Door    : 001         \n\n");
                 }
-            } else if (isGlitching) {
+            } else if (displayGlitch) {
                 char g1[4], g2[4];
                 for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; }
                 g1[3]='\0'; g2[3]='\0';
@@ -457,7 +477,7 @@ int main() {
             int plaqueTargetRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
             float wallZ = -10.0f - (plaqueTargetRoom * 10.0f);
             
-            if (isGlitching && plaqueTargetRoom != -1 && abs(camZ - wallZ) < 2.0f) {
+            if (displayGlitch && plaqueTargetRoom != -1 && abs(camZ - wallZ) < 2.0f) {
                 if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[plaqueTargetRoom].dupeNumbers[0]);
                 else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[plaqueTargetRoom].dupeNumbers[1]);
                 else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[plaqueTargetRoom].dupeNumbers[2]);
@@ -500,29 +520,29 @@ int main() {
                     screechActive = false; 
                     screechCooldown = 1800; 
                     needsVBOUpdate = true;
-                    playerHealth -= 40; flashRedFrames = 25;
+                    playerHealth -= 20; flashRedFrames = 25; // NERFED TO 20
                     if (playerHealth <= 0) isDead = true;
                 }
             }
 
-            // --- 'X' BUTTON: TOGGLE ANY DRAWER & HIDE ---
+            // --- 'X' BUTTON: PROXIMITY BASED DRAWER TOGGLE ---
             if (kDown & KEY_X) {
                 if (hideState == NOT_HIDING) {
                     bool interactedWithDrawer = false;
                     
                     for(int s=0; s<3; s++) {
                         float zCenter = (-10.0f - (roomNumber * 10.0f)) - 3.5f - (s * 2.0f);
-                        // Relaxed interaction distance
-                        if (abs(camZ - zCenter) < 2.0f) {
-                            int type = rooms[roomNumber].slotType[s];
-                            if (type == 5 || type == 6) {
-                                // Relaxed sideways check so you can open any nearby drawer
-                                if ((type == 5 && camX < -0.5f) || (type == 6 && camX > 0.5f)) {
-                                    rooms[roomNumber].drawerOpen[s] = !rooms[roomNumber].drawerOpen[s];
-                                    needsVBOUpdate = true;
-                                    interactedWithDrawer = true;
-                                    break;
-                                }
+                        int type = rooms[roomNumber].slotType[s];
+                        if (type == 5 || type == 6) {
+                            float slotX = (type == 5) ? -2.5f : 2.5f;
+                            float dist = sqrt(pow(camX - slotX, 2) + pow(camZ - zCenter, 2));
+                            
+                            // True Proximity Check!
+                            if (dist < 1.8f) {
+                                rooms[roomNumber].drawerOpen[s] = !rooms[roomNumber].drawerOpen[s];
+                                needsVBOUpdate = true;
+                                interactedWithDrawer = true;
+                                break;
                             }
                         }
                     }
@@ -549,44 +569,51 @@ int main() {
                 }
             }
 
-            // --- 'A' BUTTON: LOOT ITEMS, LOBBY KEY, OR UNLOCK DOORS ---
+            // --- 'A' BUTTON: PROXIMITY BASED LOOTING ---
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
                 
-                // 1. Check for Loot inside OPEN Drawers
                 for(int s=0; s<3; s++) {
                     float zCenter = (-10.0f - (roomNumber * 10.0f)) - 3.5f - (s * 2.0f);
-                    if (abs(camZ - zCenter) < 2.0f) {
-                        int type = rooms[roomNumber].slotType[s];
+                    int type = rooms[roomNumber].slotType[s];
+                    if (type == 0) continue;
+                    
+                    float slotX = (type % 2 != 0) ? -2.5f : 2.5f;
+                    float dist = sqrt(pow(camX - slotX, 2) + pow(camZ - zCenter, 2));
+                    
+                    if (dist < 1.8f) {
                         if (type == 5 || type == 6) {
-                            if ((type == 5 && camX < -0.5f) || (type == 6 && camX > 0.5f)) {
-                                if (rooms[roomNumber].drawerOpen[s]) {
-                                    if (rooms[roomNumber].drawerItem[s] == 1) { // Grab Key
-                                        hasKey = true;
-                                        rooms[roomNumber].drawerItem[s] = 0;
-                                        needsVBOUpdate = true;
-                                        sprintf(uiMessage, "Grabbed the Golden Key!"); messageTimer = 90;
-                                    } else if (rooms[roomNumber].drawerItem[s] == 2) { // Grab Bandaid
-                                        playerHealth += 10;
-                                        if (playerHealth > 100) playerHealth = 100;
-                                        rooms[roomNumber].drawerItem[s] = 0;
-                                        needsVBOUpdate = true;
-                                        sprintf(uiMessage, "Used a Bandaid! (+10 HP)"); messageTimer = 90;
-                                    } else {
-                                        sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
-                                    }
+                            if (rooms[roomNumber].drawerOpen[s]) {
+                                if (rooms[roomNumber].slotItem[s] == 1) { 
+                                    hasKey = true;
+                                    rooms[roomNumber].slotItem[s] = 0;
+                                    needsVBOUpdate = true;
+                                    sprintf(uiMessage, "Grabbed the Golden Key!"); messageTimer = 90;
+                                } else if (rooms[roomNumber].slotItem[s] == 2) { 
+                                    playerHealth += 10;
+                                    if (playerHealth > 100) playerHealth = 100;
+                                    rooms[roomNumber].slotItem[s] = 0;
+                                    needsVBOUpdate = true;
+                                    sprintf(uiMessage, "Used a Bandaid! (+10 HP)"); messageTimer = 90;
+                                } else {
+                                    sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
                                 }
+                            }
+                        } else if (type == 3 || type == 4) { // Beds
+                            if (rooms[roomNumber].slotItem[s] == 1) {
+                                hasKey = true;
+                                rooms[roomNumber].slotItem[s] = 0;
+                                needsVBOUpdate = true;
+                                sprintf(uiMessage, "Grabbed Key off the bed!"); messageTimer = 90;
                             }
                         }
                     }
                 }
 
-                // 2. Check Lobby Key
                 if(!lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
                     lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true;
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                // 3. Check Door Unlock
                 float lockDoorZ = -10.0f - (roomNumber * 10.0f);
                 if (hasKey && rooms[roomNumber].isLocked && abs(camZ - lockDoorZ) < 2.0f && abs(camX) < 1.5f) {
                     rooms[roomNumber].isLocked = false;
@@ -595,7 +622,6 @@ int main() {
                     sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
                 }
 
-                // 4. Check Dupe Doors
                 int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
                 if (interactRoom != -1 && !doorOpen[interactRoom]) {
                     float wallZ = -10.0f - (interactRoom * 10.0f);
