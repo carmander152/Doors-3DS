@@ -5,15 +5,18 @@ endif
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := hotel_doors
-OBJS := vshader.shbin.o main.o
-LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
+# Define the RomFS directory here
+ROMFS  := romfs
+OBJS   := vshader.shbin.o main.o
+LIBS   := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 
 .PHONY: all clean
 
 all: $(TARGET).3dsx
 
+# Updated: Added the --romfs flag to 3dsxtool
 $(TARGET).3dsx: $(TARGET).elf
-	3dsxtool $< $@
+	3dsxtool $< $@ --romfs=$(ROMFS)
 
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
