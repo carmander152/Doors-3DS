@@ -34,9 +34,9 @@ $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
-# 2. Create the Home Menu Banner (requires a exactly 256x128 banner.png)
-banner.bin: banner.png
-	bannertool makebanner -i banner.png -o $@
+# 2. Create the Home Menu Banner (requires a 256x128 banner.png and an audio.wav)
+banner.bin: banner.png audio.wav
+	bannertool makebanner -i banner.png -a audio.wav -o $@
 
 # 3. Generate a minimal Rom Spec File (RSF)
 app.rsf:
