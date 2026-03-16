@@ -15,7 +15,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- FIX: Bulletproof tool downloading ---
       - name: Install CIA Tools Manually
         run: |
           echo "Downloading makerom..."
@@ -25,18 +24,16 @@ jobs:
           cp makerom /usr/local/bin/
 
           echo "Downloading bannertool..."
-          # Using the 'latest' tag so GitHub auto-finds the correct ZIP file
-          wget -qO bannertool.zip https://github.com/Steveice10/bannertool/releases/latest/download/bannertool.zip
+          wget -qO bannertool.zip https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip
           unzip -o bannertool.zip
           chmod +x linux-x86_64/bannertool
           cp linux-x86_64/bannertool /usr/local/bin/
 
           echo "Downloading 3dstool..."
-          # We need 3dstool to pack the audio/romfs folder into the CIA!
-          wget -qO 3dstool.zip https://github.com/dnasdw/3dstool/releases/download/v1.2.6/3dstool-v1.2.6-linux-x86_64.zip
-          unzip -o 3dstool.zip
-          chmod +x 3dstool-v1.2.6-linux-x86_64/bin/3dstool
-          cp 3dstool-v1.2.6-linux-x86_64/bin/3dstool /usr/local/bin/
+          wget -qO 3dstool.tar.gz https://github.com/dnasdw/3dstool/releases/download/v1.2.6/3dstool_linux_x86_64.tar.gz
+          tar -xzf 3dstool.tar.gz
+          chmod +x 3dstool
+          cp 3dstool /usr/local/bin/
 
       - name: Compile Game
         run: make
@@ -47,5 +44,4 @@ jobs:
           name: DOORS_3DS_Build
           path: |
             *.3dsx
-            *.elf
             *.cia
