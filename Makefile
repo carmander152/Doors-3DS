@@ -47,21 +47,14 @@ app.rsf:
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
-	@echo "    - cfg:u" >> app.rsf
-	@echo "    - ac:u" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
 	@echo "    - ControlMemory" >> app.rsf
-	@echo "    - QueryMemory" >> app.rsf
 	@echo "    - ExitProcess" >> app.rsf
 	@echo "    - CreateThread" >> app.rsf
 	@echo "    - ExitThread" >> app.rsf
 	@echo "    - SleepThread" >> app.rsf
 	@echo "    - GetThreadPriority" >> app.rsf
 	@echo "    - SetThreadPriority" >> app.rsf
-	@echo "    - CreateMutex" >> app.rsf
-	@echo "    - ReleaseMutex" >> app.rsf
-	@echo "    - CreateSemaphore" >> app.rsf
-	@echo "    - ReleaseSemaphore" >> app.rsf
 	@echo "    - CreateEvent" >> app.rsf
 	@echo "    - SignalEvent" >> app.rsf
 	@echo "    - ClearEvent" >> app.rsf
@@ -69,12 +62,9 @@ app.rsf:
 	@echo "    - SetTimer" >> app.rsf
 	@echo "    - CancelTimer" >> app.rsf
 	@echo "    - ClearTimer" >> app.rsf
-	@echo "    - CreateAddressArbiter" >> app.rsf
-	@echo "    - ArbitrateAddress" >> app.rsf
 	@echo "    - CloseHandle" >> app.rsf
 	@echo "    - WaitSynchronization1" >> app.rsf
 	@echo "    - WaitSynchronizationN" >> app.rsf
-	@echo "    - GetSystemTick" >> app.rsf
 	@echo "    - ConnectToPort" >> app.rsf
 	@echo "    - SendSyncRequest" >> app.rsf
 	@echo "    - GetProcessId" >> app.rsf
