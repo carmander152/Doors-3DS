@@ -11,8 +11,6 @@ TitleInfo:
 
 Option:
   UseOnSD                 : true
-  FreeProductCode         : true
-  MediaSize               : 128MB
 
 AccessControlInfo:
   IdealProcessor          : 0
