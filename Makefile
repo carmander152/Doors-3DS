@@ -38,7 +38,7 @@ romfs.bin: $(ROMFS_DIR)
 banner.bin: banner.png audio.wav
 	bannertool makebanner -i banner.png -a audio.wav -o $@
 
-# 3. Generate a minimal Rom Spec File (RSF)
+# 3. Generate a complete Rom Spec File (RSF)
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
 	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
@@ -51,8 +51,22 @@ app.rsf:
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
+	@echo "AccessControlInfo:" >> app.rsf
+	@echo "  CoreVersion             : 2" >> app.rsf
+	@echo "  ExtSaveDataId           : 0x0D00A" >> app.rsf
+	@echo "  SystemSaveDataId1       : 0x00000000" >> app.rsf
+	@echo "  SystemSaveDataId2       : 0x00000000" >> app.rsf
+	@echo "  OtherUserSaveDataId1    : 0x00000" >> app.rsf
+	@echo "  OtherUserSaveDataId2    : 0x00000" >> app.rsf
+	@echo "  OtherUserSaveDataId3    : 0x00000" >> app.rsf
+	@echo "  IdealProcessor          : 0" >> app.rsf
+	@echo "  AffinityMask            : 1" >> app.rsf
+	@echo "  Priority                : 16" >> app.rsf
+	@echo "  MaxCpu                  : 0x9E" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
-	@echo "  SaveDataSize: 0KB" >> app.rsf
+	@echo "  SaveDataSize            : 0KB" >> app.rsf
+	@echo "  RemasterVersion         : 0" >> app.rsf
+	@echo "  StackSize               : 0x40000" >> app.rsf
 
 # 4. Compile the CIA using makerom
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
