@@ -24,7 +24,8 @@ jobs:
           cp makerom /usr/local/bin/
 
           echo "Downloading bannertool..."
-          wget -qO bannertool.zip https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip
+          # Steveice10's repo was deleted! Using the community mirror.
+          wget -qO bannertool.zip https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip
           unzip -o bannertool.zip
           chmod +x linux-x86_64/bannertool
           cp linux-x86_64/bannertool /usr/local/bin/
@@ -44,4 +45,5 @@ jobs:
           name: DOORS_3DS_Build
           path: |
             *.3dsx
+            *.elf
             *.cia
