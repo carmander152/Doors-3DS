@@ -67,6 +67,39 @@ int rushCooldown = 0;
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
 
+// --- AUDIO SYSTEM ---
+ndspWaveBuf loadWav(const char* path) {
+    ndspWaveBuf waveBuf;
+    memset(&waveBuf, 0, sizeof(ndspWaveBuf));
+
+    FILE* file = fopen(path, "rb");
+    if (!file) {
+        printf("Failed to load: %s\n", path);
+        return waveBuf; 
+    }
+
+    fseek(file, 0, SEEK_END);
+    u32 fileSize = ftell(file);
+    
+    fseek(file, 44, SEEK_SET); 
+    u32 dataSize = fileSize - 44;
+
+    s16* buffer = (s16*)linearAlloc(dataSize);
+    if (!buffer) { fclose(file); return waveBuf; }
+
+    fread(buffer, 1, dataSize, file);
+    fclose(file);
+
+    DSP_FlushDataCache(buffer, dataSize);
+
+    waveBuf.data_vaddr = buffer;
+    waveBuf.nsamples = dataSize / 2; 
+    waveBuf.looping = false;
+    waveBuf.status = NDSP_WBUF_FREE;
+
+    return waveBuf;
+}
+
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0, float light = 1.0f) {
     r *= light; g *= light; b *= light; 
     if (r > 1.0f) r = 1.0f; if (g > 1.0f) g = 1.0f; if (b > 1.0f) b = 1.0f;
@@ -415,21 +448,18 @@ int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     consoleInit(GFX_BOTTOM, NULL);
 
+    romfsInit();
+
     ndspInit();
     ndspSetOutputMode(NDSP_OUTPUT_STEREO);
     ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
     ndspChnSetRate(0, 44100);
     ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
 
-    u32 audioSize = 44100 * 0.2f; 
-    s16* audioBuffer = (s16*)linearAlloc(audioSize * sizeof(s16));
-    for(u32 i=0; i<audioSize; i++) audioBuffer[i] = (rand() % 32767) - 16384; 
-    DSP_FlushDataCache(audioBuffer, audioSize * sizeof(s16));
-    
-    ndspWaveBuf waveBuf;
-    memset(&waveBuf, 0, sizeof(ndspWaveBuf));
-    waveBuf.data_vaddr = audioBuffer;
-    waveBuf.nsamples = audioSize;
+    // --- NEW: Load all three Screech files ---
+    ndspWaveBuf sndPsst = loadWav("romfs:/Screech_Psst.wav");
+    ndspWaveBuf sndAttack = loadWav("romfs:/Screech_Attack.wav");
+    ndspWaveBuf sndCaught = loadWav("romfs:/Screech_Caught.wav");
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
@@ -513,8 +543,7 @@ int main() {
         if (screechCooldown > 0) screechCooldown--;
         if (rushCooldown > 0) rushCooldown--; 
 
-        // --- HARDWARE-SAFE UI DRAWING ---
-        printf("\x1b[1;1H"); // Jump to top-left (DO NOT clear the whole screen first!)
+        printf("\x1b[1;1H"); 
 
         printf("==============================\n");
         if (isDead) {
@@ -523,7 +552,7 @@ int main() {
             printf("                              \n");
             printf("                              \n\n\n");
             printf("    [PRESS START TO RESTART]  \n");
-            for(int i=0; i<8; i++) printf("                              \n"); // Tail padding
+            for(int i=0; i<8; i++) printf("                              \n"); 
         } else {
             if (screechActive) {
                 printf("  >> SCREECH ATTACK!! <<      \n");
@@ -531,7 +560,7 @@ int main() {
                 printf("     (PSST!)                  \n");
                 printf("    LOOK AROUND QUICKLY!      \n");
                 printf("                              \n");
-                for(int i=0; i<8; i++) printf("                              \n"); // Tail padding
+                for(int i=0; i<8; i++) printf("                              \n"); 
             } else {
                 printf("       PLAYER STATUS          \n");
                 printf("==============================\n\n");
@@ -581,7 +610,6 @@ int main() {
                 else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
                 else printf("\n                                    \n");
 
-                // Tail padding to erase old messages/screech UI without screen tearing
                 for(int i=0; i<4; i++) printf("                                    \n");
             }
         }
@@ -595,7 +623,13 @@ int main() {
                 screechX = camX + sinf(camYaw) * 2.0f; 
                 screechZ = camZ + cosf(camYaw) * 2.0f;
                 needsVBOUpdate = true;
-                ndspChnWaveBufAdd(0, &waveBuf); 
+                
+                // --- PLAY PSST SOUND ---
+                ndspChnWaveBufClear(0); // Instantly stop anything else on this channel
+                if (sndPsst.data_vaddr) {
+                    DSP_FlushDataCache(sndPsst.data_vaddr, sndPsst.nsamples * 2);
+                    ndspChnWaveBufAdd(0, &sndPsst); 
+                }
             }
 
             if (screechActive) {
@@ -611,6 +645,14 @@ int main() {
                     screechCooldown = 1800; 
                     needsVBOUpdate = true;
                     sprintf(uiMessage, "Dodged Screech!"); messageTimer = 90;
+                    
+                    // --- PLAY CAUGHT SOUND ---
+                    ndspChnWaveBufClear(0);
+                    if (sndCaught.data_vaddr) {
+                        DSP_FlushDataCache(sndCaught.data_vaddr, sndCaught.nsamples * 2);
+                        ndspChnWaveBufAdd(0, &sndCaught); 
+                    }
+
                 } else if (screechTimer <= 0) {
                     screechActive = false; 
                     screechCooldown = 1800; 
@@ -618,6 +660,13 @@ int main() {
                     playerHealth -= 20; flashRedFrames = 25; 
                     sprintf(uiMessage, "Screech bit you! (-20 HP)"); messageTimer = 90; 
                     if (playerHealth <= 0) isDead = true;
+
+                    // --- PLAY ATTACK SOUND ---
+                    ndspChnWaveBufClear(0);
+                    if (sndAttack.data_vaddr) {
+                        DSP_FlushDataCache(sndAttack.data_vaddr, sndAttack.nsamples * 2);
+                        ndspChnWaveBufAdd(0, &sndAttack); 
+                    }
                 }
             }
 
@@ -628,7 +677,6 @@ int main() {
                         float flicker = (rand() % 2 == 0) ? 0.3f : 1.0f;
                         if (playerCurrentRoom >= 0 && playerCurrentRoom < 100) rooms[playerCurrentRoom].lightLevel = flicker;
                         needsVBOUpdate = true;
-                        ndspChnWaveBufAdd(0, &waveBuf); 
                     }
 
                     if (rushTimer <= 0) {
@@ -878,8 +926,13 @@ int main() {
         C3D_FrameEnd(0);
     }
     
+    // Clean up audio memory!
+    if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
+    if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
+    if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
+    
+    romfsExit();
     ndspExit();
-    linearFree(audioBuffer);
-    linearFree(vbo_ptr); C3D_Fini(); gfxExit();
+    C3D_Fini(); gfxExit();
     return 0;
 }
