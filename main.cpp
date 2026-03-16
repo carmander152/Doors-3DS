@@ -61,9 +61,9 @@ float screechX = 0.0f;
 float screechZ = 0.0f;
 
 bool rushActive = false;
-int rushState = 0; // 0=Off, 1=Flickering, 2=Rushing
+int rushState = 0; 
 int rushTimer = 0;
-int rushCooldown = 0; // NEW: 30 Second breather!
+int rushCooldown = 0; 
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
 
@@ -277,7 +277,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
         addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
         
-        // Ceiling Light Fixture (Darkens slightly to 0.2f if broken)
         addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.8f : 0.2f), false);
 
         for(int s=0; s<3; s++) {
@@ -313,7 +312,6 @@ void generateRooms() {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
         
-        // --- LESS DARK NATURAL ROOMS (0.3f instead of 0.15f) ---
         if (i > 0 && rand() % 100 < 15) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
         
@@ -478,7 +476,7 @@ int main() {
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
                 screechCooldown = 1800; rushActive = false; rushState = 0;
-                rushCooldown = 0; // Reset Rush cooldown!
+                rushCooldown = 0; 
                 messageTimer = 0;
                 camX = 0.0f; camZ = -1.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
@@ -513,7 +511,7 @@ int main() {
 
         if (messageTimer > 0) messageTimer--;
         if (screechCooldown > 0) screechCooldown--;
-        if (rushCooldown > 0) rushCooldown--; // NEW: Decrement Rush cooldown
+        if (rushCooldown > 0) rushCooldown--; 
 
         printf("\x1b[1;1H"); 
         for(int i=0; i<15; i++) printf("                                        \n");
@@ -625,7 +623,7 @@ int main() {
                 if (rushState == 1) { 
                     rushTimer--;
                     if (rushTimer % 10 == 0) { 
-                        float flicker = (rand() % 2 == 0) ? 0.3f : 1.0f; // NEW: Flickers to 0.3f instead of 0.1f!
+                        float flicker = (rand() % 2 == 0) ? 0.3f : 1.0f;
                         if (playerCurrentRoom >= 0 && playerCurrentRoom < 100) rooms[playerCurrentRoom].lightLevel = flicker;
                         needsVBOUpdate = true;
                         ndspChnWaveBufAdd(0, &waveBuf); 
@@ -642,7 +640,7 @@ int main() {
 
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
                     if (rushRoomIndex >= 0 && rushRoomIndex < 100) {
-                        rooms[rushRoomIndex].lightLevel = 0.3f; // NEW: Leaves the room at 0.3f brightness!
+                        rooms[rushRoomIndex].lightLevel = 0.3f;
                     }
 
                     if (abs(rushZ - camZ) < 3.0f && hideState == NOT_HIDING) {
@@ -652,7 +650,7 @@ int main() {
 
                     if (rushZ < rushTargetZ) { 
                         rushActive = false; rushState = 0; needsVBOUpdate = true;
-                        rushCooldown = 1800; // NEW: Starts the 30-second cooldown!
+                        rushCooldown = 1800; 
                     }
                 }
             }
@@ -794,11 +792,10 @@ int main() {
             if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
             
             if (newChunk != currentChunk || needsVBOUpdate) { 
-                // --- NEW: Rush will only trigger if Cooldown is <= 0 ---
                 if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && rand() % 100 < 20) {
                     rushActive = true;
                     rushState = 1; 
-                    rushTimer = 180 + (rand() % 120); // NEW: 3 to 5 seconds warning!
+                    rushTimer = 300 + (rand() % 120); // NEW: 5 to 7 seconds warning!
                 }
                 currentChunk = newChunk; 
                 needsVBOUpdate = true; 
@@ -837,13 +834,15 @@ int main() {
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             
             if (hideState == NOT_HIDING) {
-                if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.25f;
-                if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.25f;
+                // NEW: 3x faster C-Stick sensitivity
+                if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
+                if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 if (camPitch > 1.57f) camPitch = 1.57f; 
                 if (camPitch < -1.57f) camPitch = -1.57f;
                 
                 if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                    float s = isCrouching ? 0.12f : 0.22f; 
+                    // NEW: Faster player speed
+                    float s = isCrouching ? 0.16f : 0.28f; 
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                     float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
