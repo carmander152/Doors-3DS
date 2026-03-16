@@ -13,13 +13,97 @@ Option:
   UseOnSD                 : true
 
 AccessControlInfo:
-  Priority                : 0x30 # Added this line
+  Priority                : 0x30
   IdealProcessor          : 0
   AffinityMask            : 1
   SystemMode              : 64MB
   MemoryType              : Application
   CoreVersion             : 2
   DescVersion             : 2
+  
+  # These lines tell the 3DS which system services your game can talk to
+  ServiceAccessControl:
+    - gsp::Gpu
+    - hid:USER
+    - apt:U
+    - y2r:U
+    - ir:u
+    - ptm:u
+    - ac:u
+    - dsp::DSP
+    - cfg:u
+    - nfc:u
+    - ndm:u
+    - boss:P
+    - soc:U
+    - frd:u
+    - nwm::U
+    - ldr:ro
+
+  # This lists the low-level system calls (SVCs) the game is allowed to make
+  SystemCallAccess:
+    0x01: ControlMemory
+    0x02: QueryMemory
+    0x03: ExitProcess
+    0x04: GetProcessAffinityMask
+    0x05: SetProcessAffinityMask
+    0x06: GetProcessIdealProcessor
+    0x07: SetProcessIdealProcessor
+    0x08: CreateTimer
+    0x09: SetTimer
+    0x0A: CancelTimer
+    0x0B: ClearTimer
+    0x0C: CreateEvent
+    0x0D: SignalEvent
+    0x0E: ClearEvent
+    0x0F: CreateAddressArbiter
+    0x10: ArbitrateAddress
+    0x11: CloseHandle
+    0x12: WaitSynchronization
+    0x13: WaitSynchronizationN
+    0x14: SignalAndWait
+    0x15: GetSystemTick
+    0x16: GetHandleInfo
+    0x17: GetSystemInfo
+    0x18: GetProcessInfo
+    0x19: GetThreadInfo
+    0x1A: ConnectToPort
+    0x1B: SendSyncRequest1
+    0x1C: SendSyncRequest2
+    0x1D: SendSyncRequest3
+    0x1E: SendSyncRequest4
+    0x1F: SendSyncRequest
+    0x20: ReplyAndReceive1
+    0x21: ReplyAndReceive2
+    0x22: ReplyAndReceive3
+    0x23: ReplyAndReceive4
+    0x24: ReplyAndReceive
+    0x25: BindInterrupt
+    0x26: UnbindInterrupt
+    0x27: InvalidateProcessDataCache
+    0x28: StoreProcessDataCache
+    0x29: FlushProcessDataCache
+    0x2A: StartInterProcessDma
+    0x2B: StopDma
+    0x2C: GetDmaState
+    0x2D: RestartDma
+    0x2E: SetThreadPriority
+    0x2F: GetThreadPriority
+    0x30: CreateThread
+    0x31: ExitThread
+    0x32: SleepThread
+    0x33: CreateBlockProcess
+    0x34: CreateProcess
+    0x35: TerminateProcess
+    0x36: GetProcessId
+    0x37: GetThreadId
+    0x38: GetResourceLimit
+    0x39: GetResourceLimitLimitValues
+    0x3A: GetResourceLimitCurrentValues
+    0x3B: GetThreadContext
+    0x3C: Break
+    0x3D: OutputDebugString
+    0x3E: ControlPerformanceCounter
 
 SystemControlInfo:
   SaveDataSize            : 128K
