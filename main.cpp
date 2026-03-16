@@ -191,46 +191,46 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     }
     
     if (currentChunk < 2) {
-        // --- RESTORED LOBBY AT Z=3.0f ---
-        addBox(-6, 0, 3.0f, 12, 0.01f, -13.0f, 0.22f, 0.15f, 0.1f, false); 
-        addBox(-6, 1.8f, 3.0f, 12, 0.01f, -13.0f, 0.1f, 0.1f, 0.1f, false); 
-        addBox(-6, 0, 3.0f, 0.1f, 1.8f, -13.0f, 0.3f, 0.3f, 0.3f, true); 
-        addBox(6, 0, 3.0f, 0.1f, 1.8f, -13.0f, 0.3f, 0.3f, 0.3f, true);  
-        addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
-        addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  
-        addBox(-6.0f, 0, 3.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
+        // --- RESTORED SPACIOUS LOBBY AT Z=5.0f ---
+        addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); // Floor
+        addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); // Ceiling
+        addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); // Left Wall
+        addBox(6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  // Right Wall
+        addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); // Front L
+        addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  // Front R
+        addBox(-6.0f, 0, 5.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Back Wall
 
         // Restored Desk
-        addBox(-0.6f, 0, 1.0f, 1.2f, 1.5f, -0.2f, 0.4f, 0.2f, 0.1f, false); 
-        addBox(-0.5f, 0, 0.9f, 1.0f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
+        addBox(-0.6f, 0, 2.9f, 1.2f, 1.5f, -0.2f, 0.4f, 0.2f, 0.1f, false); 
+        addBox(-0.5f, 0, 2.8f, 1.0f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
 
         // Restored Couches & Trolley
-        addBox(-6.0f, 0.0f, -6.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
-        addBox(-3.3f, 0.0f, -6.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
-        addBox(-2.5f, 0.1f, -7.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.15f, -7.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-1.55f, 0.15f, -7.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.15f, -8.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-1.55f, 0.15f, -8.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.6f, -7.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
+        addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
+        addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
+        addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
+        addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
+        addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
+        addBox(-2.5f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
+        addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
+        addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
-        // --- 3 NEW IDENTICAL ELEVATORS ---
+        // --- 3 IDENTICAL ELEVATORS ON BACK WALL (Old "deep" elevator removed) ---
         // Left
-        addBox(-4.5f, 0.0f, 2.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(-4.4f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(-3.4f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(-4.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
+        addBox(-4.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(-3.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
         // Middle
-        addBox(-1.0f, 0.0f, 2.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(-0.9f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(0.1f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(-1.0f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
+        addBox(-0.9f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(0.1f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
         // Right
-        addBox(2.5f, 0.0f, 2.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(2.6f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(3.6f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(2.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
+        addBox(2.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(3.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
 
         if(!lobbyKeyPickedUp) {
-            addBox(-4.8f, 0.9f, -8.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
-            addBox(-4.7f, 0.7f, -8.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); 
+            addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
+            addBox(-4.7f, 0.7f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); 
         }
     }
 
