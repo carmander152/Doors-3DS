@@ -1,28 +1,28 @@
 BasicInfo:
   Title                   : "Doors 3DS"
   CompanyCode             : "00"
-  ProductCode             : "CTR-P-DOOR" # You can change this to whatever you want
+  ProductCode             : "CTR-P-DOOR"
   ContentType             : Application
   Logo                    : Nintendo
 
 TitleInfo:
-  UniqueId                : 0x0F800 # Make sure this is a unique hex ID so it doesn't overwrite other homebrew
+  UniqueId                : 0x0F800
   Category                : Application
 
 Option:
-  UseOnSD                 : true # Required for homebrew running off the SD card
+  UseOnSD                 : true
+  FreeProductCode         : true
+  MediaSize               : 128MB
 
 AccessControlInfo:
   IdealProcessor          : 0
   AffinityMask            : 1
   SystemMode              : 64MB
-  StartupCore             : 0
   MemoryType              : Application
   CoreVersion             : 2
   DescVersion             : 2
-  ReleaseVersion          : 0
 
 SystemControlInfo:
-  SaveDataSize            : 0 # Change this if your game needs to write save data
+  SaveDataSize            : 0
   RemasterVersion         : 0
   StackSize               : 0x40000
