@@ -7,18 +7,11 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
-
-# Define the RomFS directory
 ROMFS_DIR := romfs
 
 .PHONY: all clean
 
-# Build both the 3dsx (Homebrew Launcher) and the cia (Home Screen)
 all: $(TARGET).3dsx $(TARGET).cia
-
-# ---------------------------------------------------
-# 3DSX Build (Homebrew Launcher)
-# ---------------------------------------------------
 
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "carmander152" icon.png $@
@@ -26,98 +19,56 @@ $(TARGET).smdh: icon.png
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
-# ---------------------------------------------------
-# CIA Build (Home Screen)
-# ---------------------------------------------------
-
-# 1. Create the RomFS binary
 romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
-# 2. Create the Home Menu Banner (requires a 256x128 banner.png and an audio.wav)
 banner.bin: banner.png audio.wav
 	bannertool makebanner -i banner.png -a audio.wav -o $@
 
-# 3. Generate a complete Rom Spec File (RSF) - This is the "Bouncer" for makerom
 app.rsf:
-	@cat << 'EOF' > app.rsf
-BasicInfo:
-  Title                   : "Doors 3DS"
-  CompanyCode             : "00"
-  ProductCode             : "CTR-P-DOOR"
-  ContentType             : Application
-  Logo                    : Nintendo
+	@echo "BasicInfo:" > app.rsf
+	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
+	@echo "  CompanyCode             : \"00\"" >> app.rsf
+	@echo "  ProductCode             : \"CTR-P-DOOR\"" >> app.rsf
+	@echo "  ContentType             : Application" >> app.rsf
+	@echo "  Logo                    : Nintendo" >> app.rsf
+	@echo "TitleInfo:" >> app.rsf
+	@echo "  UniqueId                : 0x0F800" >> app.rsf
+	@echo "  Category                : Application" >> app.rsf
+	@echo "Option:" >> app.rsf
+	@echo "  UseOnSD                 : true" >> app.rsf
+	@echo "AccessControlInfo:" >> app.rsf
+	@echo "  CoreVersion             : 2" >> app.rsf
+	@echo "  HandleTableSize         : 512" >> app.rsf
+	@echo "  Priority                : 0x30" >> app.rsf
+	@echo "  IdealProcessor          : 0" >> app.rsf
+	@echo "  AffinityMask            : 1" >> app.rsf
+	@echo "  SystemMode              : 64MB" >> app.rsf
+	@echo "  MemoryType              : Application" >> app.rsf
+	@echo "  FileSystemAccess        : DirectSdmc" >> app.rsf
+	@echo "  ServiceAccessControl:" >> app.rsf
+	@echo "    - gsp::Gpu" >> app.rsf
+	@echo "    - hid:USER" >> app.rsf
+	@echo "    - apt:U" >> app.rsf
+	@echo "    - dsp::DSP" >> app.rsf
+	@echo "    - fs:USER" >> app.rsf
+	@echo "  SystemCallAccess:" >> app.rsf
+	@echo "    - ControlMemory" >> app.rsf
+	@echo "    - QueryMemory" >> app.rsf
+	@echo "    - ExitProcess" >> app.rsf
+	@echo "    - CreateThread" >> app.rsf
+	@echo "    - ExitThread" >> app.rsf
+	@echo "    - SleepThread" >> app.rsf
+	@echo "    - CloseHandle" >> app.rsf
+	@echo "    - WaitSynchronization1" >> app.rsf
+	@echo "    - WaitSynchronizationN" >> app.rsf
+	@echo "SystemControlInfo:" >> app.rsf
+	@echo "  SaveDataSize            : 128KB" >> app.rsf
+	@echo "  RemasterVersion         : 0" >> app.rsf
+	@echo "  StackSize               : 0x40000" >> app.rsf
 
-TitleInfo:
-  UniqueId                : 0x0F800
-  Category                : Application
-
-Option:
-  UseOnSD                 : true
-  FreeProductCode         : true
-
-AccessControlInfo:
-  CoreVersion             : 2
-  HandleTableSize         : 512
-  Priority                : 0x30
-  IdealProcessor          : 0
-  AffinityMask            : 1
-  SystemMode              : 64MB
-  MemoryType              : Application
-  FileSystemAccess        : DirectSdmc
-  ServiceAccessControl:
-    - gsp::Gpu
-    - hid:USER
-    - apt:U
-    - dsp::DSP
-    - fs:USER
-    - cfg:u
-    - ac:u
-  SystemCallAccess:
-    - ControlMemory
-    - QueryMemory
-    - ExitProcess
-    - CreateThread
-    - ExitThread
-    - SleepThread
-    - GetThreadPriority
-    - SetThreadPriority
-    - CreateMutex
-    - ReleaseMutex
-    - CreateSemaphore
-    - ReleaseSemaphore
-    - CreateEvent
-    - SignalEvent
-    - ClearEvent
-    - CreateTimer
-    - SetTimer
-    - CancelTimer
-    - ClearTimer
-    - CreateAddressArbiter
-    - ArbitrateAddress
-    - CloseHandle
-    - WaitSynchronization1
-    - WaitSynchronizationN
-    - GetSystemTick
-    - ConnectToPort
-    - SendSyncRequest
-    - GetProcessId
-    - GetThreadId
-    - OutputDebugString
-
-SystemControlInfo:
-  SaveDataSize            : 128KB
-  RemasterVersion         : 0
-  StackSize               : 0x40000
-EOF
-
-# 4. Compile the CIA using makerom
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	makerom -f cia -o $@ -elf $< -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
-
-# ---------------------------------------------------
-# Core Compilation
-# ---------------------------------------------------
 
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
