@@ -13,7 +13,6 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-// Increased to handle the procedural generation safely!
 #define MAX_VERTS 120000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
@@ -79,21 +78,19 @@ ndspWaveBuf loadWav(const char* path) {
         return waveBuf;
     }
 
-    // Skip the initial "RIFF", file size, and "WAVE" header (12 bytes)
     fseek(file, 12, SEEK_SET);
 
     char chunkId[4];
     u32 chunkSize;
     bool foundData = false;
 
-    // Scan through the chunks until we find the actual audio "data"
     while (fread(chunkId, 1, 4, file) == 4) {
         fread(&chunkSize, 4, 1, file);
         if (strncmp(chunkId, "data", 4) == 0) {
             foundData = true;
             break;
         }
-        fseek(file, chunkSize, SEEK_CUR); // Skip non-audio chunks (metadata, etc.)
+        fseek(file, chunkSize, SEEK_CUR);
     }
 
     if (!foundData) {
@@ -102,7 +99,6 @@ ndspWaveBuf loadWav(const char* path) {
         return waveBuf;
     }
 
-    // Allocate only the exact size of the audio data
     s16* buffer = (s16*)linearAlloc(chunkSize);
     if (!buffer) { fclose(file); return waveBuf; }
 
@@ -112,7 +108,7 @@ ndspWaveBuf loadWav(const char* path) {
     DSP_FlushDataCache(buffer, chunkSize);
 
     waveBuf.data_vaddr = buffer;
-    waveBuf.nsamples = chunkSize / 2; // Divide by 2 because it's 16-bit
+    waveBuf.nsamples = chunkSize / 2;
     waveBuf.looping = false;
     waveBuf.status = NDSP_WBUF_FREE;
 
@@ -469,16 +465,24 @@ int main() {
 
     romfsInit();
 
-    ndspInit();
-    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
-    ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
-    ndspChnSetRate(0, 44100);
-    ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
+    // --- NEW: Audio Safety Net ---
+    bool audio_ok = R_SUCCEEDED(ndspInit());
+    ndspWaveBuf sndPsst = {0};
+    ndspWaveBuf sndAttack = {0};
+    ndspWaveBuf sndCaught = {0};
 
-    // --- NEW: Load all three Screech files ---
-    ndspWaveBuf sndPsst = loadWav("romfs:/Screech_Psst.wav");
-    ndspWaveBuf sndAttack = loadWav("romfs:/Screech_Attack.wav");
-    ndspWaveBuf sndCaught = loadWav("romfs:/Screech_Caught.wav");
+    if (audio_ok) {
+        ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+        ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(0, 44100);
+        ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
+
+        sndPsst = loadWav("romfs:/Screech_Psst.wav");
+        sndAttack = loadWav("romfs:/Screech_Attack.wav");
+        sndCaught = loadWav("romfs:/Screech_Caught.wav");
+    } else {
+        printf("AUDIO FAILED TO LOAD! Playing silently.\n");
+    }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
@@ -662,11 +666,13 @@ int main() {
                 screechZ = camZ + cosf(camYaw) * 2.0f;
                 needsVBOUpdate = true;
                 
-                // --- PLAY PSST SOUND ---
-                ndspChnWaveBufClear(0); 
-                if (sndPsst.data_vaddr) {
-                    sndPsst.status = NDSP_WBUF_FREE;
-                    ndspChnWaveBufAdd(0, &sndPsst); 
+                // --- PLAY PSST SOUND (Safety Wrapped) ---
+                if (audio_ok) {
+                    ndspChnWaveBufClear(0); 
+                    if (sndPsst.data_vaddr) {
+                        sndPsst.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(0, &sndPsst); 
+                    }
                 }
             }
 
@@ -684,11 +690,13 @@ int main() {
                     needsVBOUpdate = true;
                     sprintf(uiMessage, "Dodged Screech!"); messageTimer = 90;
                     
-                    // --- PLAY CAUGHT SOUND ---
-                    ndspChnWaveBufClear(0);
-                    if (sndCaught.data_vaddr) {
-                        sndCaught.status = NDSP_WBUF_FREE;
-                        ndspChnWaveBufAdd(0, &sndCaught); 
+                    // --- PLAY CAUGHT SOUND (Safety Wrapped) ---
+                    if (audio_ok) {
+                        ndspChnWaveBufClear(0);
+                        if (sndCaught.data_vaddr) {
+                            sndCaught.status = NDSP_WBUF_FREE;
+                            ndspChnWaveBufAdd(0, &sndCaught); 
+                        }
                     }
 
                 } else if (screechTimer <= 0) {
@@ -699,11 +707,13 @@ int main() {
                     sprintf(uiMessage, "Screech bit you! (-20 HP)"); messageTimer = 90; 
                     if (playerHealth <= 0) isDead = true;
 
-                    // --- PLAY ATTACK SOUND ---
-                    ndspChnWaveBufClear(0);
-                    if (sndAttack.data_vaddr) {
-                        sndAttack.status = NDSP_WBUF_FREE;
-                        ndspChnWaveBufAdd(0, &sndAttack); 
+                    // --- PLAY ATTACK SOUND (Safety Wrapped) ---
+                    if (audio_ok) {
+                        ndspChnWaveBufClear(0);
+                        if (sndAttack.data_vaddr) {
+                            sndAttack.status = NDSP_WBUF_FREE;
+                            ndspChnWaveBufAdd(0, &sndAttack); 
+                        }
                     }
                 }
             }
@@ -911,8 +921,8 @@ int main() {
             if (needsVBOUpdate) {
                 buildWorld(currentChunk, playerCurrentRoom);
                 if (world_mesh.size() > MAX_VERTS) {
-                    printf("\x1b[2J"); // Clear bottom screen
-                    printf("\x1b[1;1H"); // Reset cursor
+                    printf("\x1b[2J"); 
+                    printf("\x1b[1;1H"); 
                     printf("CRITICAL ERROR: Vertex overflow during gameplay!\n");
                     printf("Generated %zu vertices. Max is %d.\n", world_mesh.size(), MAX_VERTS);
                 } else {
@@ -972,13 +982,14 @@ int main() {
         C3D_FrameEnd(0);
     }
     
-    // Clean up audio memory!
-    if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
-    if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
-    if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
+    if (audio_ok) {
+        if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
+        if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
+        if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
+        ndspExit();
+    }
     
     romfsExit();
-    ndspExit();
     C3D_Fini(); gfxExit();
     return 0;
 }
