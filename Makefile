@@ -48,7 +48,34 @@ app.rsf:
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    - dummy" >> app.rsf
+	@echo "    - ControlMemory" >> app.rsf
+	@echo "    - ControlProcessMemory" >> app.rsf
+	@echo "    - ExitProcess" >> app.rsf
+	@echo "    - GetProcessInfo" >> app.rsf
+	@echo "    - GetProcessList" >> app.rsf
+	@echo "    - GetThreadList" >> app.rsf
+	@echo "    - WaitSynchronization1" >> app.rsf
+	@echo "    - WaitSynchronizationN" >> app.rsf
+	@echo "    - CreateEvent" >> app.rsf
+	@echo "    - SignalEvent" >> app.rsf
+	@echo "    - ClearEvent" >> app.rsf
+	@echo "    - CreateTimer" >> app.rsf
+	@echo "    - SetTimer" >> app.rsf
+	@echo "    - CancelTimer" >> app.rsf
+	@echo "    - ClearTimer" >> app.rsf
+	@echo "    - CreateMemoryBlock" >> app.rsf
+	@echo "    - MapMemoryBlock" >> app.rsf
+	@echo "    - UnmapMemoryBlock" >> app.rsf
+	@echo "    - CreateAddressArbiter" >> app.rsf
+	@echo "    - ArbitrateAddress" >> app.rsf
+	@echo "    - CloseHandle" >> app.rsf
+	@echo "    - ConnectToPort" >> app.rsf
+	@echo "    - SendSyncRequest" >> app.rsf
+	@echo "    - GetSystemTick" >> app.rsf
+	@echo "    - GetSystemInfo" >> app.rsf
+	@echo "    - GetProcessId" >> app.rsf
+	@echo "    - GetThreadId" >> app.rsf
+	@echo "    - OutputDebugString" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
