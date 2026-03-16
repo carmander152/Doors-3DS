@@ -31,7 +31,7 @@ struct RoomSetup {
     int doorPos;     
     int pCount;      
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10];
-    int pSide[10];   // 0 = Left, 1 = Right
+    int pSide[10];   
     
     bool isDupeRoom;
     int correctDupePos; 
@@ -192,19 +192,15 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     
     if (currentChunk < 2) {
         // --- RESTORED SPACIOUS LOBBY AT Z=5.0f ---
-        addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); // Floor
-        addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); // Ceiling
-        addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); // Left Wall
-        addBox(6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  // Right Wall
-        addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); // Front L
-        addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  // Front R
+        addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
+        addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
+        addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
+        addBox(6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  
+        addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
+        addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  
         addBox(-6.0f, 0, 5.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Back Wall
 
-        // Restored Desk
-        addBox(-0.6f, 0, 2.9f, 1.2f, 1.5f, -0.2f, 0.4f, 0.2f, 0.1f, false); 
-        addBox(-0.5f, 0, 2.8f, 1.0f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
-
-        // Restored Couches & Trolley
+        // Couches & Trolley
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
@@ -214,19 +210,18 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
-        // --- 3 IDENTICAL ELEVATORS ON BACK WALL (Old "deep" elevator removed) ---
-        // Left
+        // --- 2 ELEVATORS (Left and Right only!) ---
         addBox(-4.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
         addBox(-4.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
         addBox(-3.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        // Middle
-        addBox(-1.0f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(-0.9f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(0.1f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        // Right
+        
         addBox(2.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
         addBox(2.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
         addBox(3.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+
+        // --- FRONT DESK (Placed cleanly against back wall, WITH collision!) ---
+        addBox(-1.0f, 0, 4.9f, 2.0f, 1.5f, -0.4f, 0.4f, 0.2f, 0.1f, true); 
+        addBox(-0.9f, 0, 4.5f, 1.8f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
 
         if(!lobbyKeyPickedUp) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
@@ -278,7 +273,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
         }
 
-        // --- FLAWLESS WALL PAINTINGS (Strictly Left/Right Walls Only) ---
+        // --- FLAWLESS WALL PAINTINGS (With Frames!) ---
         for(int p=0; p<rooms[i].pCount; p++) {
             float pZ = rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
@@ -286,12 +281,15 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             float pY = rooms[i].pY[p];
 
             if (rooms[i].pSide[p] == 0) { // Left Wall
-                // Frame Thickness 0.04. Canvas Thickness 0.02. Canvas perfectly centered!
-                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.04f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
-                addBox(-2.91f, pY, z - pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+                // Frame Backing
+                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
+                // Canvas (Sticks out 0.01 further to avoid z-fighting, inset 0.05 from frame edges)
+                addBox(-2.94f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
             } else if (rooms[i].pSide[p] == 1) { // Right Wall
-                addBox(2.91f, pY - 0.05f, z - pZ + 0.05f, 0.04f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
-                addBox(2.89f, pY, z - pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+                // Frame Backing
+                addBox(2.90f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
+                // Canvas 
+                addBox(2.89f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
             }
         }
     }
@@ -338,29 +336,27 @@ void generateRooms() {
             else rooms[i].slotType[s] = 0;             
         }
 
-        // --- NO MORE DOOR BED TRAPS ---
         int inDoor = rooms[i].doorPos;
         int outDoor = (i < 99) ? rooms[i+1].doorPos : 1;
         
         for(int s=0; s<3; s++) {
-            if (rooms[i].slotType[s] == 3) { // Left Bed
+            if (rooms[i].slotType[s] == 3) { 
                 if (s == 0 && inDoor == 0) rooms[i].slotType[s] = 5; 
                 if (s == 2 && outDoor == 0) rooms[i].slotType[s] = 5; 
             }
-            if (rooms[i].slotType[s] == 4) { // Right Bed
+            if (rooms[i].slotType[s] == 4) { 
                 if (s == 0 && inDoor == 2) rooms[i].slotType[s] = 6; 
                 if (s == 2 && outDoor == 2) rooms[i].slotType[s] = 6;
             }
         }
 
-        // --- SIDE WALL PAINTINGS ONLY ---
         rooms[i].pCount = rand() % 5 + 3; 
         for(int p=0; p<rooms[i].pCount; p++) {
             bool overlap;
             int tries = 0;
             do {
                 overlap = false;
-                rooms[i].pSide[p] = rand() % 2; // ONLY 0 or 1! No doors on these walls!
+                rooms[i].pSide[p] = rand() % 2; 
                 rooms[i].pZ[p] = 1.0f + (rand() % 70) / 10.0f; 
                 rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; 
                 rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
@@ -500,7 +496,11 @@ int main() {
         if (messageTimer > 0) messageTimer--;
         if (screechCooldown > 0) screechCooldown--;
 
+        // --- BRUTE FORCE CONSOLE WIPE TO PREVENT GHOST TEXT ---
         printf("\x1b[1;1H"); 
+        for(int i=0; i<15; i++) printf("                                        \n");
+        printf("\x1b[1;1H");
+
         printf("==============================\n");
         if (isDead) {
             printf("         YOU DIED!            \n");
@@ -509,7 +509,6 @@ int main() {
             printf("                              \n\n\n");
             printf("    [PRESS START TO RESTART]  \n");
         } else {
-            // --- NEW EXPLICIT SCREECH TEXT UI ---
             if (screechActive) {
                 printf("  >> SCREECH ATTACK!! <<      \n");
                 printf("                              \n");
