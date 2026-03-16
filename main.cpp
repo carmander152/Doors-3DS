@@ -13,7 +13,8 @@
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-#define MAX_VERTS 55000 
+// Increased to handle the procedural generation safely!
+#define MAX_VERTS 120000 
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
@@ -497,9 +498,21 @@ int main() {
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr);
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 4);
 
+    // --- SAFETY CHECK 1: Boot-up Allocation ---
     void* vbo_ptr = linearAlloc(MAX_VERTS * sizeof(vertex));
-    memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
-    GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+    if (!vbo_ptr) {
+        printf("CRITICAL ERROR: Failed to allocate VRAM!\n");
+        while(aptMainLoop()) { hidScanInput(); if(hidKeysDown() & KEY_START) break; }
+    }
+
+    if (world_mesh.size() > MAX_VERTS) {
+        printf("CRITICAL ERROR: Generated %zu vertices!\n", world_mesh.size());
+        printf("This exceeds MAX_VERTS of %d\n", MAX_VERTS);
+        while(aptMainLoop()) { hidScanInput(); if(hidKeysDown() & KEY_START) break; }
+    } else {
+        memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
+        GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+    }
 
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
@@ -534,8 +547,15 @@ int main() {
                 generateRooms(); 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 buildWorld(currentChunk, playerCurrentRoom);
-                memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
-                GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+                
+                // --- SAFETY CHECK 2: Restart Game ---
+                if (world_mesh.size() > MAX_VERTS) {
+                    printf("CRITICAL ERROR: Vertex overflow on restart!\n");
+                } else {
+                    memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
+                    GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+                }
+                
                 consoleClear(); 
                 continue; 
             } else break; 
@@ -887,10 +907,18 @@ int main() {
                 }
             }
 
+            // --- SAFETY CHECK 3: Gameplay Chunk Updates ---
             if (needsVBOUpdate) {
                 buildWorld(currentChunk, playerCurrentRoom);
-                memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
-                GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+                if (world_mesh.size() > MAX_VERTS) {
+                    printf("\x1b[2J"); // Clear bottom screen
+                    printf("\x1b[1;1H"); // Reset cursor
+                    printf("CRITICAL ERROR: Vertex overflow during gameplay!\n");
+                    printf("Generated %zu vertices. Max is %d.\n", world_mesh.size(), MAX_VERTS);
+                } else {
+                    memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
+                    GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
+                }
             }
 
             float curH = -0.9f; float playerH = 1.1f; 
