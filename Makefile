@@ -11,7 +11,8 @@ ROMFS_DIR := romfs
 
 .PHONY: all clean
 
-all: $(TARGET).3dsx $(TARGET).cia
+# We want all three: the raw code (.elf), the Homebrew file (.3dsx), and the installable (.cia)
+all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "carmander152" icon.png $@
@@ -23,7 +24,7 @@ romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
-	bannertool makebanner -i banner.png -a audio.wav -o banner.bin
+	bannertool makebanner -i banner.png -a audio.wav -o $@
 
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
