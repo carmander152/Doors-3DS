@@ -38,7 +38,7 @@ romfs.bin: $(ROMFS_DIR)
 banner.bin: banner.png audio.wav
 	bannertool makebanner -i banner.png -a audio.wav -o $@
 
-# 3. Generate a complete Rom Spec File (RSF)
+# 3. Generate a v0.18 compatible Rom Spec File (RSF)
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
 	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
@@ -60,18 +60,14 @@ app.rsf:
 	@echo "  OtherUserSaveDataId3: 0x00000" >> app.rsf
 	@echo "  UseOtherVariationSaveData: false" >> app.rsf
 	@echo "  UseExtSaveData: false" >> app.rsf
-	@echo "  AppType: Regular" >> app.rsf
 	@echo "  IdealProcessor: 0" >> app.rsf
 	@echo "  AffinityMask: 1" >> app.rsf
 	@echo "  Priority: 16" >> app.rsf
 	@echo "  MaxCpu: 0x9E" >> app.rsf
-	@echo "  MemoryType: Application" >> app.rsf
 	@echo "  CoreVersion: 2" >> app.rsf
-	@echo "  SystemMode: 64MB" >> app.rsf
 	@echo "  HandleTableSize: 512" >> app.rsf
 	@echo "  DisableP3D: false" >> app.rsf
 	@echo "  EnableL2Cache: true" >> app.rsf
-	@echo "  ResourceLimitCategory: Application" >> app.rsf
 	@echo "  ReleaseKernelMajor: 0" >> app.rsf
 	@echo "  ReleaseKernelMinor: 0" >> app.rsf
 	@echo "  FileSystemAccess:" >> app.rsf
