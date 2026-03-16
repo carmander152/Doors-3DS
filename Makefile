@@ -13,36 +13,69 @@ ROMFS_DIR := romfs
 
 .PHONY: all clean
 
-# Build both the 3dsx and the smdh metadata file
-all: $(TARGET).3dsx $(TARGET).smdh
+# Build both the 3dsx (Homebrew Launcher) and the cia (Home Screen)
+all: $(TARGET).3dsx $(TARGET).cia
 
-# Generate the SMDH metadata file with your custom icon and text
+# ---------------------------------------------------
+# 3DSX Build (Homebrew Launcher)
+# ---------------------------------------------------
+
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Remake of LSplashes Roblox game Doors for 3DS" "carmander152" icon.png $@
 
-# Compile the .3dsx, bundling the SMDH and RomFS
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
-# Compile the ELF binary
+# ---------------------------------------------------
+# CIA Build (Home Screen)
+# ---------------------------------------------------
+
+# 1. Create the RomFS binary
+romfs.bin: $(ROMFS_DIR)
+	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
+
+# 2. Create the Home Menu Banner (requires a exactly 256x128 banner.png)
+banner.bin: banner.png
+	bannertool makebanner -i banner.png -o $@
+
+# 3. Generate a minimal Rom Spec File (RSF)
+app.rsf:
+	@echo "BasicInfo:" > app.rsf
+	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
+	@echo "  CompanyCode             : \"00\"" >> app.rsf
+	@echo "  ProductCode             : \"CTR-P-DOOR\"" >> app.rsf
+	@echo "  ContentType             : Application" >> app.rsf
+	@echo "  Logo                    : Nintendo" >> app.rsf
+	@echo "TitleInfo:" >> app.rsf
+	@echo "  UniqueId                : 0x0D00A" >> app.rsf
+	@echo "  Category                : Application" >> app.rsf
+	@echo "Option:" >> app.rsf
+	@echo "  UseOnSD                 : true" >> app.rsf
+	@echo "SystemControlInfo:" >> app.rsf
+	@echo "  SaveDataSize: 0KB" >> app.rsf
+
+# 4. Compile the CIA using makerom
+$(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
+	makerom -f cia -o $@ -elf $< -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
+
+# ---------------------------------------------------
+# Core Compilation
+# ---------------------------------------------------
+
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
 
-# Compile main.cpp
 main.o: main.cpp vshader_shbin.h
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
-# Compile the shader
 vshader.shbin.o: vshader.v.pica
 	picasso -o vshader.shbin $<
 	bin2s vshader.shbin > vshader.shbin.s
 	$(AS) -march=armv6k -mfloat-abi=hard -o $@ vshader.shbin.s
 
-# Generate the shader header
 vshader_shbin.h: vshader.shbin
 	echo "extern const u8 vshader_shbin[];" > $@
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
-# Clean up generated files
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf
