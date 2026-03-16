@@ -38,38 +38,9 @@ app.rsf:
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
-	@echo "  Priority                : 0x30" >> app.rsf
+	@echo "  Priority                : 48" >> app.rsf
 	@echo "  CoreVersion             : 2" >> app.rsf
 	@echo "  HandleTableSize         : 512" >> app.rsf
-	@echo "  ServiceAccessControl:" >> app.rsf
-	@echo "    - apt:U" >> app.rsf
-	@echo "    - gsp::Gpu" >> app.rsf
-	@echo "    - hid:USER" >> app.rsf
-	@echo "    - dsp::DSP" >> app.rsf
-	@echo "    - fs:USER" >> app.rsf
-	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    - ControlMemory" >> app.rsf
-	@echo "    - ExitProcess" >> app.rsf
-	@echo "    - CreateThread" >> app.rsf
-	@echo "    - ExitThread" >> app.rsf
-	@echo "    - SleepThread" >> app.rsf
-	@echo "    - GetThreadPriority" >> app.rsf
-	@echo "    - SetThreadPriority" >> app.rsf
-	@echo "    - CreateEvent" >> app.rsf
-	@echo "    - SignalEvent" >> app.rsf
-	@echo "    - ClearEvent" >> app.rsf
-	@echo "    - CreateTimer" >> app.rsf
-	@echo "    - SetTimer" >> app.rsf
-	@echo "    - CancelTimer" >> app.rsf
-	@echo "    - ClearTimer" >> app.rsf
-	@echo "    - CloseHandle" >> app.rsf
-	@echo "    - WaitSynchronization1" >> app.rsf
-	@echo "    - WaitSynchronizationN" >> app.rsf
-	@echo "    - ConnectToPort" >> app.rsf
-	@echo "    - SendSyncRequest" >> app.rsf
-	@echo "    - GetProcessId" >> app.rsf
-	@echo "    - GetThreadId" >> app.rsf
-	@echo "    - OutputDebugString" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  RemasterVersion         : 0" >> app.rsf
