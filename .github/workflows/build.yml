@@ -11,9 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
 
+    # This tells the Makefile exactly where the tools are located
+    env:
+      DEVKITPRO: /opt/devkitpro
+      DEVKITARM: /opt/devkitpro/devkitARM
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          apt-get update
+          apt-get install -y wget unzip zip make p7zip-full
 
       - name: Install CIA Tools Manually
         run: |
@@ -24,7 +34,6 @@ jobs:
           cp makerom /usr/local/bin/
 
           echo "Downloading bannertool..."
-          # Steveice10's repo was deleted! Using the community mirror.
           wget -qO bannertool.zip https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip
           unzip -o bannertool.zip
           chmod +x linux-x86_64/bannertool
