@@ -47,6 +47,8 @@ app.rsf:
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
+	@echo "    - irrst:u" >> app.rsf
+	@echo "    - cfg:u" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
 	@echo "    0x01: ControlMemory" >> app.rsf
 	@echo "    0x02: QueryMemory" >> app.rsf
