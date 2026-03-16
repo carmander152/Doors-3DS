@@ -18,7 +18,7 @@ all: $(TARGET).3dsx $(TARGET).smdh
 
 # Generate the SMDH metadata file with your custom icon and text
 $(TARGET).smdh: icon.png
-	smdhtool --create "Doors 3DS" "DOORS Fan Game" "carmander152" icon.png $@
+	smdhtool --create "Doors 3DS" "Remake of LSplashes Roblox game Doors for 3DS" "carmander152" icon.png $@
 
 # Compile the .3dsx, bundling the SMDH and RomFS
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
