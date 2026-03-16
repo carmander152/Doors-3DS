@@ -465,7 +465,7 @@ int main() {
 
     romfsInit();
 
-    // --- NEW: Audio Safety Net ---
+    // --- FULL AUDIO ENGINE ---
     bool audio_ok = R_SUCCEEDED(ndspInit());
     ndspWaveBuf sndPsst = {0};
     ndspWaveBuf sndAttack = {0};
@@ -480,8 +480,6 @@ int main() {
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
         sndCaught = loadWav("romfs:/Screech_Caught.wav");
-    } else {
-        printf("AUDIO FAILED TO LOAD! Playing silently.\n");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -502,7 +500,6 @@ int main() {
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr);
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 4);
 
-    // --- SAFETY CHECK 1: Boot-up Allocation ---
     void* vbo_ptr = linearAlloc(MAX_VERTS * sizeof(vertex));
     if (!vbo_ptr) {
         printf("CRITICAL ERROR: Failed to allocate VRAM!\n");
@@ -552,7 +549,6 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 buildWorld(currentChunk, playerCurrentRoom);
                 
-                // --- SAFETY CHECK 2: Restart Game ---
                 if (world_mesh.size() > MAX_VERTS) {
                     printf("CRITICAL ERROR: Vertex overflow on restart!\n");
                 } else {
@@ -652,7 +648,12 @@ int main() {
                 else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
                 else printf("\n                                    \n");
 
-                for(int i=0; i<4; i++) printf("                                    \n");
+                if (!audio_ok) {
+                    printf("\x1b[31m WARNING: dspfirm.cdc MISSING!\x1b[0m\n");
+                    printf("\x1b[31m Sound chip could not turn on.\x1b[0m\n");
+                } else {
+                    for(int i=0; i<4; i++) printf("                                    \n");
+                }
             }
         }
 
@@ -666,7 +667,6 @@ int main() {
                 screechZ = camZ + cosf(camYaw) * 2.0f;
                 needsVBOUpdate = true;
                 
-                // --- PLAY PSST SOUND (Safety Wrapped) ---
                 if (audio_ok) {
                     ndspChnWaveBufClear(0); 
                     if (sndPsst.data_vaddr) {
@@ -690,7 +690,6 @@ int main() {
                     needsVBOUpdate = true;
                     sprintf(uiMessage, "Dodged Screech!"); messageTimer = 90;
                     
-                    // --- PLAY CAUGHT SOUND (Safety Wrapped) ---
                     if (audio_ok) {
                         ndspChnWaveBufClear(0);
                         if (sndCaught.data_vaddr) {
@@ -707,7 +706,6 @@ int main() {
                     sprintf(uiMessage, "Screech bit you! (-20 HP)"); messageTimer = 90; 
                     if (playerHealth <= 0) isDead = true;
 
-                    // --- PLAY ATTACK SOUND (Safety Wrapped) ---
                     if (audio_ok) {
                         ndspChnWaveBufClear(0);
                         if (sndAttack.data_vaddr) {
@@ -917,7 +915,6 @@ int main() {
                 }
             }
 
-            // --- SAFETY CHECK 3: Gameplay Chunk Updates ---
             if (needsVBOUpdate) {
                 buildWorld(currentChunk, playerCurrentRoom);
                 if (world_mesh.size() > MAX_VERTS) {
