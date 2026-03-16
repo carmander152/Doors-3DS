@@ -60,9 +60,6 @@ app.rsf:
 	@echo "  OtherUserSaveDataId3: 0x00000" >> app.rsf
 	@echo "  UseOtherVariationSaveData: false" >> app.rsf
 	@echo "  UseExtSaveData: false" >> app.rsf
-	@echo "  UseExtSaveData1: false" >> app.rsf
-	@echo "  UseExtSaveData2: false" >> app.rsf
-	@echo "  UseExtSaveData3: false" >> app.rsf
 	@echo "  AppType: Regular" >> app.rsf
 	@echo "  IdealProcessor: 0" >> app.rsf
 	@echo "  AffinityMask: 1" >> app.rsf
