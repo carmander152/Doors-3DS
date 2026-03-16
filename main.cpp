@@ -30,8 +30,8 @@ struct RoomSetup {
 
     int doorPos;     
     int pCount;      
-    float pZ[4], pY[4], pW[4], pH[4], pR[4], pG[4], pB[4];
-    int pSide[4];    
+    float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10];
+    int pSide[10];    
     
     bool isDupeRoom;
     int correctDupePos; 
@@ -47,6 +47,7 @@ bool doorOpen[100] = {false};
 bool isCrouching = false;
 bool isDead = false; 
 bool persistentGlitch = false; 
+HideState hideState = NOT_HIDING; // NOW GLOBAL FOR THE VOID CHECK!
 
 // UI Message Variables
 int messageTimer = 0;
@@ -90,13 +91,12 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
-// --- WARDROBES (Flush & Void Added) ---
+// --- WARDROBES ---
 void buildCabinet(float zCenter, bool isLeft) {
     float backX = isLeft ? -2.9f : 2.8f; 
     float topX = isLeft ? -2.9f : 2.1f;  
     float frontX = isLeft ? -2.2f : 2.1f; 
     
-    // Solid Wooden Frame
     addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
     addBox(topX, 1.5f, zCenter - 0.5f, 0.8f, 0.1f, 1.0f, 0.3f, 0.18f, 0.1f, false); 
     addBox(topX, 0, zCenter - 0.5f, 0.8f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false); 
@@ -104,14 +104,16 @@ void buildCabinet(float zCenter, bool isLeft) {
     addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
     addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false); 
 
-    // THE VOID: A pure black box inside the wardrobe without collision!
-    float voidX = isLeft ? -2.8f : 2.2f;
-    addBox(voidX, 0.01f, zCenter - 0.4f, 0.6f, 1.48f, 0.8f, 0.0f, 0.0f, 0.0f, false);
+    // ONLY RENDER THE PITCH BLACK VOID IF WE ARE NOT HIDING INSIDE IT!
+    if (hideState != IN_CABINET) {
+        float voidX = isLeft ? -2.8f : 2.2f;
+        addBox(voidX, 0.01f, zCenter - 0.4f, 0.6f, 1.48f, 0.8f, 0.0f, 0.0f, 0.0f, false);
+    }
     
     collisions.push_back({isLeft ? -2.9f : 2.1f, 0.0f, zCenter - 0.5f, isLeft ? -2.1f : 2.9f, 1.5f, zCenter + 0.5f, 1});
 }
 
-// --- BEDS (Flush) ---
+// --- BEDS ---
 void buildBed(float zCenter, bool isLeft, int itemType) {
     float x = isLeft ? -2.9f : 1.5f; 
     float skirtX = isLeft ? -1.6f : 1.5f; 
@@ -133,29 +135,32 @@ void buildBed(float zCenter, bool isLeft, int itemType) {
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
-// --- DRESSERS (Flush & Proper Drawer Movement) ---
+// --- PROTRUDING DRESSERS WITH VISIBLE LOOT TRAY ---
 void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType) {
-    float frameX = isLeft ? -2.9f : 2.4f; 
-    float drawerX = isLeft ? -2.85f : 2.45f; 
-    float handleX = isLeft ? -2.5f : 2.45f; 
-    float itemX = isLeft ? -2.7f : 2.5f; 
+    float frameX = isLeft ? -2.6f : 2.1f; 
+    
+    // The Drawer is now slightly wider so it always protrudes perfectly past the frame!
+    float drawerX = isLeft ? -2.55f : 2.05f; 
+    float handleX = isLeft ? -2.15f : 2.05f; 
     float openOffset = isOpen ? (isLeft ? 0.35f : -0.35f) : 0.0f;
 
-    // Solid Dresser Frame
+    // Solid Dresser Frame (Width 0.5)
     addBox(frameX, 0.0f, zCenter - 0.4f, 0.5f, 0.8f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3); 
     
-    // The Drawer
-    addBox(drawerX + openOffset, 0.3f, zCenter - 0.35f, 0.4f, 0.25f, 0.7f, 0.25f, 0.12f, 0.08f, false);
+    // The Drawer (Width 0.5, sitting slightly offset so it sticks out!)
+    // Height is reduced to 0.15f to act like a tray for items.
+    addBox(drawerX + openOffset, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false);
     
     // The Drawer Handle
-    addBox(handleX + openOffset, 0.4f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+    addBox(handleX + openOffset, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
 
-    // Items
+    // Items rest clearly ON TOP of the drawer box (Y = 0.46f)
     if (isOpen) {
-        if (itemType == 1) { 
-            addBox(itemX + openOffset, 0.35f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
-        } else if (itemType == 2) { 
-            addBox(itemX + openOffset, 0.35f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
+        float itemX = isLeft ? -2.4f : 2.25f; 
+        if (itemType == 1) { // Key
+            addBox(itemX + openOffset, 0.46f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
+        } else if (itemType == 2) { // Bandaid
+            addBox(itemX + openOffset, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
         }
     }
 }
@@ -216,6 +221,12 @@ void buildWorld(int currentChunk) {
         addBox(-2.5f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
+
+        // LOBBY PAINTINGS!
+        addBox(-4.0f, 0.8f, 4.9f, 1.0f, 0.6f, 0.1f, 0.7f, 0.2f, 0.2f, false);
+        addBox(3.0f, 0.7f, 4.9f, 1.2f, 0.8f, 0.1f, 0.2f, 0.5f, 0.8f, false);
+        addBox(-5.9f, 0.7f, -2.0f, 0.1f, 0.8f, 1.0f, 0.8f, 0.7f, 0.2f, false);
+        addBox(5.8f, 0.6f, -4.0f, 0.1f, 0.7f, 1.2f, 0.2f, 0.8f, 0.4f, false);
 
         if(!lobbyKeyPickedUp) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
@@ -316,16 +327,36 @@ void generateRooms() {
             else rooms[i].slotType[s] = 0;             
         }
 
-        rooms[i].pCount = rand() % 4; 
+        // IMPROVED PAINTINGS: Increased count and strict non-overlap checks!
+        rooms[i].pCount = rand() % 5 + 3; // 3 to 7 paintings
         for(int p=0; p<rooms[i].pCount; p++) {
-            rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; 
-            rooms[i].pY[p] = 0.6f + (rand() % 60) / 100.0f; 
-            rooms[i].pW[p] = 0.4f + (rand() % 80) / 100.0f; 
-            rooms[i].pH[p] = 0.4f + (rand() % 60) / 100.0f; 
+            bool overlap;
+            int tries = 0;
+            do {
+                overlap = false;
+                rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; 
+                rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; 
+                rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
+                rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
+                rooms[i].pSide[p] = rand() % 2; 
+                
+                for(int op=0; op<p; op++) {
+                    if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
+                        float zDist = abs(rooms[i].pZ[p] - rooms[i].pZ[op]);
+                        float yDist = abs(rooms[i].pY[p] - rooms[i].pY[op]);
+                        // If they are too close to each other, set overlap to true and try again
+                        if (zDist < (rooms[i].pW[p] + rooms[i].pW[op]) * 0.6f && 
+                            yDist < (rooms[i].pH[p] + rooms[i].pH[op]) * 0.6f) {
+                            overlap = true; break;
+                        }
+                    }
+                }
+                tries++;
+            } while (overlap && tries < 10);
+            
             rooms[i].pR[p] = (rand() % 100) / 100.0f; 
             rooms[i].pG[p] = (rand() % 100) / 100.0f; 
             rooms[i].pB[p] = (rand() % 100) / 100.0f; 
-            rooms[i].pSide[p] = rand() % 2; 
         }
     }
     
@@ -401,7 +432,6 @@ int main() {
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
     float camX = 0, camZ = 4.0f, camYaw = 0, camPitch = 0;
-    HideState hideState = NOT_HIDING;
     const char symbols[] = "@!$#&*%?";
 
     while (aptMainLoop()) {
@@ -431,7 +461,6 @@ int main() {
 
         bool needsVBOUpdate = false;
         
-        // --- NEW PERFECT ROOM MATH ---
         int currentRoom = (camZ > -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f);
         if (currentRoom < -1) currentRoom = -1;
         if (currentRoom > 98) currentRoom = 98;
@@ -542,7 +571,6 @@ int main() {
                 }
             }
 
-            // --- PERFECTED X BUTTON (HIDING AND OPENING DRAWERS) ---
             if (kDown & KEY_X) {
                 if (hideState == NOT_HIDING) {
                     bool interactedWithDrawer = false;
@@ -554,8 +582,7 @@ int main() {
                             
                             if (type == 5 || type == 6) {
                                 float slotX = (type == 5) ? -2.4f : 2.4f; 
-                                // PROXIMITY CHECK!
-                                if (abs(camZ - zCenter) < 1.5f && abs(camX - slotX) < 1.2f) {
+                                if (abs(camZ - zCenter) < 1.5f && abs(camX - slotX) < 1.8f) {
                                     rooms[currentRoom].drawerOpen[s] = !rooms[currentRoom].drawerOpen[s];
                                     needsVBOUpdate = true;
                                     interactedWithDrawer = true;
@@ -577,17 +604,16 @@ int main() {
                                         hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; 
                                         if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } else { camX = 2.2f; camYaw = 1.57f; } 
                                     }
-                                    isCrouching = false; break; 
+                                    isCrouching = false; needsVBOUpdate = true; break; 
                                 }
                             }
                         }
                     }
                 } else {
-                    hideState = NOT_HIDING; camX = 0.0f; camYaw = 0.0f; 
+                    hideState = NOT_HIDING; camX = 0.0f; camYaw = 0.0f; needsVBOUpdate = true; 
                 }
             }
 
-            // --- PERFECTED A BUTTON (LOOTING) ---
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
                 
                 if (currentRoom >= 0 && currentRoom < 100) {
@@ -596,9 +622,9 @@ int main() {
                         int type = rooms[currentRoom].slotType[s];
                         if (type == 0) continue;
                         
-                        float slotX = (type % 2 != 0) ? -2.4f : 2.4f; // General edge of furniture
+                        float slotX = (type % 2 != 0) ? -2.4f : 2.4f; 
                         
-                        if (abs(camZ - zCenter) < 1.5f && abs(camX - slotX) < 1.5f) {
+                        if (abs(camZ - zCenter) < 1.5f && abs(camX - slotX) < 1.8f) {
                             if (type == 5 || type == 6) { 
                                 if (rooms[currentRoom].drawerOpen[s]) {
                                     if (rooms[currentRoom].slotItem[s] == 1) { 
@@ -633,17 +659,26 @@ int main() {
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                if (nextRoom >= 0 && nextRoom < 100) {
-                    float lockDoorZ = -10.0f - (nextRoom * 10.0f);
-                    if (hasKey && rooms[nextRoom].isLocked && abs(camZ - lockDoorZ) < 2.0f && abs(camX) < 1.5f) {
-                        rooms[nextRoom].isLocked = false;
-                        hasKey = false;
-                        needsVBOUpdate = true;
-                        sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
+                // UNIVERSAL DOOR UNLOCK SYSTEM!
+                if (hasKey) {
+                    for(int i=0; i<100; i++) {
+                        if (rooms[i].isLocked) {
+                            float doorZ = -10.0f - (i * 10.0f);
+                            if (abs(camZ - doorZ) < 2.5f && abs(camX) < 1.5f) {
+                                rooms[i].isLocked = false;
+                                hasKey = false;
+                                needsVBOUpdate = true;
+                                sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
+                                break; // Only unlock one door at a time!
+                            }
+                        }
                     }
+                }
 
+                if (nextRoom >= 0 && nextRoom < 100) {
                     int interactRoom = rooms[nextRoom].isDupeRoom ? nextRoom : -1;
                     if (interactRoom != -1 && !doorOpen[interactRoom]) {
+                        float lockDoorZ = -10.0f - (nextRoom * 10.0f);
                         if (abs(camZ - lockDoorZ) < 1.8f) {
                             bool leftT = (camX < -1.4f);
                             bool centerT = (camX >= -1.4f && camX <= 0.6f);
