@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
 
+    # Environment variables for devkitPro tools
     env:
       DEVKITPRO: /opt/devkitpro
       DEVKITARM: /opt/devkitpro/devkitARM
@@ -24,9 +25,9 @@ jobs:
           apt-get update
           apt-get install -y wget unzip zip make
 
-      - name: Install CIA Tools Manually
+      - name: Install CIA Build Tools
         run: |
-          echo "Downloading makerom..."
+          echo "Downloading makerom v0.18..."
           wget -qO makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18/makerom-v0.18-ubuntu_x86_64.zip
           unzip -o makerom.zip
           chmod +x makerom
@@ -44,13 +45,15 @@ jobs:
           chmod +x 3dstool
           cp 3dstool /usr/local/bin/
 
-      - name: Compile Game
+      - name: Build Game
         run: make
 
-      - name: Upload Game Artifacts
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: DOORS_3DS_Build
           path: |
-            *.3dsx
-            *.cia
+            hotel_doors.3dsx
+            hotel_doors.elf
+            hotel_doors.cia
+          if-no-files-found: error
