@@ -9,27 +9,34 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Back to the official, existing container!
     container: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- THE FIX: Download tools manually to bypass the 403 error ---
+      # --- FIX: Bulletproof tool downloading ---
       - name: Install CIA Tools Manually
         run: |
-          # Download and install makerom
-          curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18/makerom-v0.18-ubuntu_x86_64.zip -o makerom.zip
-          unzip makerom.zip
+          echo "Downloading makerom..."
+          wget -qO makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18/makerom-v0.18-ubuntu_x86_64.zip
+          unzip -o makerom.zip
           chmod +x makerom
           cp makerom /usr/local/bin/
 
-          # Download and install bannertool
-          curl -sL https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip -o bannertool.zip
-          unzip bannertool.zip
+          echo "Downloading bannertool..."
+          # Using the 'latest' tag so GitHub auto-finds the correct ZIP file
+          wget -qO bannertool.zip https://github.com/Steveice10/bannertool/releases/latest/download/bannertool.zip
+          unzip -o bannertool.zip
           chmod +x linux-x86_64/bannertool
           cp linux-x86_64/bannertool /usr/local/bin/
+
+          echo "Downloading 3dstool..."
+          # We need 3dstool to pack the audio/romfs folder into the CIA!
+          wget -qO 3dstool.zip https://github.com/dnasdw/3dstool/releases/download/v1.2.6/3dstool-v1.2.6-linux-x86_64.zip
+          unzip -o 3dstool.zip
+          chmod +x 3dstool-v1.2.6-linux-x86_64/bin/3dstool
+          cp 3dstool-v1.2.6-linux-x86_64/bin/3dstool /usr/local/bin/
 
       - name: Compile Game
         run: make
