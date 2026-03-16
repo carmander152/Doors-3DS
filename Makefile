@@ -40,28 +40,6 @@ app.rsf:
 	@echo "AccessControlInfo:" >> app.rsf
 	@echo "  CoreVersion             : 2" >> app.rsf
 	@echo "  HandleTableSize         : 512" >> app.rsf
-	@echo "  Priority                : 0x30" >> app.rsf
-	@echo "  IdealProcessor          : 0" >> app.rsf
-	@echo "  AffinityMask            : 1" >> app.rsf
-	@echo "  SystemMode              : 64MB" >> app.rsf
-	@echo "  MemoryType              : Application" >> app.rsf
-	@echo "  FileSystemAccess        : DirectSdmc" >> app.rsf
-	@echo "  ServiceAccessControl:" >> app.rsf
-	@echo "    - gsp::Gpu" >> app.rsf
-	@echo "    - hid:USER" >> app.rsf
-	@echo "    - apt:U" >> app.rsf
-	@echo "    - dsp::DSP" >> app.rsf
-	@echo "    - fs:USER" >> app.rsf
-	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    - ControlMemory" >> app.rsf
-	@echo "    - QueryMemory" >> app.rsf
-	@echo "    - ExitProcess" >> app.rsf
-	@echo "    - CreateThread" >> app.rsf
-	@echo "    - ExitThread" >> app.rsf
-	@echo "    - SleepThread" >> app.rsf
-	@echo "    - CloseHandle" >> app.rsf
-	@echo "    - WaitSynchronization1" >> app.rsf
-	@echo "    - WaitSynchronizationN" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  RemasterVersion         : 0" >> app.rsf
