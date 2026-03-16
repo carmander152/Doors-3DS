@@ -16,9 +16,9 @@ ROMFS_DIR := romfs
 # Build both the 3dsx and the smdh metadata file
 all: $(TARGET).3dsx $(TARGET).smdh
 
-# Generate the SMDH metadata file (creates a default icon)
-$(TARGET).smdh:
-	smdhtool --create "Hotel Doors" "DOORS Fan Game" "YourName" $@
+# Generate the SMDH metadata file with your custom icon and text
+$(TARGET).smdh: icon.png
+	smdhtool --create "Doors 3DS" "DOORS Fan Game" "carmander152" icon.png $@
 
 # Compile the .3dsx, bundling the SMDH and RomFS
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
