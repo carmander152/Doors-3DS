@@ -11,26 +11,20 @@ ROMFS_DIR := romfs
 
 .PHONY: all clean
 
-# Build all three formats: ELF (debug), 3DSX (Homebrew), and CIA (Installable)
 all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
-# Create the Homebrew Launcher metadata (Title, Description, Author, Icon)
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "carmander152" icon.png $@
 
-# Build the Homebrew Launcher version
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
-# Pack your textures and sounds into the RomFS binary
 romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
-# Create the banner that appears on the 3DS Home Menu
 banner.bin: banner.png audio.wav
 	bannertool makebanner -i banner.png -a audio.wav -o $@
 
-# Generate the Rom Spec File (RSF) with essential hardware permissions
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
 	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
@@ -53,42 +47,27 @@ app.rsf:
 	@echo "    - hid:USER" >> app.rsf
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
-	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    - ControlMemory" >> app.rsf
-	@echo "    - ExitProcess" >> app.rsf
-	@echo "    - CreateThread" >> app.rsf
-	@echo "    - ExitThread" >> app.rsf
-	@echo "    - SleepThread" >> app.rsf
-	@echo "    - CloseHandle" >> app.rsf
-	@echo "    - WaitSynchronization1" >> app.rsf
-	@echo "    - WaitSynchronizationN" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
 
-# Compile the final CIA file
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	makerom -f cia -o $@ -elf $< -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
 
-# Link the objects into an ELF executable
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
 
-# Compile C++ code
 main.o: main.cpp vshader_shbin.h
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
-# Compile the PICA200 vertex shader
 vshader.shbin.o: vshader.v.pica
 	picasso -o vshader.shbin $<
 	bin2s vshader.shbin > vshader.shbin.s
 	$(AS) -march=armv6k -mfloat-abi=hard -o $@ vshader.shbin.s
 
-# Create the shader header file
 vshader_shbin.h: vshader.shbin
 	echo "extern const u8 vshader_shbin[];" > $@
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
-# Clean all generated files
 clean:
 	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf
