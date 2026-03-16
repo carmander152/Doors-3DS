@@ -312,7 +312,8 @@ void generateRooms() {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
         
-        if (i > 0 && rand() % 100 < 15) rooms[i].lightLevel = 0.3f; 
+        // --- EVEN LESS FREQUENT DARK ROOMS (8% Chance) ---
+        if (i > 0 && rand() % 100 < 8) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
         
         for(int s=0; s<3; s++) {
@@ -792,10 +793,11 @@ int main() {
             if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
             
             if (newChunk != currentChunk || needsVBOUpdate) { 
-                if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && rand() % 100 < 20) {
+                // --- LESS FREQUENT RUSH (12% Chance) ---
+                if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && rand() % 100 < 12) {
                     rushActive = true;
                     rushState = 1; 
-                    rushTimer = 300 + (rand() % 120); // NEW: 5 to 7 seconds warning!
+                    rushTimer = 300 + (rand() % 120); 
                 }
                 currentChunk = newChunk; 
                 needsVBOUpdate = true; 
@@ -834,14 +836,12 @@ int main() {
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             
             if (hideState == NOT_HIDING) {
-                // NEW: 3x faster C-Stick sensitivity
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 if (camPitch > 1.57f) camPitch = 1.57f; 
                 if (camPitch < -1.57f) camPitch = -1.57f;
                 
                 if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
-                    // NEW: Faster player speed
                     float s = isCrouching ? 0.16f : 0.28f; 
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
