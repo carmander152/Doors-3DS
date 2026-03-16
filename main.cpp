@@ -133,30 +133,33 @@ void buildBed(float zCenter, bool isLeft, int itemType) {
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
-// --- FIXED NIGHTSTANDS (Half height, Flush against walls, Perfect Handles) ---
+// --- REDESIGNED NIGHTSTANDS (Now With Legs!) ---
 void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType) {
+    float frameX = isLeft ? -2.95f : 2.45f;
     float openOffset = isOpen ? (isLeft ? 0.35f : -0.35f) : 0.0f;
+    float trayX = isLeft ? (-2.9f + openOffset) : (2.4f + openOffset); 
+    float handleX = isLeft ? (-2.4f + openOffset) : (2.35f + openOffset);
+    float itemX = isLeft ? (-2.6f + openOffset) : (2.5f + openOffset);
 
-    if (isLeft) {
-        float baseDrawer = -2.95f + openOffset; 
-        addBox(-2.95f, 0.0f, zCenter - 0.4f, 0.5f, 0.4f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3); // Frame
-        addBox(baseDrawer + 0.05f, 0.1f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false); // Tray
-        addBox(baseDrawer + 0.55f, 0.15f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false); // Handle
-        
-        if (isOpen) {
-            if (itemType == 1) addBox(baseDrawer + 0.45f, 0.26f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
-            else if (itemType == 2) addBox(baseDrawer + 0.40f, 0.26f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
-        }
-    } else {
-        float baseDrawer = 2.45f + openOffset;
-        addBox(2.45f, 0.0f, zCenter - 0.4f, 0.5f, 0.4f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3); // Frame
-        addBox(baseDrawer - 0.05f, 0.1f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false); // Tray
-        addBox(baseDrawer - 0.1f, 0.15f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false); // Handle
-        
-        if (isOpen) {
-            if (itemType == 1) addBox(baseDrawer - 0.05f, 0.26f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
-            else if (itemType == 2) addBox(baseDrawer - 0.05f, 0.26f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
-        }
+    // 4 Wooden Legs (Y: 0.0 to 0.2)
+    addBox(frameX + 0.05f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
+    addBox(frameX + 0.05f, 0.0f, zCenter + 0.3f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
+    addBox(frameX + 0.4f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
+    addBox(frameX + 0.4f, 0.0f, zCenter + 0.3f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false);
+
+    // Main Box Frame (Y: 0.2 to 0.5)
+    addBox(frameX, 0.2f, zCenter - 0.4f, 0.5f, 0.3f, 0.8f, 0.3f, 0.15f, 0.1f, true, 3);
+    
+    // Drawer Tray (Sticks out slightly)
+    addBox(trayX, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false);
+
+    // Handle
+    addBox(handleX, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+
+    // Items rest clearly on top of the tray
+    if (isOpen) {
+        if (itemType == 1) addBox(itemX, 0.46f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
+        else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false);
     }
 }
 
@@ -198,22 +201,22 @@ void buildWorld(int currentChunk) {
     }
     
     if (currentChunk < 2) {
-        // --- COMPACTED LOBBY (Back wall is at Z=3 now!) ---
-        addBox(-6, 0, 3.0f, 12, 0.01f, -13.0f, 0.22f, 0.15f, 0.1f, false); // Floor
-        addBox(-6, 1.8f, 3.0f, 12, 0.01f, -13.0f, 0.1f, 0.1f, 0.1f, false); // Ceiling
-        addBox(-6, 0, 3.0f, 0.1f, 1.8f, -13.0f, 0.3f, 0.3f, 0.3f, true); // Left Wall
-        addBox(6, 0, 3.0f, 0.1f, 1.8f, -13.0f, 0.3f, 0.3f, 0.3f, true);  // Right Wall
-        addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); // Front Wall Left
-        addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  // Front Wall Right
-        addBox(-6.0f, 0, 3.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Main Back Wall
-        
+        // --- THE COMPACT LOBBY (Starts at Z = 0.0) ---
+        addBox(-6, 0, 0.0f, 12, 0.01f, -10.0f, 0.22f, 0.15f, 0.1f, false); 
+        addBox(-6, 1.8f, 0.0f, 12, 0.01f, -10.0f, 0.1f, 0.1f, 0.1f, false); 
+        addBox(-6, 0, 0.0f, 0.1f, 1.8f, -10.0f, 0.3f, 0.3f, 0.3f, true); 
+        addBox(6, 0, 0.0f, 0.1f, 1.8f, -10.0f, 0.3f, 0.3f, 0.3f, true);  
+        addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
+        addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  
+        addBox(-6.0f, 0, 0.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Close Back Wall!
+
         // Front Desk
-        addBox(-0.6f, 0, 2.9f, 1.2f, 1.5f, 0.2f, 0.4f, 0.2f, 0.1f, false); 
-        addBox(-0.5f, 0, 2.8f, 1.0f, 1.4f, 0.2f, 0.5f, 0.5f, 0.5f, false); 
+        addBox(-0.6f, 0, -0.1f, 1.2f, 1.5f, -0.2f, 0.4f, 0.2f, 0.1f, false); 
+        addBox(-0.5f, 0, -0.2f, 1.0f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
         
-        // Lobby Decor
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
+
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
@@ -221,13 +224,13 @@ void buildWorld(int currentChunk) {
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
 
-        // ELEVATORS ON THE BACK WALL!
-        addBox(-4.5f, 0.0f, 2.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(-4.4f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(-3.4f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(2.5f, 0.0f, 2.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(2.6f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(3.6f, 0.0f, 2.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        // ELEVATORS ARE PERFECTLY ON THE BACK WALL NOW!
+        addBox(-4.5f, 0.0f, -0.1f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
+        addBox(-4.4f, 0.0f, -0.15f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(-3.4f, 0.0f, -0.15f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(2.5f, 0.0f, -0.1f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
+        addBox(2.6f, 0.0f, -0.15f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
+        addBox(3.6f, 0.0f, -0.15f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
 
         if(!lobbyKeyPickedUp) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
@@ -260,9 +263,9 @@ void buildWorld(int currentChunk) {
         addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
         addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true); 
 
-        // WIDER SLOT SPACING PREVENTS BED CLIPPING! (2.5 units apart)
+        // --- FIXED FURNITURE SPACING (No more clipping beds!) ---
         for(int s=0; s<3; s++) {
-            float zCenter = z + 1.25f + (s * 2.5f); 
+            float zCenter = z - 2.5f - (s * 2.5f); 
             int type = rooms[i].slotType[s];
             if (type == 1) buildCabinet(zCenter, true);
             else if (type == 2) buildCabinet(zCenter, false);
@@ -272,26 +275,26 @@ void buildWorld(int currentChunk) {
             else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s]);
         }
 
-        // --- NEW PAINTING RENDERER (FIXED Z MATH) ---
+        // --- FLAWLESS PAINTING PLACEMENT ---
         for(int p=0; p<rooms[i].pCount; p++) {
-            float pZ = z + rooms[i].pZ[p]; 
+            float pZ = rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
             float pW = rooms[i].pW[p];
             float pY = rooms[i].pY[p];
             float pX = rooms[i].pX[p];
 
             if (rooms[i].pSide[p] == 0) { // Left Wall
-                addBox(-2.9f, pY - 0.05f, pZ - pW - 0.05f, 0.04f, pH + 0.1f, pW + 0.1f, 0.1f, 0.05f, 0.02f, false); 
-                addBox(-2.87f, pY, pZ - pW, 0.02f, pH, pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+                addBox(-2.9f, pY - 0.05f, z - pZ - 0.05f, 0.04f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
+                addBox(-2.86f, pY, z - pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
             } else if (rooms[i].pSide[p] == 1) { // Right Wall
-                addBox(2.86f, pY - 0.05f, pZ - pW - 0.05f, 0.04f, pH + 0.1f, pW + 0.1f, 0.1f, 0.05f, 0.02f, false); 
-                addBox(2.85f, pY, pZ - pW, 0.02f, pH, pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
-            } else if (rooms[i].pSide[p] == 2) { // Front Wall (Far wall at z)
-                addBox(pX - 0.05f, pY - 0.05f, z + 0.1f, pW + 0.1f, pH + 0.1f, -0.04f, 0.1f, 0.05f, 0.02f, false);
-                addBox(pX, pY, z + 0.07f, pW, pH, -0.02f, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false);
-            } else if (rooms[i].pSide[p] == 3) { // Back Wall (Near wall at z + 10.0f)
-                addBox(pX - 0.05f, pY - 0.05f, z + 9.9f, pW + 0.1f, pH + 0.1f, 0.04f, 0.1f, 0.05f, 0.02f, false);
-                addBox(pX, pY, z + 9.93f, pW, pH, 0.02f, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false);
+                addBox(2.86f, pY - 0.05f, z - pZ - 0.05f, 0.04f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false); 
+                addBox(2.84f, pY, z - pZ, 0.02f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false); 
+            } else if (rooms[i].pSide[p] == 2) { // Front Wall (Near camera)
+                addBox(pX - 0.05f, pY - 0.05f, z - 0.04f, pW + 0.1f, pH + 0.1f, 0.04f, 0.1f, 0.05f, 0.02f, false);
+                addBox(pX, pY, z - 0.05f, pW, pH, 0.02f, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false);
+            } else if (rooms[i].pSide[p] == 3) { // Back Wall (Further away)
+                addBox(pX - 0.05f, pY - 0.05f, z - 9.96f, pW + 0.1f, pH + 0.1f, -0.04f, 0.1f, 0.05f, 0.02f, false);
+                addBox(pX, pY, z - 9.95f, pW, pH, -0.02f, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false);
             }
         }
     }
@@ -320,6 +323,8 @@ void generateRooms() {
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = nextRoomNumber;
         }
 
+        // --- RARE BANDAID GENERATOR (Max 1 Per Room) ---
+        bool bandaidSpawned = false;
         for(int s=0; s<3; s++) {
             int r = rand() % 100;
             if (r < 15) rooms[i].slotType[s] = 1;      
@@ -328,16 +333,16 @@ void generateRooms() {
             else if (r < 60) rooms[i].slotType[s] = 4; 
             else if (r < 75) {
                 rooms[i].slotType[s] = 5; 
-                if (rand() % 100 < 30) rooms[i].slotItem[s] = 2; 
+                if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
             }
             else if (r < 90) {
                 rooms[i].slotType[s] = 6; 
-                if (rand() % 100 < 30) rooms[i].slotItem[s] = 2; 
+                if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
             }
             else rooms[i].slotType[s] = 0;             
         }
 
-        // --- ENHANCED PAINTING GENERATOR WITH DOORWAY AVOIDANCE ---
+        // --- STRICT DOORWAY PAINTING COLLISION ---
         rooms[i].pCount = rand() % 5 + 3; 
         for(int p=0; p<rooms[i].pCount; p++) {
             bool overlap;
@@ -345,7 +350,7 @@ void generateRooms() {
             do {
                 overlap = false;
                 rooms[i].pSide[p] = rand() % 4; 
-                rooms[i].pZ[p] = 1.0f + (rand() % 80) / 10.0f; 
+                rooms[i].pZ[p] = 1.0f + (rand() % 70) / 10.0f; 
                 rooms[i].pX[p] = -2.5f + (rand() % 50) / 10.0f; 
                 rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; 
                 rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
@@ -353,11 +358,11 @@ void generateRooms() {
                 
                 if (rooms[i].pSide[p] == 2) { 
                     float doorCenter = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                    if ((rooms[i].pX[p] < doorCenter + 1.0f) && (rooms[i].pX[p] + rooms[i].pW[p] > doorCenter - 1.0f)) overlap = true;
+                    if ((rooms[i].pX[p] < doorCenter + 0.8f) && (rooms[i].pX[p] + rooms[i].pW[p] > doorCenter - 0.8f)) overlap = true;
                 } else if (rooms[i].pSide[p] == 3) { 
-                    int prevDoorPos = (i > 0) ? rooms[i-1].doorPos : 1;
+                    int prevDoorPos = (i < 99) ? rooms[i+1].doorPos : 1;
                     float doorCenter = (prevDoorPos == 0) ? -2.0f : ((prevDoorPos == 1) ? 0.0f : 2.0f);
-                    if ((rooms[i].pX[p] < doorCenter + 1.0f) && (rooms[i].pX[p] + rooms[i].pW[p] > doorCenter - 1.0f)) overlap = true;
+                    if ((rooms[i].pX[p] < doorCenter + 0.8f) && (rooms[i].pX[p] + rooms[i].pW[p] > doorCenter - 0.8f)) overlap = true;
                 }
 
                 if (!overlap) {
@@ -383,10 +388,6 @@ void generateRooms() {
                 }
                 tries++;
             } while (overlap && tries < 10);
-            
-            rooms[i].pR[p] = (rand() % 100) / 100.0f; 
-            rooms[i].pG[p] = (rand() % 100) / 100.0f; 
-            rooms[i].pB[p] = (rand() % 100) / 100.0f; 
         }
     }
     
@@ -398,13 +399,8 @@ void generateRooms() {
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
             int s = rand() % 3;
-            
-            if (rand() % 100 < 15) {
-                rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 3 : 4; 
-            } else {
-                rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6; 
-            }
-            
+            if (rand() % 100 < 15) rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 3 : 4; 
+            else rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 5 : 6; 
             rooms[i-1].slotItem[s] = 1; 
         }
     }
@@ -461,7 +457,7 @@ int main() {
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    float camX = 0, camZ = 2.0f, camYaw = 0, camPitch = 0; // Spawn slightly closer to doors
+    float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
 
     while (aptMainLoop()) {
@@ -475,7 +471,7 @@ int main() {
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
                 screechCooldown = 1800; 
                 messageTimer = 0;
-                camX = 0.0f; camZ = 2.0f; camYaw = 0.0f; camPitch = 0.0f;
+                camX = 0.0f; camZ = -1.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
                 for(int i=0; i<100; i++) doorOpen[i] = false;
                 
@@ -494,16 +490,17 @@ int main() {
         int currentRoom = (camZ > -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f);
         if (currentRoom < -1) currentRoom = -1;
         if (currentRoom > 98) currentRoom = 98;
-        int nextRoom = currentRoom + 1;
         
-        // --- PERFECT DUPE ROOM GLITCH LOGIC ---
+        // --- FLAWLESS GLITCH START & STOP LOGIC ---
         bool isGlitching = false;
         int targetDupeRoom = -1;
         for (int k = 1; k < 100; k++) {
-            if (rooms[k].isDupeRoom && doorOpen[k-1] && !doorOpen[k]) {
-                isGlitching = true;
-                targetDupeRoom = k;
-                break;
+            if (rooms[k].isDupeRoom) {
+                if (doorOpen[k-1] && !doorOpen[k]) {
+                    isGlitching = true;
+                    targetDupeRoom = k;
+                    break;
+                }
             }
         }
 
@@ -605,7 +602,7 @@ int main() {
                     
                     if (currentRoom >= 0 && currentRoom < 100) {
                         for(int s=0; s<3; s++) {
-                            float zCenter = (-10.0f - (currentRoom * 10.0f)) + 1.25f + (s * 2.5f);
+                            float zCenter = (-10.0f - (currentRoom * 10.0f)) - 2.5f - (s * 2.5f);
                             int type = rooms[currentRoom].slotType[s];
                             
                             if (type == 5 || type == 6) {
@@ -646,7 +643,7 @@ int main() {
                 
                 if (currentRoom >= 0 && currentRoom < 100) {
                     for(int s=0; s<3; s++) {
-                        float zCenter = (-10.0f - (currentRoom * 10.0f)) + 1.25f + (s * 2.5f);
+                        float zCenter = (-10.0f - (currentRoom * 10.0f)) - 2.5f - (s * 2.5f);
                         int type = rooms[currentRoom].slotType[s];
                         if (type == 0) continue;
                         
@@ -670,7 +667,7 @@ int main() {
                                         sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
                                     }
                                 }
-                            } else if (type == 3 || type == 4) { // Beds
+                            } else if (type == 3 || type == 4) { 
                                 if (rooms[currentRoom].slotItem[s] == 1) {
                                     hasKey = true;
                                     rooms[currentRoom].slotItem[s] = 0;
@@ -704,6 +701,7 @@ int main() {
                     }
                 }
 
+                int nextRoom = currentRoom + 1;
                 if (nextRoom >= 0 && nextRoom < 100) {
                     int interactRoom = rooms[nextRoom].isDupeRoom ? nextRoom : -1;
                     if (interactRoom != -1 && !doorOpen[interactRoom]) {
