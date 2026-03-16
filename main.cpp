@@ -54,7 +54,7 @@ char uiMessage[50] = "";
 // --- SCREECH VARIABLES ---
 bool screechActive = false;
 int screechTimer = 0;
-int screechCooldown = 0; // 30-second safety buffer!
+int screechCooldown = 0; 
 float screechX = 0.0f;
 float screechZ = 0.0f;
 
@@ -118,14 +118,26 @@ void buildBed(float zCenter, bool isLeft) {
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
 
-void buildDresser(float zCenter, bool isLeft, bool isOpen) {
+// --- UPDATED DRESSER WITH SMALLER DRAWERS & VISIBLE KEYS ---
+void buildDresser(float zCenter, bool isLeft, bool isOpen, bool containsKey) {
     float x = isLeft ? -2.9f : 2.1f;
     float drawerX = isLeft ? -2.4f : 2.0f; 
     float openOffset = isOpen ? (isLeft ? 0.4f : -0.4f) : 0.0f; 
 
+    // Solid Dresser Frame
     addBox(x, 0, zCenter - 0.6f, 0.8f, 1.0f, 1.2f, 0.3f, 0.15f, 0.1f, true, 3); 
-    addBox(drawerX + openOffset, 0.4f, zCenter - 0.5f, 0.4f, 0.4f, 1.0f, 0.25f, 0.12f, 0.08f, false);
-    addBox(drawerX + (isLeft ? 0.4f : -0.05f) + openOffset, 0.55f, zCenter - 0.1f, 0.05f, 0.1f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+    
+    // The Drawer (Shrunk down visually)
+    addBox(drawerX + openOffset, 0.4f, zCenter - 0.4f, 0.4f, 0.3f, 0.8f, 0.25f, 0.12f, 0.08f, false);
+    
+    // The Drawer Handle
+    addBox(drawerX + (isLeft ? 0.4f : -0.05f) + openOffset, 0.55f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false);
+
+    // --- RENDER THE VISIBLE GOLDEN KEY IF IT HASN'T BEEN PICKED UP ---
+    if (isOpen && containsKey) {
+        float keyX = drawerX + (isLeft ? 0.1f : 0.2f) + openOffset;
+        addBox(keyX, 0.42f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false);
+    }
 }
 
 void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bool centerOpen, bool rightDoor, bool rightOpen, int roomIndex) {
@@ -223,8 +235,9 @@ void buildWorld(int currentChunk) {
             else if (type == 2) buildCabinet(zCenter, false);
             else if (type == 3) buildBed(zCenter, true);
             else if (type == 4) buildBed(zCenter, false);
-            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s]);
-            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s]);
+            // DRESSERS PASS THE KEY SLOT CHECK TO RENDER THE VISIBLE KEY
+            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].keySlot == s);
+            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].keySlot == s);
         }
 
         for(int p=0; p<rooms[i].pCount; p++) {
@@ -307,7 +320,6 @@ int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     consoleInit(GFX_BOTTOM, NULL);
 
-    // --- AUDIO SYSTEM INIT (FOR SYNTHETIC "PSST" SOUND) ---
     ndspInit();
     ndspSetOutputMode(NDSP_OUTPUT_STEREO);
     ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
@@ -368,7 +380,7 @@ int main() {
                 isDead = false; hasKey = false; lobbyKeyPickedUp = false;
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
-                screechCooldown = 1800; // Give player 30 seconds of peace on spawn
+                screechCooldown = 1800; 
                 messageTimer = 0;
                 camX = 0.0f; camZ = 4.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
@@ -450,15 +462,13 @@ int main() {
 
         if (!isDead) {
             
-            // --- SCREECH SPAWN LOGIC ---
-            // Much lower chance to spawn, strict 30 second cooldown, not in Lobby or Room 1!
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && roomNumber > 1 && (rand() % 2000 == 0)) {
                 screechActive = true;
                 screechTimer = 180; 
                 screechX = camX + sinf(camYaw) * 2.0f; 
                 screechZ = camZ + cosf(camYaw) * 2.0f;
                 needsVBOUpdate = true;
-                ndspChnWaveBufAdd(0, &waveBuf); // TRIGGER NOISE BURST
+                ndspChnWaveBufAdd(0, &waveBuf); 
             }
 
             if (screechActive) {
@@ -471,70 +481,113 @@ int main() {
                 float dotProduct = (fx * vx) + (fz * vz);
                 if (dotProduct > 0.85f) { 
                     screechActive = false; 
-                    screechCooldown = 1800; // Reset safe timer
+                    screechCooldown = 1800; 
                     needsVBOUpdate = true;
                 } else if (screechTimer <= 0) {
                     screechActive = false; 
-                    screechCooldown = 1800; // Reset safe timer
+                    screechCooldown = 1800; 
                     needsVBOUpdate = true;
                     playerHealth -= 40; flashRedFrames = 25;
                     if (playerHealth <= 0) isDead = true;
                 }
             }
 
-            // --- LOBBY KEY ---
-            if(!lobbyKeyPickedUp && rooms[0].isLocked && (kDown & KEY_A) && camX < -3.5f && camZ < -8.5f && hideState == NOT_HIDING) {
-                lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true;
-                sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
+            // --- 'X' BUTTON: TOGGLE DRAWERS & HIDE ---
+            if (kDown & KEY_X) {
+                if (hideState == NOT_HIDING) {
+                    bool interactedWithDrawer = false;
+                    
+                    // 1. Try toggling a Drawer first
+                    for(int s=0; s<3; s++) {
+                        float zCenter = (-10.0f - (roomNumber * 10.0f)) - 3.5f - (s * 2.0f);
+                        if (abs(camZ - zCenter) < 1.5f) {
+                            int type = rooms[roomNumber].slotType[s];
+                            if (type == 5 || type == 6) {
+                                if ((type == 5 && camX < -1.0f) || (type == 6 && camX > 1.0f)) {
+                                    rooms[roomNumber].drawerOpen[s] = !rooms[roomNumber].drawerOpen[s];
+                                    needsVBOUpdate = true;
+                                    interactedWithDrawer = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. If no drawer toggled, try hiding in Cabinets/Beds
+                    if (!interactedWithDrawer) {
+                        float reach = 0.5f; 
+                        for(auto& b : collisions) {
+                            if (b.type == 1 || b.type == 2) { 
+                                if (camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
+                                    if (b.type == 1) { 
+                                        hideState = IN_CABINET; camZ = (b.minZ + b.maxZ) / 2.0f;
+                                        if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } else { camX = 1.65f; camYaw = 1.57f; } 
+                                    } else { 
+                                        hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; 
+                                        if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } else { camX = 2.2f; camYaw = 1.57f; } 
+                                    }
+                                    isCrouching = false; break; 
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    hideState = NOT_HIDING; camX = 0.0f; camYaw = 0.0f; 
+                }
             }
 
-            // --- DRAWER INTERACTION ---
+            // --- 'A' BUTTON: LOOT OPEN DRAWERS, LOBBY KEY, OR UNLOCK DOORS ---
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
+                
+                // 1. Check for Loot inside OPEN Drawers
                 for(int s=0; s<3; s++) {
                     float zCenter = (-10.0f - (roomNumber * 10.0f)) - 3.5f - (s * 2.0f);
                     if (abs(camZ - zCenter) < 1.5f) {
                         int type = rooms[roomNumber].slotType[s];
-                        if ((type == 5 || type == 6) && !rooms[roomNumber].drawerOpen[s]) {
+                        if (type == 5 || type == 6) {
                             if ((type == 5 && camX < -1.0f) || (type == 6 && camX > 1.0f)) {
-                                rooms[roomNumber].drawerOpen[s] = true;
-                                needsVBOUpdate = true;
-                                if (rooms[roomNumber].keySlot == s) {
+                                if (rooms[roomNumber].drawerOpen[s] && rooms[roomNumber].keySlot == s) {
                                     hasKey = true;
-                                    sprintf(uiMessage, "Found a Golden Key!"); messageTimer = 90;
-                                } else {
-                                    sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
+                                    rooms[roomNumber].keySlot = -1; // Remove key from world!
+                                    needsVBOUpdate = true;
+                                    sprintf(uiMessage, "Grabbed the Golden Key!"); messageTimer = 90;
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // --- UNLOCKING THE ROOM YOU ARE IN ---
-            // If the room you are standing in is locked, unlock its exit door!
-            float lockDoorZ = -10.0f - (roomNumber * 10.0f);
-            if (hasKey && rooms[roomNumber].isLocked && (kDown & KEY_A) && abs(camZ - lockDoorZ) < 2.0f && abs(camX) < 1.5f) {
-                rooms[roomNumber].isLocked = false;
-                hasKey = false;
-                needsVBOUpdate = true;
-                sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
-            }
+                // 2. Check Lobby Key
+                if(!lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
+                    lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true;
+                    sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
+                }
 
-            // --- DUPE ROOM DOOR LOGIC ---
-            int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
-            if (interactRoom != -1 && !doorOpen[interactRoom] && (kDown & KEY_A)) {
-                float wallZ = -10.0f - (interactRoom * 10.0f);
-                if (abs(camZ - wallZ) < 1.8f) {
-                    bool leftT = (camX < -1.4f);
-                    bool centerT = (camX >= -1.4f && camX <= 0.6f);
-                    bool rightT = (camX > 0.6f);
-                    int correctPos = rooms[interactRoom].correctDupePos;
+                // 3. Check Door Unlock
+                float lockDoorZ = -10.0f - (roomNumber * 10.0f);
+                if (hasKey && rooms[roomNumber].isLocked && abs(camZ - lockDoorZ) < 2.0f && abs(camX) < 1.5f) {
+                    rooms[roomNumber].isLocked = false;
+                    hasKey = false;
+                    needsVBOUpdate = true;
+                    sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
+                }
 
-                    if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
-                        doorOpen[interactRoom] = true; needsVBOUpdate = true;
-                    } else if (leftT || centerT || rightT) {
-                        playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
-                        if (playerHealth <= 0) isDead = true; 
+                // 4. Check Dupe Doors
+                int interactRoom = rooms[roomNumber].isDupeRoom ? roomNumber : (rooms[roomNumber + 1].isDupeRoom ? roomNumber + 1 : -1);
+                if (interactRoom != -1 && !doorOpen[interactRoom]) {
+                    float wallZ = -10.0f - (interactRoom * 10.0f);
+                    if (abs(camZ - wallZ) < 1.8f) {
+                        bool leftT = (camX < -1.4f);
+                        bool centerT = (camX >= -1.4f && camX <= 0.6f);
+                        bool rightT = (camX > 0.6f);
+                        int correctPos = rooms[interactRoom].correctDupePos;
+
+                        if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
+                            doorOpen[interactRoom] = true; needsVBOUpdate = true;
+                        } else if (leftT || centerT || rightT) {
+                            playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
+                            if (playerHealth <= 0) isDead = true; 
+                        }
                     }
                 }
             }
@@ -560,32 +613,10 @@ int main() {
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
                 
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
-                if (rooms[i].isLocked) shouldBeOpen = false; // Never auto-open a locked door!
+                if (rooms[i].isLocked) shouldBeOpen = false; 
                 
                 if (doorOpen[i] != shouldBeOpen) {
                     doorOpen[i] = shouldBeOpen; needsVBOUpdate = true;
-                }
-            }
-
-            if (kDown & KEY_X) {
-                if (hideState == NOT_HIDING) {
-                    float reach = 0.5f; 
-                    for(auto& b : collisions) {
-                        if (b.type == 1 || b.type == 2) { 
-                            if (camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
-                                if (b.type == 1) { 
-                                    hideState = IN_CABINET; camZ = (b.minZ + b.maxZ) / 2.0f;
-                                    if (b.minX < 0) { camX = -1.65f; camYaw = -1.57f; } else { camX = 1.65f; camYaw = 1.57f; } 
-                                } else { 
-                                    hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; 
-                                    if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } else { camX = 2.2f; camYaw = 1.57f; } 
-                                }
-                                isCrouching = false; break; 
-                            }
-                        }
-                    }
-                } else {
-                    hideState = NOT_HIDING; camX = 0.0f; camYaw = 0.0f; 
                 }
             }
 
@@ -646,10 +677,8 @@ int main() {
         C3D_FrameEnd(0);
     }
     
-    // --- AUDIO SYSTEM CLEANUP ---
     ndspExit();
     linearFree(audioBuffer);
-
     linearFree(vbo_ptr); C3D_Fini(); gfxExit();
     return 0;
 }
