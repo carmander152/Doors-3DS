@@ -48,19 +48,23 @@ app.rsf:
 	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
 	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    - ControlMemory" >> app.rsf
-	@echo "    - ExitProcess" >> app.rsf
-	@echo "    - CreateThread" >> app.rsf
-	@echo "    - ExitThread" >> app.rsf
-	@echo "    - SleepThread" >> app.rsf
-	@echo "    - CloseHandle" >> app.rsf
-	@echo "    - WaitSynchronization1" >> app.rsf
-	@echo "    - WaitSynchronizationN" >> app.rsf
+	@echo "    0x01: ControlMemory" >> app.rsf
+	@echo "    0x02: QueryMemory" >> app.rsf
+	@echo "    0x03: ExitProcess" >> app.rsf
+	@echo "    0x11: CloseHandle" >> app.rsf
+	@echo "    0x12: WaitSynchronization1" >> app.rsf
+	@echo "    0x13: WaitSynchronizationN" >> app.rsf
+	@echo "    0x17: GetSystemInfo" >> app.rsf
+	@echo "    0x1A: ConnectToPort" >> app.rsf
+	@echo "    0x1F: SendSyncRequest" >> app.rsf
+	@echo "    0x30: CreateThread" >> app.rsf
+	@echo "    0x31: ExitThread" >> app.rsf
+	@echo "    0x32: SleepThread" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
 
-# NEW: We strip the ELF file of debug symbols before giving it to makerom
+# Here is the magic: Strip the ELF first, then feed it to makerom
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	arm-none-eabi-strip --strip-debug $< -o stripped_for_cia.elf
 	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
