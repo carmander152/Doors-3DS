@@ -470,7 +470,9 @@ int main() {
     ndspWaveBuf sndPsst = {0};
     ndspWaveBuf sndAttack = {0};
     ndspWaveBuf sndCaught = {0};
-    ndspWaveBuf sndDoor = {0}; // NEW: Door Audio buffer
+    ndspWaveBuf sndDoor = {0}; 
+    ndspWaveBuf sndLockedDoor = {0}; // NEW: Locked door
+    ndspWaveBuf sndDupeAttack = {0}; // NEW: Dupe attack
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -480,15 +482,22 @@ int main() {
         ndspChnSetRate(0, 44100);
         ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
         
-        // Channel 1 (Environment / Doors)
+        // Channel 1 (Environment / Normal & Locked Doors)
         ndspChnSetInterp(1, NDSP_INTERP_LINEAR);
         ndspChnSetRate(1, 44100);
         ndspChnSetFormat(1, NDSP_FORMAT_MONO_PCM16);
+        
+        // Channel 2 (Dupe/Damage)
+        ndspChnSetInterp(2, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(2, 44100);
+        ndspChnSetFormat(2, NDSP_FORMAT_MONO_PCM16);
 
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
         sndCaught = loadWav("romfs:/Screech_Caught.wav");
-        sndDoor = loadWav("romfs:/Door_Open.wav"); // Load Door Audio
+        sndDoor = loadWav("romfs:/Door_Open.wav"); 
+        sndLockedDoor = loadWav("romfs:/Locked_Door.wav"); 
+        sndDupeAttack = loadWav("romfs:/Dupe_Attack.wav"); 
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -848,19 +857,27 @@ int main() {
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                if (hasKey) {
-                    for(int i=0; i<100; i++) {
-                        if (rooms[i].isLocked) {
-                            float doorZ = -10.0f - (i * 10.0f);
-                            float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                            
-                            if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
+                // --- REFACTORED LOCKED DOOR LOGIC ---
+                for(int i=0; i<100; i++) {
+                    if (rooms[i].isLocked) {
+                        float doorZ = -10.0f - (i * 10.0f);
+                        float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                        
+                        if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
+                            if (hasKey) {
                                 rooms[i].isLocked = false;
                                 hasKey = false;
                                 needsVBOUpdate = true;
                                 sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
-                                break; 
+                            } else {
+                                if (audio_ok && sndLockedDoor.data_vaddr) {
+                                    ndspChnWaveBufClear(1);
+                                    sndLockedDoor.status = NDSP_WBUF_FREE;
+                                    ndspChnWaveBufAdd(1, &sndLockedDoor);
+                                }
+                                sprintf(uiMessage, "It's locked..."); messageTimer = 60;
                             }
+                            break; 
                         }
                     }
                 }
@@ -878,7 +895,7 @@ int main() {
 
                             // --- DUPE DOOR OPEN LOGIC ---
                             if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
-                                if (!doorOpen[interactRoom]) { // Play sound if it wasn't open
+                                if (!doorOpen[interactRoom]) { 
                                     if (audio_ok && sndDoor.data_vaddr) {
                                         ndspChnWaveBufClear(1);
                                         sndDoor.status = NDSP_WBUF_FREE;
@@ -887,6 +904,12 @@ int main() {
                                     doorOpen[interactRoom] = true; needsVBOUpdate = true;
                                 }
                             } else if (leftT || centerT || rightT) {
+                                // --- NEW: DUPE ATTACK SOUND ---
+                                if (audio_ok && sndDupeAttack.data_vaddr) {
+                                    ndspChnWaveBufClear(2); // Use Channel 2!
+                                    sndDupeAttack.status = NDSP_WBUF_FREE;
+                                    ndspChnWaveBufAdd(2, &sndDupeAttack);
+                                }
                                 playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
                                 if (playerHealth <= 0) isDead = true; 
                             }
@@ -1006,7 +1029,9 @@ int main() {
         if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
         if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
         if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
-        if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); // Free Door audio
+        if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); 
+        if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr); // Free Locked Door
+        if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr); // Free Dupe Attack
         ndspExit();
     }
     
