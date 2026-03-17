@@ -23,8 +23,8 @@ romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
-	# Force 16-bit, Mono, 44100Hz, and pad to 1.5s to ensure the 3DS buffer is happy
-	sox audio.wav -b 16 -c 1 -r 44100 clean_audio.wav pad 0 1.5
+	# Force 16-bit, Stereo, 44100Hz, and trim to 3 seconds max for the 3DS memory limit
+	sox audio.wav -b 16 -c 2 -r 44100 clean_audio.wav trim 0 3
 	bannertool makebanner -i banner.png -a clean_audio.wav -o $@
 
 app.rsf:
