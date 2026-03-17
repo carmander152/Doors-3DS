@@ -19,7 +19,7 @@ $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh 
 
 banner.bin: banner.png audio.wav
-	ffmpeg -y -i audio.wav -acodec pcm_s16le -ac 1 -ar 44100 -fflags +bitexact -write_bext 0 -map_metadata -1 clean_audio.wav
+	python3 -c "import wave; i=wave.open('audio.wav','rb'); p=i.getparams(); f=i.readframes(i.getnframes()); o=wave.open('clean_audio.wav','wb'); o.setparams(p); o.writeframes(f); i.close(); o.close()"
 	bannertool makebanner -i banner.png -a clean_audio.wav -o $@
 
 app.rsf:
@@ -30,7 +30,7 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xF80B" >> app.rsf
+	@echo "  UniqueId                : 0xF80C" >> app.rsf
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
