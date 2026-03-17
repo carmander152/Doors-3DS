@@ -63,6 +63,7 @@ float screechZ = 0.0f;
 bool rushActive = false;
 int rushState = 0; 
 int rushTimer = 0;
+float rushStartTimer = 1.0f; // NEW: For audio crescendo calculation
 int rushCooldown = 0; 
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
@@ -471,8 +472,9 @@ int main() {
     ndspWaveBuf sndAttack = {0};
     ndspWaveBuf sndCaught = {0};
     ndspWaveBuf sndDoor = {0}; 
-    ndspWaveBuf sndLockedDoor = {0}; // NEW: Locked door
-    ndspWaveBuf sndDupeAttack = {0}; // NEW: Dupe attack
+    ndspWaveBuf sndLockedDoor = {0}; 
+    ndspWaveBuf sndDupeAttack = {0}; 
+    ndspWaveBuf sndRushScream = {0}; // NEW: Rush scream
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -492,12 +494,18 @@ int main() {
         ndspChnSetRate(2, 44100);
         ndspChnSetFormat(2, NDSP_FORMAT_MONO_PCM16);
 
+        // NEW: Channel 3 (Rush Spatial Audio)
+        ndspChnSetInterp(3, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(3, 44100);
+        ndspChnSetFormat(3, NDSP_FORMAT_MONO_PCM16);
+
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
         sndCaught = loadWav("romfs:/Screech_Caught.wav");
         sndDoor = loadWav("romfs:/Door_Open.wav"); 
         sndLockedDoor = loadWav("romfs:/Locked_Door.wav"); 
         sndDupeAttack = loadWav("romfs:/Dupe_Attack.wav"); 
+        sndRushScream = loadWav("romfs:/Rush_Scream.wav"); // Load Rush
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -573,6 +581,8 @@ int main() {
                     memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
                     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 }
+                
+                if (audio_ok) ndspChnWaveBufClear(3); // Make sure Rush sound stops if you restart
                 
                 consoleClear(); 
                 continue; 
@@ -734,6 +744,7 @@ int main() {
                 }
             }
 
+            // --- REFACTORED RUSH LOGIC WITH SPATIAL AUDIO ---
             if (rushActive) {
                 if (rushState == 1) { 
                     rushTimer--;
@@ -745,11 +756,13 @@ int main() {
 
                     if (rushTimer <= 0) {
                         rushState = 2; 
-                        rushZ = camZ + 30.0f; 
-                        rushTargetZ = camZ - 20.0f; 
+                        // Start him further back so the peak hits perfectly
+                        rushZ = camZ + 40.0f; 
+                        // Let him go deeper into the dark to finish the decrescendo
+                        rushTargetZ = camZ - 60.0f; 
                     }
                 } else if (rushState == 2) { 
-                    rushZ -= 0.6f; 
+                    rushZ -= 0.8f; // Move him a bit faster to cover the new distance
                     needsVBOUpdate = true; 
 
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
@@ -765,7 +778,40 @@ int main() {
                     if (rushZ < rushTargetZ) { 
                         rushActive = false; rushState = 0; needsVBOUpdate = true;
                         rushCooldown = 1800; 
+                        if (audio_ok) ndspChnWaveBufClear(3); // Hard stop audio when despawned
                     }
+                }
+                
+                // --- RUSH DYNAMIC AUDIO CALCULATION ---
+                if (audio_ok && sndRushScream.data_vaddr) {
+                    float dist = 0.0f;
+                    
+                    if (rushState == 1) {
+                        // Crescendo: Fake distance drops from 150.0 to 40.0 during flicker warning
+                        dist = 40.0f + (rushTimer / rushStartTimer) * 110.0f; 
+                    } else if (rushState == 2) {
+                        // Peak & Decrescendo: Based on real physical distance
+                        dist = abs(rushZ - camZ);
+                        
+                        if (rushZ < camZ) {
+                            // FAST DECRESCENDO: Multiply distance when he is behind you to fade out faster
+                            dist *= 1.5f; 
+                        }
+                    }
+                    
+                    // Convert distance to volume (0.0 to 1.0)
+                    float maxDist = 150.0f;
+                    float vol = 1.0f - (dist / maxDist);
+                    if (vol < 0.0f) vol = 0.0f;
+                    if (vol > 1.0f) vol = 1.0f;
+                    
+                    // Exponential curve (cubing it makes it start very quiet and spike heavily when close)
+                    vol = vol * vol * vol; 
+                    
+                    float mix[12] = {0};
+                    mix[0] = vol; // Left Channel
+                    mix[1] = vol; // Right Channel
+                    ndspChnSetMix(3, mix);
                 }
             }
 
@@ -857,7 +903,6 @@ int main() {
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                // --- REFACTORED LOCKED DOOR LOGIC ---
                 for(int i=0; i<100; i++) {
                     if (rooms[i].isLocked) {
                         float doorZ = -10.0f - (i * 10.0f);
@@ -893,7 +938,6 @@ int main() {
                             bool rightT = (camX > 0.6f);
                             int correctPos = rooms[interactRoom].correctDupePos;
 
-                            // --- DUPE DOOR OPEN LOGIC ---
                             if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
                                 if (!doorOpen[interactRoom]) { 
                                     if (audio_ok && sndDoor.data_vaddr) {
@@ -904,9 +948,8 @@ int main() {
                                     doorOpen[interactRoom] = true; needsVBOUpdate = true;
                                 }
                             } else if (leftT || centerT || rightT) {
-                                // --- NEW: DUPE ATTACK SOUND ---
                                 if (audio_ok && sndDupeAttack.data_vaddr) {
-                                    ndspChnWaveBufClear(2); // Use Channel 2!
+                                    ndspChnWaveBufClear(2);
                                     sndDupeAttack.status = NDSP_WBUF_FREE;
                                     ndspChnWaveBufAdd(2, &sndDupeAttack);
                                 }
@@ -932,6 +975,16 @@ int main() {
                     rushActive = true;
                     rushState = 1; 
                     rushTimer = 300 + (rand() % 120); 
+                    rushStartTimer = (float)rushTimer; 
+                    
+                    // NEW: Start the scream audio at volume 0.0
+                    if (audio_ok && sndRushScream.data_vaddr) {
+                        float mix[12] = {0};
+                        ndspChnSetMix(3, mix); 
+                        ndspChnWaveBufClear(3);
+                        sndRushScream.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(3, &sndRushScream);
+                    }
                 }
                 currentChunk = newChunk; 
                 needsVBOUpdate = true; 
@@ -950,7 +1003,6 @@ int main() {
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
                 if (rooms[i].isLocked) shouldBeOpen = false; 
                 
-                // --- PROXIMITY DOOR OPEN LOGIC ---
                 if (doorOpen[i] != shouldBeOpen) {
                     if (shouldBeOpen && audio_ok && sndDoor.data_vaddr) {
                         ndspChnWaveBufClear(1);
@@ -1030,8 +1082,9 @@ int main() {
         if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
         if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
         if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); 
-        if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr); // Free Locked Door
-        if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr); // Free Dupe Attack
+        if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr);
+        if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
+        if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); // Free Rush
         ndspExit();
     }
     
