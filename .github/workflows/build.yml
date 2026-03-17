@@ -56,7 +56,7 @@ jobs:
         with:
           name: DOORS_3DS_Build
           path: |
-            hotel_doors.3dsx
-            hotel_doors.elf
-            hotel_doors.cia
+            Doors_3DS.3dsx
+            Doors_3DS.elf
+            Doors_3DS.cia
           if-no-files-found: error
