@@ -4,7 +4,7 @@ endif
 
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
-TARGET := hotel_doors
+TARGET := Doors_3DS
 OBJS := vshader.shbin.o main.o
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 ROMFS_DIR := romfs
