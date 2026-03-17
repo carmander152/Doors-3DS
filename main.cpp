@@ -514,7 +514,6 @@ int main() {
         sndTitleTheme.looping = true; 
         
         if (sndTitleTheme.data_vaddr) {
-            // NEW: Make the title theme 2.5x louder!
             float titleMix[12] = {0};
             titleMix[0] = 2.5f; 
             titleMix[1] = 2.5f; 
@@ -565,8 +564,6 @@ int main() {
 
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
-
-    C3D_TexEnv* env = C3D_GetTexEnv(0);
 
     float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
@@ -1075,30 +1072,41 @@ int main() {
             }
         }
 
-        // --- DRAW FRAME (COMPLETELY REWRITTEN TO FIX BROWN SCREEN) ---
+        // --- DRAW FRAME ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         
-        // 1. ALWAYS render the 3D world (serves as a live background for the title screen!)
+        // 1. RESTORE 3D PIPELINE AND DRAW WORLD
         C3D_FrameDrawOn(target);
         C3D_BindProgram(&program);
         C3D_SetAttrInfo(attr);
         C3D_SetBufInfo(buf);
-        C3D_TexEnvInit(env);
 
-        // Explicitly set 3D states so Citro2D doesn't break them
-        C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-        C3D_CullFace(GPU_CULL_NONE);
-        C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO); // This stops the brown screen!
+        // --- THE FIX: SCRUB THE TEXTURE STAGES ---
+        C3D_TexEnvInit(C3D_GetTexEnv(0));
+        C3D_TexEnvInit(C3D_GetTexEnv(1));
+        C3D_TexEnvInit(C3D_GetTexEnv(2));
+        C3D_TexEnvInit(C3D_GetTexEnv(3));
+        C3D_TexEnvInit(C3D_GetTexEnv(4));
+        C3D_TexEnvInit(C3D_GetTexEnv(5));
 
+        // Now setup Stage 0 specifically for our 3D coloring/damage flashing
+        C3D_TexEnv* env0 = C3D_GetTexEnv(0);
         if (flashRedFrames > 0 && !isDead) {
-            C3D_TexEnvColor(env, 0xFF0000FF); 
-            C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
+            C3D_TexEnvColor(env0, 0xFF0000FF); 
+            C3D_TexEnvSrc(env0, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
             flashRedFrames--;
         } else {
-            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            C3D_TexEnvSrc(env0, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
         }
+        C3D_TexEnvFunc(env0, C3D_Both, GPU_REPLACE);
 
+        // Reset the depth testing and blending rules
+        C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+        C3D_CullFace(GPU_CULL_NONE);
+        C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO);
+
+        // Move the camera
         C3D_Mtx proj, view;
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         Mtx_Identity(&view);
@@ -1106,20 +1114,18 @@ int main() {
         Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
         Mtx_Multiply(&view, &proj, &view);
         
+        // Draw the 3D map
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
         C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
 
-        // 2. Draw the 2D Title overlay ON TOP of the 3D world
+        // 2. DRAW 2D OVERLAY
         if (onTitleScreen) {
-            C2D_Prepare(); // Tells GPU we are switching to 2D
+            C2D_Prepare(); // Tells GPU we are switching to 2D rules
             C2D_SceneBegin(target);
             if (spriteSheet) {
                 C2D_Image titleImg = C2D_SpriteSheetGetImage(spriteSheet, 0);
-                
-                // Draw the logo with slight transparency so the 3D lobby shows behind it!
                 C2D_DrawImageAt(titleImg, 0, 0, 0.5f, NULL, 1.0f, 1.0f);
             } else {
-                // Failsafe: Draw a solid color if the PNG fails to load so it doesn't look empty
                 C2D_DrawRectSolid(0, 0, 0, 400, 240, C2D_Color32(20, 0, 0, 200)); 
             }
             C2D_Flush(); // Force draw the 2D elements
