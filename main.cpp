@@ -808,9 +808,13 @@ int main() {
                     // Exponential curve (cubing it makes it start very quiet and spike heavily when close)
                     vol = vol * vol * vol; 
                     
+                    // --- NEW: VOLUME BOOST ---
+                    // Adjust this number! 1.0f is normal, 3.5f is a huge boost. 
+                    float rushVolumeMultiplier = 3.5f; 
+                    
                     float mix[12] = {0};
-                    mix[0] = vol; // Left Channel
-                    mix[1] = vol; // Right Channel
+                    mix[0] = vol * rushVolumeMultiplier; // Left Channel
+                    mix[1] = vol * rushVolumeMultiplier; // Right Channel
                     ndspChnSetMix(3, mix);
                 }
             }
@@ -1084,7 +1088,7 @@ int main() {
         if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); 
         if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr);
         if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
-        if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); // Free Rush
+        if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); 
         ndspExit();
     }
     
