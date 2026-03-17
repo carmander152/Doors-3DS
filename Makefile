@@ -23,7 +23,8 @@ romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
-	bannertool makebanner -i banner.png -a audio.wav -o $@
+	ffmpeg -y -i audio.wav -acodec pcm_s16le -ac 1 -ar 44100 -map_metadata -1 clean_audio.wav
+	bannertool makebanner -i banner.png -a clean_audio.wav -o $@
 
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
@@ -33,7 +34,7 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xF809" >> app.rsf
+	@echo "  UniqueId                : 0xF80A" >> app.rsf
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
@@ -97,4 +98,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin romfs.bin app.rsf stripped_for_cia.elf
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf
