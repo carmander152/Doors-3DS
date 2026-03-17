@@ -2,9 +2,9 @@
 #include <citro3d.h>
 #include <citro2d.h> 
 #include <string.h>
-#include <stdlib.h> 
-#include <stdio.h> 
-#include <math.h> 
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 #include <vector>
 #include <time.h>
 #include "vshader_shbin.h"
@@ -48,7 +48,7 @@ bool lobbyKeyPickedUp = false;
 bool doorOpen[100] = {false}; 
 bool isCrouching = false;
 bool isDead = false; 
-bool onTitleScreen = true; 
+bool onTitleScreen = true; // Added this back for the 2D overlay!
 HideState hideState = NOT_HIDING; 
 
 // UI Message Variables
@@ -65,7 +65,6 @@ float screechZ = 0.0f;
 bool rushActive = false;
 int rushState = 0; 
 int rushTimer = 0;
-float rushStartTimer = 1.0f; 
 int rushCooldown = 0; 
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
@@ -78,7 +77,7 @@ ndspWaveBuf loadWav(const char* path) {
     FILE* file = fopen(path, "rb");
     if (!file) {
         printf("Failed to load: %s\n", path);
-        return waveBuf; 
+        return waveBuf;
     }
 
     fseek(file, 12, SEEK_SET);
@@ -99,7 +98,7 @@ ndspWaveBuf loadWav(const char* path) {
     if (!foundData) {
         printf("Invalid WAV: %s\n", path);
         fclose(file);
-        return waveBuf; 
+        return waveBuf;
     }
 
     s16* buffer = (s16*)linearAlloc(chunkSize);
@@ -111,8 +110,8 @@ ndspWaveBuf loadWav(const char* path) {
     DSP_FlushDataCache(buffer, chunkSize);
 
     waveBuf.data_vaddr = buffer;
-    waveBuf.nsamples = chunkSize / 2; 
-    waveBuf.looping = false; 
+    waveBuf.nsamples = chunkSize / 2;
+    waveBuf.looping = false;
     waveBuf.status = NDSP_WBUF_FREE;
 
     return waveBuf;
@@ -473,65 +472,28 @@ int main() {
     ndspWaveBuf sndPsst = {0};
     ndspWaveBuf sndAttack = {0};
     ndspWaveBuf sndCaught = {0};
-    ndspWaveBuf sndDoor = {0}; 
-    ndspWaveBuf sndLockedDoor = {0}; 
-    ndspWaveBuf sndDupeAttack = {0}; 
-    ndspWaveBuf sndRushScream = {0}; 
-    ndspWaveBuf sndTitleTheme = {0}; 
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
-        
         ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
         ndspChnSetRate(0, 44100);
         ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
-        
-        ndspChnSetInterp(1, NDSP_INTERP_LINEAR);
-        ndspChnSetRate(1, 44100);
-        ndspChnSetFormat(1, NDSP_FORMAT_MONO_PCM16);
-        
-        ndspChnSetInterp(2, NDSP_INTERP_LINEAR);
-        ndspChnSetRate(2, 44100);
-        ndspChnSetFormat(2, NDSP_FORMAT_MONO_PCM16);
-
-        ndspChnSetInterp(3, NDSP_INTERP_LINEAR);
-        ndspChnSetRate(3, 44100);
-        ndspChnSetFormat(3, NDSP_FORMAT_MONO_PCM16);
-
-        ndspChnSetInterp(4, NDSP_INTERP_LINEAR);
-        ndspChnSetRate(4, 44100);
-        ndspChnSetFormat(4, NDSP_FORMAT_MONO_PCM16);
 
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
         sndCaught = loadWav("romfs:/Screech_Caught.wav");
-        sndDoor = loadWav("romfs:/Door_Open.wav"); 
-        sndLockedDoor = loadWav("romfs:/Locked_Door.wav"); 
-        sndDupeAttack = loadWav("romfs:/Dupe_Attack.wav"); 
-        sndRushScream = loadWav("romfs:/Rush_Scream.wav"); 
-        
-        sndTitleTheme = loadWav("romfs:/Title_Theme.wav"); 
-        sndTitleTheme.looping = true; 
-        
-        if (sndTitleTheme.data_vaddr) {
-            float titleMix[12] = {0};
-            titleMix[0] = 2.5f; 
-            titleMix[1] = 2.5f; 
-            ndspChnSetMix(4, titleMix);
-            ndspChnWaveBufAdd(4, &sndTitleTheme);
-        }
     }
 
-    // --- GRAPHICS PIPELINE ---
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-    C2D_Init(C2D_DEFAULT_MAX_OBJECTS); 
-    C2D_Prepare(); 
+    
+    // --- TEMPORARILY INIT 2D FOR THE TITLE SCREEN ---
+    C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
+    C2D_Prepare();
+    C2D_SpriteSheet spriteSheet = C2D_SpriteSheetLoad("romfs:/sprites.t3x");
+    if (!spriteSheet) printf("Warning: sprites.t3x not found in romfs!\n");
 
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
-
-    C2D_SpriteSheet spriteSheet = C2D_SpriteSheetLoad("romfs:/sprites.t3x");
-    if (!spriteSheet) printf("Warning: sprites.t3x not found in romfs!\n");
 
     generateRooms(); 
 
@@ -541,7 +503,7 @@ int main() {
 
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
     shaderProgram_s program; shaderProgramInit(&program);
-    shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); 
+    shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
 
     int uLoc_proj = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx");
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr);
@@ -564,8 +526,9 @@ int main() {
 
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
+    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+    C3D_CullFace(GPU_CULL_NONE); 
 
-    // PERFECT ORIGINAL 3D SETUP
     C3D_TexEnv* env = C3D_GetTexEnv(0);
     C3D_TexEnvInit(env);
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
@@ -574,25 +537,25 @@ int main() {
     float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
 
-    bool needsC3DRestore = false; // Add flag to restore 3D when START is pressed
-
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
         
-        // --- INPUT LOGIC ---
+        // --- TITLE SCREEN START LOGIC ---
         if (onTitleScreen) {
             if (kDown & KEY_START) {
                 onTitleScreen = false;
-                needsC3DRestore = true; // Tell game to rebuild 3D engine on next frame
                 
-                if (audio_ok) ndspChnWaveBufClear(4); 
-                
-                if (audio_ok && sndDoor.data_vaddr) {
-                    ndspChnWaveBufClear(1);
-                    sndDoor.status = NDSP_WBUF_FREE;
-                    ndspChnWaveBufAdd(1, &sndDoor);
-                }
+                // NUKE CITRO2D SO IT NEVER TOUCHES THE 3D ENGINE AGAIN
+                if (spriteSheet) C2D_SpriteSheetFree(spriteSheet);
+                C2D_Fini(); 
+
+                // FORCE RESTORE YOUR EXACT WORKING 3D SETTINGS
+                C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+                C3D_CullFace(GPU_CULL_NONE); 
+                for (int i = 0; i < 6; i++) C3D_TexEnvInit(C3D_GetTexEnv(i)); // Scrub all texture stages clean
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             }
         } else if (kDown & KEY_START) {
             if (isDead) {
@@ -608,6 +571,7 @@ int main() {
                 for(int i=0; i<100; i++) doorOpen[i] = false;
                 
                 generateRooms(); 
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 buildWorld(currentChunk, playerCurrentRoom);
                 
                 if (world_mesh.size() > MAX_VERTS) {
@@ -617,20 +581,9 @@ int main() {
                     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 }
                 
-                if (audio_ok) ndspChnWaveBufClear(3); 
                 consoleClear(); 
-                
-                onTitleScreen = true; 
-                if (audio_ok && sndTitleTheme.data_vaddr) {
-                    ndspChnWaveBufClear(4);
-                    sndTitleTheme.status = NDSP_WBUF_FREE;
-                    ndspChnWaveBufAdd(4, &sndTitleTheme);
-                }
-                
                 continue; 
-            } else {
-                break; 
-            } 
+            } else break; 
         }
 
         bool needsVBOUpdate = false;
@@ -653,7 +606,6 @@ int main() {
         if (screechCooldown > 0) screechCooldown--;
         if (rushCooldown > 0) rushCooldown--; 
 
-        // --- BOTTOM SCREEN CONSOLE ---
         printf("\x1b[1;1H"); 
 
         if (onTitleScreen) {
@@ -665,7 +617,6 @@ int main() {
             printf("                              \n\n");
             for(int i=0; i<8; i++) printf("                              \n"); 
         } else if (isDead) {
-            printf("==============================\n");
             printf("         YOU DIED!            \n");
             printf("==============================\n\n");
             printf("                              \n");
@@ -681,7 +632,7 @@ int main() {
                 printf("                              \n");
                 for(int i=0; i<8; i++) printf("                              \n"); 
             } else {
-                printf("       PLAYER STATUS          \n");
+                printf("        PLAYER STATUS         \n");
                 printf("==============================\n\n");
                 
                 if (playerCurrentRoom == -1) {
@@ -728,10 +679,16 @@ int main() {
                 if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
                 else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
                 else printf("\n                                    \n");
+
+                if (!audio_ok) {
+                    printf("\x1b[31m WARNING: dspfirm.cdc MISSING!\x1b[0m\n");
+                    printf("\x1b[31m Sound chip could not turn on.\x1b[0m\n");
+                } else {
+                    for(int i=0; i<4; i++) printf("                                    \n");
+                }
             }
         }
 
-        // --- GAMEPLAY UPDATES ---
         if (!isDead && !onTitleScreen) {
             
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 2000;
@@ -802,11 +759,11 @@ int main() {
 
                     if (rushTimer <= 0) {
                         rushState = 2; 
-                        rushZ = camZ + 40.0f; 
-                        rushTargetZ = camZ - 60.0f; 
+                        rushZ = camZ + 30.0f; 
+                        rushTargetZ = camZ - 20.0f; 
                     }
                 } else if (rushState == 2) { 
-                    rushZ -= 0.8f; 
+                    rushZ -= 0.6f; 
                     needsVBOUpdate = true; 
 
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
@@ -822,32 +779,7 @@ int main() {
                     if (rushZ < rushTargetZ) { 
                         rushActive = false; rushState = 0; needsVBOUpdate = true;
                         rushCooldown = 1800; 
-                        if (audio_ok) ndspChnWaveBufClear(3); 
                     }
-                }
-                
-                if (audio_ok && sndRushScream.data_vaddr) {
-                    float dist = 0.0f;
-                    
-                    if (rushState == 1) {
-                        dist = 40.0f + (rushTimer / rushStartTimer) * 110.0f; 
-                    } else if (rushState == 2) {
-                        dist = abs(rushZ - camZ);
-                        if (rushZ < camZ) dist *= 1.5f; 
-                    }
-                    
-                    float maxDist = 150.0f;
-                    float vol = 1.0f - (dist / maxDist);
-                    if (vol < 0.0f) vol = 0.0f;
-                    if (vol > 1.0f) vol = 1.0f;
-                    
-                    vol = vol * vol * vol; 
-                    float rushVolumeMultiplier = 3.5f; 
-                    
-                    float mix[12] = {0};
-                    mix[0] = vol * rushVolumeMultiplier; 
-                    mix[1] = vol * rushVolumeMultiplier; 
-                    ndspChnSetMix(3, mix);
                 }
             }
 
@@ -939,26 +871,19 @@ int main() {
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                for(int i=0; i<100; i++) {
-                    if (rooms[i].isLocked) {
-                        float doorZ = -10.0f - (i * 10.0f);
-                        float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                        
-                        if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
-                            if (hasKey) {
+                if (hasKey) {
+                    for(int i=0; i<100; i++) {
+                        if (rooms[i].isLocked) {
+                            float doorZ = -10.0f - (i * 10.0f);
+                            float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                            
+                            if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
                                 rooms[i].isLocked = false;
                                 hasKey = false;
                                 needsVBOUpdate = true;
                                 sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
-                            } else {
-                                if (audio_ok && sndLockedDoor.data_vaddr) {
-                                    ndspChnWaveBufClear(1);
-                                    sndLockedDoor.status = NDSP_WBUF_FREE;
-                                    ndspChnWaveBufAdd(1, &sndLockedDoor);
-                                }
-                                sprintf(uiMessage, "It's locked..."); messageTimer = 60;
+                                break; 
                             }
-                            break; 
                         }
                     }
                 }
@@ -966,7 +891,7 @@ int main() {
                 int nextRoom = playerCurrentRoom + 1;
                 if (nextRoom >= 0 && nextRoom < 100) {
                     int interactRoom = rooms[nextRoom].isDupeRoom ? nextRoom : -1;
-                    if (interactRoom != -1) {
+                    if (interactRoom != -1 && !doorOpen[interactRoom]) {
                         float lockDoorZ = -10.0f - (nextRoom * 10.0f);
                         if (abs(camZ - lockDoorZ) < 1.8f) {
                             bool leftT = (camX < -1.4f);
@@ -975,20 +900,8 @@ int main() {
                             int correctPos = rooms[interactRoom].correctDupePos;
 
                             if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
-                                if (!doorOpen[interactRoom]) { 
-                                    if (audio_ok && sndDoor.data_vaddr) {
-                                        ndspChnWaveBufClear(1);
-                                        sndDoor.status = NDSP_WBUF_FREE;
-                                        ndspChnWaveBufAdd(1, &sndDoor);
-                                    }
-                                    doorOpen[interactRoom] = true; needsVBOUpdate = true;
-                                }
+                                doorOpen[interactRoom] = true; needsVBOUpdate = true;
                             } else if (leftT || centerT || rightT) {
-                                if (audio_ok && sndDupeAttack.data_vaddr) {
-                                    ndspChnWaveBufClear(2);
-                                    sndDupeAttack.status = NDSP_WBUF_FREE;
-                                    ndspChnWaveBufAdd(2, &sndDupeAttack);
-                                }
                                 playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
                                 if (playerHealth <= 0) isDead = true; 
                             }
@@ -1011,15 +924,6 @@ int main() {
                     rushActive = true;
                     rushState = 1; 
                     rushTimer = 300 + (rand() % 120); 
-                    rushStartTimer = (float)rushTimer; 
-                    
-                    if (audio_ok && sndRushScream.data_vaddr) {
-                        float mix[12] = {0};
-                        ndspChnSetMix(3, mix); 
-                        ndspChnWaveBufClear(3);
-                        sndRushScream.status = NDSP_WBUF_FREE;
-                        ndspChnWaveBufAdd(3, &sndRushScream);
-                    }
                 }
                 currentChunk = newChunk; 
                 needsVBOUpdate = true; 
@@ -1039,11 +943,6 @@ int main() {
                 if (rooms[i].isLocked) shouldBeOpen = false; 
                 
                 if (doorOpen[i] != shouldBeOpen) {
-                    if (shouldBeOpen && audio_ok && sndDoor.data_vaddr) {
-                        ndspChnWaveBufClear(1);
-                        sndDoor.status = NDSP_WBUF_FREE;
-                        ndspChnWaveBufAdd(1, &sndDoor);
-                    }
                     doorOpen[i] = shouldBeOpen; needsVBOUpdate = true;
                 }
             }
@@ -1054,11 +953,17 @@ int main() {
                     printf("\x1b[2J"); 
                     printf("\x1b[1;1H"); 
                     printf("CRITICAL ERROR: Vertex overflow during gameplay!\n");
+                    printf("Generated %zu vertices. Max is %d.\n", world_mesh.size(), MAX_VERTS);
                 } else {
                     memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
                     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 }
             }
+
+            float curH = -0.9f; float playerH = 1.1f; 
+            if (isCrouching) { curH = -0.4f; playerH = 0.5f; }
+            if (hideState == IN_CABINET) curH = -0.7f;
+            else if (hideState == UNDER_BED) curH = -0.15f; 
 
             circlePosition cStick, cPad;
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
@@ -1075,44 +980,29 @@ int main() {
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                     float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
                     
-                    float playerH = isCrouching ? 0.5f : 1.1f;
                     if(!checkCollision(nextX, 0.0f, camZ, playerH)) camX = nextX;
                     if(!checkCollision(camX, 0.0f, nextZ, playerH)) camZ = nextZ;
                 }
             }
         }
 
-        // --- DRAW FRAME (COMPLETELY SEPARATED) ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         
+        // --- ISOLATED RENDER LOGIC ---
         if (onTitleScreen) {
-            // DRAW *ONLY* 2D WHEN ON TITLE SCREEN
-            C2D_Prepare(); 
+            // ONLY draw the sprite sheet
+            C2D_Prepare();
             C2D_SceneBegin(target);
             if (spriteSheet) {
                 C2D_Image titleImg = C2D_SpriteSheetGetImage(spriteSheet, 0);
                 C2D_DrawImageAt(titleImg, 0, 0, 0.5f, NULL, 1.0f, 1.0f);
             }
-            C2D_Flush(); 
+            C2D_Flush();
         } else {
-            // DRAW *ONLY* 3D WHEN IN GAME
+            // ONLY draw the perfect working 3D environment
             C3D_FrameDrawOn(target);
 
-            // Rebuild the perfect 3D environment once when START is pressed
-            if (needsC3DRestore) {
-                needsC3DRestore = false;
-                C3D_BindProgram(&program);
-                C3D_SetAttrInfo(attr);
-                C3D_SetBufInfo(buf);
-                C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-                C3D_CullFace(GPU_CULL_NONE);
-                C3D_TexEnvInit(env);
-                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-            }
-
-            // Normal 3D rendering
             if (flashRedFrames > 0 && !isDead) {
                 C3D_TexEnvColor(env, 0xFF0000FF); 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
@@ -1135,23 +1025,14 @@ int main() {
         C3D_FrameEnd(0);
     }
     
-    if (spriteSheet) C2D_SpriteSheetFree(spriteSheet);
-    
     if (audio_ok) {
         if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
         if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
         if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
-        if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); 
-        if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr);
-        if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
-        if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); 
-        if (sndTitleTheme.data_vaddr) linearFree((void*)sndTitleTheme.data_vaddr);
         ndspExit();
     }
     
     romfsExit();
-    C2D_Fini(); 
-    C3D_Fini(); 
-    gfxExit();
+    C3D_Fini(); gfxExit();
     return 0;
 }
