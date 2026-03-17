@@ -14,7 +14,7 @@ ROMFS_DIR := romfs
 all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
 $(TARGET).smdh: icon.png
-	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "carmander152" icon.png $@
+	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "Carmander152" icon.png $@
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
@@ -33,7 +33,7 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xF806" >> app.rsf
+	@echo "  UniqueId                : 0xF809" >> app.rsf
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
