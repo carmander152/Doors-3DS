@@ -1,9 +1,9 @@
 #include <3ds.h>
 #include <citro3d.h>
 #include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
+#include <stdlib.h> 
+#include <stdio.h> 
+#include <math.h> 
 #include <vector>
 #include <time.h>
 #include "vshader_shbin.h"
@@ -75,7 +75,7 @@ ndspWaveBuf loadWav(const char* path) {
     FILE* file = fopen(path, "rb");
     if (!file) {
         printf("Failed to load: %s\n", path);
-        return waveBuf;
+        return waveBuf; 
     }
 
     fseek(file, 12, SEEK_SET);
@@ -96,7 +96,7 @@ ndspWaveBuf loadWav(const char* path) {
     if (!foundData) {
         printf("Invalid WAV: %s\n", path);
         fclose(file);
-        return waveBuf;
+        return waveBuf; 
     }
 
     s16* buffer = (s16*)linearAlloc(chunkSize);
@@ -108,7 +108,7 @@ ndspWaveBuf loadWav(const char* path) {
     DSP_FlushDataCache(buffer, chunkSize);
 
     waveBuf.data_vaddr = buffer;
-    waveBuf.nsamples = chunkSize / 2;
+    waveBuf.nsamples = chunkSize / 2; 
     waveBuf.looping = false;
     waveBuf.status = NDSP_WBUF_FREE;
 
@@ -470,16 +470,25 @@ int main() {
     ndspWaveBuf sndPsst = {0};
     ndspWaveBuf sndAttack = {0};
     ndspWaveBuf sndCaught = {0};
+    ndspWaveBuf sndDoor = {0}; // NEW: Door Audio buffer
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+        
+        // Channel 0 (Screech)
         ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
         ndspChnSetRate(0, 44100);
         ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
+        
+        // Channel 1 (Environment / Doors)
+        ndspChnSetInterp(1, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(1, 44100);
+        ndspChnSetFormat(1, NDSP_FORMAT_MONO_PCM16);
 
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
         sndCaught = loadWav("romfs:/Screech_Caught.wav");
+        sndDoor = loadWav("romfs:/Door_Open.wav"); // Load Door Audio
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -600,7 +609,7 @@ int main() {
                 printf("                              \n");
                 for(int i=0; i<8; i++) printf("                              \n"); 
             } else {
-                printf("        PLAYER STATUS         \n");
+                printf("       PLAYER STATUS          \n");
                 printf("==============================\n\n");
                 
                 if (playerCurrentRoom == -1) {
@@ -859,7 +868,7 @@ int main() {
                 int nextRoom = playerCurrentRoom + 1;
                 if (nextRoom >= 0 && nextRoom < 100) {
                     int interactRoom = rooms[nextRoom].isDupeRoom ? nextRoom : -1;
-                    if (interactRoom != -1 && !doorOpen[interactRoom]) {
+                    if (interactRoom != -1) {
                         float lockDoorZ = -10.0f - (nextRoom * 10.0f);
                         if (abs(camZ - lockDoorZ) < 1.8f) {
                             bool leftT = (camX < -1.4f);
@@ -867,8 +876,16 @@ int main() {
                             bool rightT = (camX > 0.6f);
                             int correctPos = rooms[interactRoom].correctDupePos;
 
+                            // --- DUPE DOOR OPEN LOGIC ---
                             if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
-                                doorOpen[interactRoom] = true; needsVBOUpdate = true;
+                                if (!doorOpen[interactRoom]) { // Play sound if it wasn't open
+                                    if (audio_ok && sndDoor.data_vaddr) {
+                                        ndspChnWaveBufClear(1);
+                                        sndDoor.status = NDSP_WBUF_FREE;
+                                        ndspChnWaveBufAdd(1, &sndDoor);
+                                    }
+                                    doorOpen[interactRoom] = true; needsVBOUpdate = true;
+                                }
                             } else if (leftT || centerT || rightT) {
                                 playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
                                 if (playerHealth <= 0) isDead = true; 
@@ -910,7 +927,13 @@ int main() {
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
                 if (rooms[i].isLocked) shouldBeOpen = false; 
                 
+                // --- PROXIMITY DOOR OPEN LOGIC ---
                 if (doorOpen[i] != shouldBeOpen) {
+                    if (shouldBeOpen && audio_ok && sndDoor.data_vaddr) {
+                        ndspChnWaveBufClear(1);
+                        sndDoor.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(1, &sndDoor);
+                    }
                     doorOpen[i] = shouldBeOpen; needsVBOUpdate = true;
                 }
             }
@@ -983,6 +1006,7 @@ int main() {
         if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
         if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr);
         if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
+        if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); // Free Door audio
         ndspExit();
     }
     
