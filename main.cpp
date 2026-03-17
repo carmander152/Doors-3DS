@@ -81,7 +81,7 @@ float rushTargetZ = 0.0f;
 bool inEyesRoom = false;
 bool isLookingAtEyes = false;
 int eyesDamageTimer = 0;
-int eyesDamageAccumulator = 0; // NEW: Tracks chunks of 5 damage for the hit sound
+int eyesDamageAccumulator = 0; 
 
 // --- AUDIO SYSTEM ---
 ndspWaveBuf loadWav(const char* path) {
@@ -423,7 +423,6 @@ void generateRooms() {
 
         rooms[i].hasEyes = (i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
         if (rooms[i].hasEyes) {
-            // NEW FIX: Spawns randomly between X: -1.0 to 0.9 (Guarantees he spawns in the walking aisle)
             rooms[i].eyesX = (rand() % 20 / 10.0f) - 1.0f; 
             rooms[i].eyesY = 1.0f + (rand() % 10 / 10.0f); 
             rooms[i].eyesZ = -10.0f - (i * 10.0f); 
@@ -528,7 +527,7 @@ int main() {
     ndspWaveBuf sndEyesAppear = {0};
     ndspWaveBuf sndEyesGarble = {0};
     ndspWaveBuf sndEyesAttack = {0};
-    ndspWaveBuf sndHit = {0}; // NEW: General hit/damage sound effect
+    ndspWaveBuf sndEyesHit = {0}; // Renamed to Eyes_Hit
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -557,7 +556,6 @@ int main() {
         ndspChnSetRate(5, 44100);
         ndspChnSetFormat(5, NDSP_FORMAT_MONO_PCM16);
 
-        // --- NEW: Channel 6 for Player Hit Sounds ---
         ndspChnSetInterp(6, NDSP_INTERP_LINEAR);
         ndspChnSetRate(6, 44100);
         ndspChnSetFormat(6, NDSP_FORMAT_MONO_PCM16);
@@ -574,7 +572,7 @@ int main() {
         sndEyesGarble = loadWav("romfs:/Eyes_Garble.wav");
         sndEyesGarble.looping = true; 
         sndEyesAttack = loadWav("romfs:/Eyes_Attack.wav");
-        sndHit = loadWav("romfs:/Hit.wav"); // Load the damage sound!
+        sndEyesHit = loadWav("romfs:/Eyes_Hit.wav"); // Updated filename
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -811,10 +809,9 @@ int main() {
                 if (dotProduct > 0.85f) { 
                     isLookingAtEyes = true;
                     
-                    // NEW FIX: Only fire the attack sound if it isn't already playing!
                     if (audio_ok && sndEyesAttack.data_vaddr) {
                         if (sndEyesAttack.status == NDSP_WBUF_DONE || sndEyesAttack.status == NDSP_WBUF_FREE) {
-                            ndspChnWaveBufClear(4); // Stops Appear if it's playing
+                            ndspChnWaveBufClear(4); 
                             sndEyesAttack.status = NDSP_WBUF_FREE;
                             ndspChnWaveBufAdd(4, &sndEyesAttack);
                         }
@@ -826,14 +823,13 @@ int main() {
                         eyesDamageTimer = 0;
                         flashRedFrames = 2; 
 
-                        // NEW: Play a hit sound effect every 5 damage!
                         eyesDamageAccumulator++;
                         if (eyesDamageAccumulator >= 5) {
                             eyesDamageAccumulator = 0;
-                            if (audio_ok && sndHit.data_vaddr) {
+                            if (audio_ok && sndEyesHit.data_vaddr) {
                                 ndspChnWaveBufClear(6);
-                                sndHit.status = NDSP_WBUF_FREE;
-                                ndspChnWaveBufAdd(6, &sndHit);
+                                sndEyesHit.status = NDSP_WBUF_FREE;
+                                ndspChnWaveBufAdd(6, &sndEyesHit);
                             }
                         }
                     }
@@ -846,7 +842,7 @@ int main() {
                 } else {
                     isLookingAtEyes = false;
                     eyesDamageTimer = 0; 
-                    eyesDamageAccumulator = 0; // Look away to reset the combo sound
+                    eyesDamageAccumulator = 0; 
                 }
             } else {
                 isLookingAtEyes = false;
@@ -1248,7 +1244,7 @@ int main() {
         if (sndEyesAppear.data_vaddr) linearFree((void*)sndEyesAppear.data_vaddr); 
         if (sndEyesGarble.data_vaddr) linearFree((void*)sndEyesGarble.data_vaddr); 
         if (sndEyesAttack.data_vaddr) linearFree((void*)sndEyesAttack.data_vaddr); 
-        if (sndHit.data_vaddr) linearFree((void*)sndHit.data_vaddr); 
+        if (sndEyesHit.data_vaddr) linearFree((void*)sndEyesHit.data_vaddr); 
         ndspExit();
     }
     
