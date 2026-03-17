@@ -22,6 +22,11 @@ typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 std::vector<vertex> world_mesh;
 std::vector<BBox> collisions;
 
+// --- NEW: Global Light Tint for Eyes ---
+float globalTintR = 1.0f;
+float globalTintG = 1.0f;
+float globalTintB = 1.0f;
+
 struct RoomSetup {
     int slotType[3]; 
     bool drawerOpen[3]; 
@@ -37,6 +42,10 @@ struct RoomSetup {
     bool isDupeRoom;
     int correctDupePos; 
     int dupeNumbers[3]; 
+
+    // --- NEW: Eyes Variables ---
+    bool hasEyes;
+    float eyesX, eyesY, eyesZ; 
 } rooms[100];
 
 // --- GAME STATE VARIABLES ---
@@ -63,10 +72,15 @@ float screechZ = 0.0f;
 bool rushActive = false;
 int rushState = 0; 
 int rushTimer = 0;
-float rushStartTimer = 1.0f; // NEW: For audio crescendo calculation
+float rushStartTimer = 1.0f; 
 int rushCooldown = 0; 
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
+
+// --- NEW: Eyes States ---
+bool inEyesRoom = false;
+bool isLookingAtEyes = false;
+int eyesDamageTimer = 0;
 
 // --- AUDIO SYSTEM ---
 ndspWaveBuf loadWav(const char* path) {
@@ -117,7 +131,10 @@ ndspWaveBuf loadWav(const char* path) {
 }
 
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0, float light = 1.0f) {
-    r *= light; g *= light; b *= light; 
+    // --- UPDATED: Apply Global Tint ---
+    r *= light * globalTintR; 
+    g *= light * globalTintG; 
+    b *= light * globalTintB; 
     if (r > 1.0f) r = 1.0f; if (g > 1.0f) g = 1.0f; if (b > 1.0f) b = 1.0f;
 
     float x2 = x + w, y2 = y + h, z2 = z + d;
@@ -258,6 +275,9 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     }
     
     if (currentChunk < 2) {
+        // Reset tint for lobby
+        globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
+        
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
         addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
         addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
@@ -301,6 +321,13 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         float z = -10 - (i * 10);
         float L = rooms[i].lightLevel; 
         
+        // --- APPLY PURPLE TINT IF EYES IS IN THIS ROOM ---
+        if (rooms[i].hasEyes) {
+            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; // Spooky Purple!
+        } else {
+            globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; // Normal
+        }
+
         if (rooms[i].isDupeRoom) {
             if (playerCurrentRoom >= i) { 
                 bool doorIsOpen = doorOpen[i];
@@ -353,7 +380,24 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 addBox(2.89f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false, 0, L); 
             }
         }
+
+        // --- DRAW EYES (Ensure he is bright regardless of room tint) ---
+        globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
+        
+        if (rooms[i].hasEyes) {
+            float ex = rooms[i].eyesX;
+            float ey = rooms[i].eyesY;
+            float ez = rooms[i].eyesZ;
+            
+            // Draw a chaotic cluster of glowing boxes
+            addBox(ex - 0.15f, ey - 0.15f, ez - 0.15f, 0.3f, 0.3f, 0.3f, 0.6f, 0.0f, 0.8f, false, 0, 1.5f); // Purple core
+            addBox(ex - 0.2f, ey - 0.05f, ez - 0.1f, 0.4f, 0.1f, 0.2f, 0.0f, 0.8f, 0.8f, false, 0, 1.5f);   // Cyan ring
+            addBox(ex - 0.05f, ey - 0.2f, ez - 0.1f, 0.1f, 0.4f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f);   // White vertical
+        }
     }
+
+    // Safety reset!
+    globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
 }
 
 void generateRooms() {
@@ -380,6 +424,17 @@ void generateRooms() {
             rooms[i].dupeNumbers[1] = fake2;
             rooms[i].dupeNumbers[2] = nextRoomNumber + 5;
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = nextRoomNumber;
+        }
+
+        // --- NEW: SPAWN EYES ---
+        // Doesn't spawn in lobby (i=0, i=1) or dupe rooms. 8% chance!
+        rooms[i].hasEyes = (i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
+        if (rooms[i].hasEyes) {
+            // Spawn Eyes somewhere near the middle of the room, hovering in the air
+            rooms[i].eyesX = (rand() % 40 / 10.0f) - 2.0f; 
+            rooms[i].eyesY = 1.0f + (rand() % 10 / 10.0f); // Floats 1.0 to 2.0 units high
+            rooms[i].eyesZ = -10.0f - (i * 10.0f); // Exact center Z of the room
+            rooms[i].lightLevel = 1.0f; // Make sure the room isn't completely pitch black
         }
 
         bool bandaidSpawned = false;
@@ -448,6 +503,7 @@ void generateRooms() {
     rooms[0].doorPos = 1; 
     rooms[0].isDupeRoom = false; 
     rooms[0].isLocked = true; 
+    rooms[0].hasEyes = false;
     
     for(int i=2; i<98; i++) {
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && (rand() % 3 == 0)) {
@@ -474,7 +530,12 @@ int main() {
     ndspWaveBuf sndDoor = {0}; 
     ndspWaveBuf sndLockedDoor = {0}; 
     ndspWaveBuf sndDupeAttack = {0}; 
-    ndspWaveBuf sndRushScream = {0}; // NEW: Rush scream
+    ndspWaveBuf sndRushScream = {0}; 
+    
+    // --- NEW: EYES AUDIO BUFFERS ---
+    ndspWaveBuf sndEyesAppear = {0};
+    ndspWaveBuf sndEyesGarble = {0};
+    ndspWaveBuf sndEyesAttack = {0};
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -494,10 +555,21 @@ int main() {
         ndspChnSetRate(2, 44100);
         ndspChnSetFormat(2, NDSP_FORMAT_MONO_PCM16);
 
-        // NEW: Channel 3 (Rush Spatial Audio)
+        // Channel 3 (Rush Spatial Audio)
         ndspChnSetInterp(3, NDSP_INTERP_LINEAR);
         ndspChnSetRate(3, 44100);
         ndspChnSetFormat(3, NDSP_FORMAT_MONO_PCM16);
+
+        // --- NEW: EYES CHANNELS ---
+        // Channel 4 (Eyes Appear / Attack SFX)
+        ndspChnSetInterp(4, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(4, 44100);
+        ndspChnSetFormat(4, NDSP_FORMAT_MONO_PCM16);
+        
+        // Channel 5 (Eyes Garble LOOP)
+        ndspChnSetInterp(5, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(5, 44100);
+        ndspChnSetFormat(5, NDSP_FORMAT_MONO_PCM16);
 
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
@@ -505,7 +577,12 @@ int main() {
         sndDoor = loadWav("romfs:/Door_Open.wav"); 
         sndLockedDoor = loadWav("romfs:/Locked_Door.wav"); 
         sndDupeAttack = loadWav("romfs:/Dupe_Attack.wav"); 
-        sndRushScream = loadWav("romfs:/Rush_Scream.wav"); // Load Rush
+        sndRushScream = loadWav("romfs:/Rush_Scream.wav"); 
+        
+        sndEyesAppear = loadWav("romfs:/Eyes_Appear.wav");
+        sndEyesGarble = loadWav("romfs:/Eyes_Garble.wav");
+        sndEyesGarble.looping = true; // Turn looping ON for the garble!
+        sndEyesAttack = loadWav("romfs:/Eyes_Attack.wav");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -582,7 +659,14 @@ int main() {
                     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 }
                 
-                if (audio_ok) ndspChnWaveBufClear(3); // Make sure Rush sound stops if you restart
+                if (audio_ok) {
+                    ndspChnWaveBufClear(3); // Make sure Rush sound stops
+                    ndspChnWaveBufClear(4); // Eyes SFX
+                    ndspChnWaveBufClear(5); // Eyes Garble
+                }
+                inEyesRoom = false;
+                isLookingAtEyes = false;
+                eyesDamageTimer = 0;
                 
                 consoleClear(); 
                 continue; 
@@ -628,7 +712,7 @@ int main() {
                 printf("                              \n");
                 for(int i=0; i<8; i++) printf("                              \n"); 
             } else {
-                printf("       PLAYER STATUS          \n");
+                printf("        PLAYER STATUS         \n");
                 printf("==============================\n\n");
                 
                 if (playerCurrentRoom == -1) {
@@ -687,6 +771,91 @@ int main() {
 
         if (!isDead) {
             
+            // --- NEW: EYES ROOM DETECTION AND SOUND LOOPING ---
+            bool currentlyInEyesRoom = (playerCurrentRoom >= 0 && playerCurrentRoom < 100 && rooms[playerCurrentRoom].hasEyes);
+
+            if (currentlyInEyesRoom && !inEyesRoom) {
+                // The frame we step INTO an Eyes room
+                inEyesRoom = true;
+                if (audio_ok) {
+                    ndspChnWaveBufClear(4);
+                    if (sndEyesAppear.data_vaddr) {
+                        sndEyesAppear.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(4, &sndEyesAppear); 
+                    }
+                    ndspChnWaveBufClear(5);
+                    if (sndEyesGarble.data_vaddr) {
+                        sndEyesGarble.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(5, &sndEyesGarble); // Loops forever until cleared!
+                    }
+                }
+            } else if (!currentlyInEyesRoom && inEyesRoom) {
+                // The frame we step OUT of an Eyes room
+                inEyesRoom = false;
+                if (audio_ok) {
+                    ndspChnWaveBufClear(5); // Force stop the looping garble!
+                }
+            }
+
+            // --- NEW: EYES DAMAGE MATH ---
+            if (currentlyInEyesRoom && hideState == NOT_HIDING) {
+                float ex = rooms[playerCurrentRoom].eyesX;
+                float ey = rooms[playerCurrentRoom].eyesY;
+                float ez = rooms[playerCurrentRoom].eyesZ;
+
+                // Approximate where the 3DS camera is vertically
+                float camYOffset = isCrouching ? 0.4f : 0.9f; 
+                
+                // Vector pointing directly from the player to Eyes
+                float vx = ex - camX;
+                float vy = ey - camYOffset;
+                float vz = ez - camZ;
+                
+                // Normalize it
+                float dist = sqrt(vx*vx + vy*vy + vz*vz);
+                if (dist > 0) { vx /= dist; vy /= dist; vz /= dist; }
+
+                // Calculate where the player is currently pointing
+                float fx = -sinf(camYaw) * cosf(camPitch);
+                float fy = sinf(camPitch);
+                float fz = -cosf(camYaw) * cosf(camPitch);
+
+                // DOT PRODUCT: Same exact vision cone logic as Screech!
+                float dotProduct = (fx * vx) + (fy * vy) + (fz * vz);
+
+                if (dotProduct > 0.85f) { 
+                    // You are looking at him!
+                    if (!isLookingAtEyes) {
+                        isLookingAtEyes = true;
+                        if (audio_ok && sndEyesAttack.data_vaddr) {
+                            ndspChnWaveBufClear(4); // interrupt appear if it's still playing
+                            sndEyesAttack.status = NDSP_WBUF_FREE;
+                            ndspChnWaveBufAdd(4, &sndEyesAttack);
+                        }
+                    }
+                    
+                    // Accumulator: 1 damage every 6 frames = exactly 10 damage per second at 60 FPS
+                    eyesDamageTimer++;
+                    if (eyesDamageTimer >= 6) { 
+                        playerHealth -= 1; 
+                        eyesDamageTimer = 0;
+                        flashRedFrames = 2; // Pulsing red damage effect
+                    }
+
+                    if (playerHealth <= 0) {
+                        isDead = true;
+                        sprintf(uiMessage, "You stared at Eyes!"); 
+                        messageTimer = 120;
+                    }
+                } else {
+                    isLookingAtEyes = false;
+                    eyesDamageTimer = 0; // Look away to reset the timer
+                }
+            } else {
+                isLookingAtEyes = false;
+                eyesDamageTimer = 0;
+            }
+
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 2000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && (rand() % screechChance == 0)) {
                 screechActive = true;
@@ -744,7 +913,6 @@ int main() {
                 }
             }
 
-            // --- REFACTORED RUSH LOGIC WITH SPATIAL AUDIO ---
             if (rushActive) {
                 if (rushState == 1) { 
                     rushTimer--;
@@ -756,13 +924,11 @@ int main() {
 
                     if (rushTimer <= 0) {
                         rushState = 2; 
-                        // Start him further back so the peak hits perfectly
                         rushZ = camZ + 40.0f; 
-                        // Let him go deeper into the dark to finish the decrescendo
                         rushTargetZ = camZ - 60.0f; 
                     }
                 } else if (rushState == 2) { 
-                    rushZ -= 0.8f; // Move him a bit faster to cover the new distance
+                    rushZ -= 0.8f; 
                     needsVBOUpdate = true; 
 
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
@@ -778,43 +944,35 @@ int main() {
                     if (rushZ < rushTargetZ) { 
                         rushActive = false; rushState = 0; needsVBOUpdate = true;
                         rushCooldown = 1800; 
-                        if (audio_ok) ndspChnWaveBufClear(3); // Hard stop audio when despawned
+                        if (audio_ok) ndspChnWaveBufClear(3); 
                     }
                 }
                 
-                // --- RUSH DYNAMIC AUDIO CALCULATION ---
                 if (audio_ok && sndRushScream.data_vaddr) {
                     float dist = 0.0f;
                     
                     if (rushState == 1) {
-                        // Crescendo: Fake distance drops from 150.0 to 40.0 during flicker warning
                         dist = 40.0f + (rushTimer / rushStartTimer) * 110.0f; 
                     } else if (rushState == 2) {
-                        // Peak & Decrescendo: Based on real physical distance
                         dist = abs(rushZ - camZ);
                         
                         if (rushZ < camZ) {
-                            // FAST DECRESCENDO: Multiply distance when he is behind you to fade out faster
                             dist *= 1.5f; 
                         }
                     }
                     
-                    // Convert distance to volume (0.0 to 1.0)
                     float maxDist = 150.0f;
                     float vol = 1.0f - (dist / maxDist);
                     if (vol < 0.0f) vol = 0.0f;
                     if (vol > 1.0f) vol = 1.0f;
                     
-                    // Exponential curve (cubing it makes it start very quiet and spike heavily when close)
                     vol = vol * vol * vol; 
                     
-                    // --- NEW: VOLUME BOOST ---
-                    // Adjust this number! 1.0f is normal, 3.5f is a huge boost. 
                     float rushVolumeMultiplier = 3.5f; 
                     
                     float mix[12] = {0};
-                    mix[0] = vol * rushVolumeMultiplier; // Left Channel
-                    mix[1] = vol * rushVolumeMultiplier; // Right Channel
+                    mix[0] = vol * rushVolumeMultiplier; 
+                    mix[1] = vol * rushVolumeMultiplier; 
                     ndspChnSetMix(3, mix);
                 }
             }
@@ -981,7 +1139,6 @@ int main() {
                     rushTimer = 300 + (rand() % 120); 
                     rushStartTimer = (float)rushTimer; 
                     
-                    // NEW: Start the scream audio at volume 0.0
                     if (audio_ok && sndRushScream.data_vaddr) {
                         float mix[12] = {0};
                         ndspChnSetMix(3, mix); 
@@ -1089,6 +1246,10 @@ int main() {
         if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr);
         if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
         if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); 
+        
+        if (sndEyesAppear.data_vaddr) linearFree((void*)sndEyesAppear.data_vaddr); 
+        if (sndEyesGarble.data_vaddr) linearFree((void*)sndEyesGarble.data_vaddr); 
+        if (sndEyesAttack.data_vaddr) linearFree((void*)sndEyesAttack.data_vaddr); 
         ndspExit();
     }
     
