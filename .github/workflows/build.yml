@@ -23,7 +23,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           apt-get update
-          apt-get install -y wget unzip zip make
+          apt-get install -y wget unzip zip make ffmpeg
 
       - name: Install CIA Build Tools
         run: |
