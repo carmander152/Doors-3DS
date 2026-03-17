@@ -565,8 +565,16 @@ int main() {
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
 
+    // PERFECT ORIGINAL 3D SETUP
+    C3D_TexEnv* env = C3D_GetTexEnv(0);
+    C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+
     float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
+
+    bool needsC3DRestore = false; // Add flag to restore 3D when START is pressed
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
@@ -576,6 +584,8 @@ int main() {
         if (onTitleScreen) {
             if (kDown & KEY_START) {
                 onTitleScreen = false;
+                needsC3DRestore = true; // Tell game to rebuild 3D engine on next frame
+                
                 if (audio_ok) ndspChnWaveBufClear(4); 
                 
                 if (audio_ok && sndDoor.data_vaddr) {
@@ -1072,63 +1082,54 @@ int main() {
             }
         }
 
-        // --- DRAW FRAME ---
+        // --- DRAW FRAME (COMPLETELY SEPARATED) ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         
-        // 1. RESTORE 3D PIPELINE AND DRAW WORLD
-        C3D_FrameDrawOn(target);
-        C3D_BindProgram(&program);
-        C3D_SetAttrInfo(attr);
-        C3D_SetBufInfo(buf);
-
-        // --- THE FIX: SCRUB THE TEXTURE STAGES ---
-        C3D_TexEnvInit(C3D_GetTexEnv(0));
-        C3D_TexEnvInit(C3D_GetTexEnv(1));
-        C3D_TexEnvInit(C3D_GetTexEnv(2));
-        C3D_TexEnvInit(C3D_GetTexEnv(3));
-        C3D_TexEnvInit(C3D_GetTexEnv(4));
-        C3D_TexEnvInit(C3D_GetTexEnv(5));
-
-        // Now setup Stage 0 specifically for our 3D coloring/damage flashing
-        C3D_TexEnv* env0 = C3D_GetTexEnv(0);
-        if (flashRedFrames > 0 && !isDead) {
-            C3D_TexEnvColor(env0, 0xFF0000FF); 
-            C3D_TexEnvSrc(env0, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
-            flashRedFrames--;
-        } else {
-            C3D_TexEnvSrc(env0, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-        }
-        C3D_TexEnvFunc(env0, C3D_Both, GPU_REPLACE);
-
-        // Reset the depth testing and blending rules
-        C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-        C3D_CullFace(GPU_CULL_NONE);
-        C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO);
-
-        // Move the camera
-        C3D_Mtx proj, view;
-        Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
-        Mtx_Identity(&view);
-        Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
-        Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
-        Mtx_Multiply(&view, &proj, &view);
-        
-        // Draw the 3D map
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
-        C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
-
-        // 2. DRAW 2D OVERLAY
         if (onTitleScreen) {
-            C2D_Prepare(); // Tells GPU we are switching to 2D rules
+            // DRAW *ONLY* 2D WHEN ON TITLE SCREEN
+            C2D_Prepare(); 
             C2D_SceneBegin(target);
             if (spriteSheet) {
                 C2D_Image titleImg = C2D_SpriteSheetGetImage(spriteSheet, 0);
                 C2D_DrawImageAt(titleImg, 0, 0, 0.5f, NULL, 1.0f, 1.0f);
-            } else {
-                C2D_DrawRectSolid(0, 0, 0, 400, 240, C2D_Color32(20, 0, 0, 200)); 
             }
-            C2D_Flush(); // Force draw the 2D elements
+            C2D_Flush(); 
+        } else {
+            // DRAW *ONLY* 3D WHEN IN GAME
+            C3D_FrameDrawOn(target);
+
+            // Rebuild the perfect 3D environment once when START is pressed
+            if (needsC3DRestore) {
+                needsC3DRestore = false;
+                C3D_BindProgram(&program);
+                C3D_SetAttrInfo(attr);
+                C3D_SetBufInfo(buf);
+                C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+                C3D_CullFace(GPU_CULL_NONE);
+                C3D_TexEnvInit(env);
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+            }
+
+            // Normal 3D rendering
+            if (flashRedFrames > 0 && !isDead) {
+                C3D_TexEnvColor(env, 0xFF0000FF); 
+                C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
+                flashRedFrames--;
+            } else if (!isDead) {
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            }
+
+            C3D_Mtx proj, view;
+            Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
+            Mtx_Identity(&view);
+            Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
+            Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
+            Mtx_Multiply(&view, &proj, &view);
+            
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
+            C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
         }
         
         C3D_FrameEnd(0);
