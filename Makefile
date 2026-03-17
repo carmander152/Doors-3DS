@@ -7,6 +7,7 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
+ROMFS_DIR := romfs
 
 .PHONY: all clean
 
@@ -16,10 +17,14 @@ $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "Carmander152" icon.png $@
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
-	3dsxtool $< $@ --smdh=$(TARGET).smdh 
+	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
+
+romfs.bin: $(ROMFS_DIR)
+	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
-	sox audio.wav -b 16 -c 1 -r 44100 clean_audio.wav
+	# Force 16-bit, Mono, 44100Hz, and pad to 1.5s to ensure the 3DS buffer is happy
+	sox audio.wav -b 16 -c 1 -r 44100 clean_audio.wav pad 0 1.5
 	bannertool makebanner -i banner.png -a clean_audio.wav -o $@
 
 app.rsf:
@@ -30,7 +35,7 @@ app.rsf:
 	@echo "  ContentType             : Application" >> app.rsf
 	@echo "  Logo                    : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xF80D" >> app.rsf
+	@echo "  UniqueId                : 0xF80E" >> app.rsf
 	@echo "  Category                : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
 	@echo "  UseOnSD                 : true" >> app.rsf
@@ -73,9 +78,9 @@ app.rsf:
 	@echo "  SaveDataSize            : 128KB" >> app.rsf
 	@echo "  StackSize               : 0x40000" >> app.rsf
 
-$(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf
+$(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	arm-none-eabi-strip --strip-debug $< -o stripped_for_cia.elf
-	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -exefslogo -target t
+	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
 	rm -f stripped_for_cia.elf
 
 $(TARGET).elf: $(OBJS)
@@ -83,10 +88,6 @@ $(TARGET).elf: $(OBJS)
 
 main.o: main.cpp vshader_shbin.h
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
-
-%.wav.o: %.wav
-	bin2s $< > $<.s
-	$(AS) -march=armv6k -mfloat-abi=hard -o $@ $<.s
 
 vshader.shbin.o: vshader.v.pica
 	picasso -o vshader.shbin $<
@@ -98,4 +99,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav app.rsf stripped_for_cia.elf *.wav.s
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf
