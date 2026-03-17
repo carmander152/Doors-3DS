@@ -1,5 +1,6 @@
 #include <3ds.h>
 #include <citro3d.h>
+#include <citro2d.h> 
 #include <string.h>
 #include <stdlib.h> 
 #include <stdio.h> 
@@ -47,6 +48,7 @@ bool lobbyKeyPickedUp = false;
 bool doorOpen[100] = {false}; 
 bool isCrouching = false;
 bool isDead = false; 
+bool onTitleScreen = true; 
 HideState hideState = NOT_HIDING; 
 
 // UI Message Variables
@@ -63,7 +65,7 @@ float screechZ = 0.0f;
 bool rushActive = false;
 int rushState = 0; 
 int rushTimer = 0;
-float rushStartTimer = 1.0f; // NEW: For audio crescendo calculation
+float rushStartTimer = 1.0f; 
 int rushCooldown = 0; 
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
@@ -110,7 +112,7 @@ ndspWaveBuf loadWav(const char* path) {
 
     waveBuf.data_vaddr = buffer;
     waveBuf.nsamples = chunkSize / 2; 
-    waveBuf.looping = false;
+    waveBuf.looping = false; // By default no looping
     waveBuf.status = NDSP_WBUF_FREE;
 
     return waveBuf;
@@ -474,30 +476,32 @@ int main() {
     ndspWaveBuf sndDoor = {0}; 
     ndspWaveBuf sndLockedDoor = {0}; 
     ndspWaveBuf sndDupeAttack = {0}; 
-    ndspWaveBuf sndRushScream = {0}; // NEW: Rush scream
+    ndspWaveBuf sndRushScream = {0}; 
+    ndspWaveBuf sndTitleTheme = {0}; // NEW: Title Theme buffer
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        // Channel 0 (Screech)
         ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
         ndspChnSetRate(0, 44100);
         ndspChnSetFormat(0, NDSP_FORMAT_MONO_PCM16);
         
-        // Channel 1 (Environment / Normal & Locked Doors)
         ndspChnSetInterp(1, NDSP_INTERP_LINEAR);
         ndspChnSetRate(1, 44100);
         ndspChnSetFormat(1, NDSP_FORMAT_MONO_PCM16);
         
-        // Channel 2 (Dupe/Damage)
         ndspChnSetInterp(2, NDSP_INTERP_LINEAR);
         ndspChnSetRate(2, 44100);
         ndspChnSetFormat(2, NDSP_FORMAT_MONO_PCM16);
 
-        // NEW: Channel 3 (Rush Spatial Audio)
         ndspChnSetInterp(3, NDSP_INTERP_LINEAR);
         ndspChnSetRate(3, 44100);
         ndspChnSetFormat(3, NDSP_FORMAT_MONO_PCM16);
+
+        // NEW: Channel 4 for the Title Screen Music
+        ndspChnSetInterp(4, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(4, 44100);
+        ndspChnSetFormat(4, NDSP_FORMAT_MONO_PCM16);
 
         sndPsst = loadWav("romfs:/Screech_Psst.wav");
         sndAttack = loadWav("romfs:/Screech_Attack.wav");
@@ -505,12 +509,28 @@ int main() {
         sndDoor = loadWav("romfs:/Door_Open.wav"); 
         sndLockedDoor = loadWav("romfs:/Locked_Door.wav"); 
         sndDupeAttack = loadWav("romfs:/Dupe_Attack.wav"); 
-        sndRushScream = loadWav("romfs:/Rush_Scream.wav"); // Load Rush
+        sndRushScream = loadWav("romfs:/Rush_Scream.wav"); 
+        
+        // Load and setup Title Theme
+        sndTitleTheme = loadWav("romfs:/Title_Theme.wav"); 
+        sndTitleTheme.looping = true; // Tell the sound chip to loop this file infinitely
+        
+        // Start playing the title theme immediately on boot!
+        if (sndTitleTheme.data_vaddr) {
+            ndspChnWaveBufAdd(4, &sndTitleTheme);
+        }
     }
 
+    // --- GRAPHICS PIPELINE ---
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+    C2D_Init(C2D_DEFAULT_MAX_OBJECTS); 
+    C2D_Prepare(); 
+
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
+
+    C2D_SpriteSheet spriteSheet = C2D_SpriteSheetLoad("romfs:/sprites.t3x");
+    if (!spriteSheet) printf("Warning: sprites.t3x not found in romfs!\n");
 
     generateRooms(); 
 
@@ -554,12 +574,32 @@ int main() {
     float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
 
+    bool needsC3DRestore = false; 
+
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
         
-        if (kDown & KEY_START) {
+        // --- RESTRUCTURED INPUT LOGIC ---
+        if (onTitleScreen) {
+            // Wait for START to begin the game
+            if (kDown & KEY_START) {
+                onTitleScreen = false;
+                needsC3DRestore = true; 
+                
+                // Cut the title music!
+                if (audio_ok) ndspChnWaveBufClear(4);
+                
+                // Play starting door noise
+                if (audio_ok && sndDoor.data_vaddr) {
+                    ndspChnWaveBufClear(1);
+                    sndDoor.status = NDSP_WBUF_FREE;
+                    ndspChnWaveBufAdd(1, &sndDoor);
+                }
+            }
+        } else if (kDown & KEY_START) {
             if (isDead) {
+                // Restart logic
                 isDead = false; hasKey = false; lobbyKeyPickedUp = false; 
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
@@ -582,11 +622,22 @@ int main() {
                     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 }
                 
-                if (audio_ok) ndspChnWaveBufClear(3); // Make sure Rush sound stops if you restart
-                
+                if (audio_ok) ndspChnWaveBufClear(3); 
                 consoleClear(); 
+                
+                // Return to Title Screen and restart the music!
+                onTitleScreen = true; 
+                if (audio_ok && sndTitleTheme.data_vaddr) {
+                    ndspChnWaveBufClear(4);
+                    sndTitleTheme.status = NDSP_WBUF_FREE;
+                    ndspChnWaveBufAdd(4, &sndTitleTheme);
+                }
+                
                 continue; 
-            } else break; 
+            } else {
+                // If alive, pressing START quits the game to the 3DS home menu
+                break; 
+            } 
         }
 
         bool needsVBOUpdate = false;
@@ -609,10 +660,19 @@ int main() {
         if (screechCooldown > 0) screechCooldown--;
         if (rushCooldown > 0) rushCooldown--; 
 
+        // --- BOTTOM SCREEN CONSOLE ---
         printf("\x1b[1;1H"); 
 
-        printf("==============================\n");
-        if (isDead) {
+        if (onTitleScreen) {
+            printf("==============================\n");
+            printf("           DOORS 3DS          \n");
+            printf("==============================\n\n");
+            printf("                              \n");
+            printf("    Press [START] to Begin    \n"); // Updated instruction!
+            printf("                              \n\n");
+            for(int i=0; i<8; i++) printf("                              \n"); 
+        } else if (isDead) {
+            printf("==============================\n");
             printf("         YOU DIED!            \n");
             printf("==============================\n\n");
             printf("                              \n");
@@ -685,7 +745,8 @@ int main() {
             }
         }
 
-        if (!isDead) {
+        // --- GAMEPLAY UPDATES ---
+        if (!isDead && !onTitleScreen) {
             
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 2000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && (rand() % screechChance == 0)) {
@@ -744,7 +805,6 @@ int main() {
                 }
             }
 
-            // --- REFACTORED RUSH LOGIC WITH SPATIAL AUDIO ---
             if (rushActive) {
                 if (rushState == 1) { 
                     rushTimer--;
@@ -756,13 +816,11 @@ int main() {
 
                     if (rushTimer <= 0) {
                         rushState = 2; 
-                        // Start him further back so the peak hits perfectly
                         rushZ = camZ + 40.0f; 
-                        // Let him go deeper into the dark to finish the decrescendo
                         rushTargetZ = camZ - 60.0f; 
                     }
                 } else if (rushState == 2) { 
-                    rushZ -= 0.8f; // Move him a bit faster to cover the new distance
+                    rushZ -= 0.8f; 
                     needsVBOUpdate = true; 
 
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
@@ -778,43 +836,31 @@ int main() {
                     if (rushZ < rushTargetZ) { 
                         rushActive = false; rushState = 0; needsVBOUpdate = true;
                         rushCooldown = 1800; 
-                        if (audio_ok) ndspChnWaveBufClear(3); // Hard stop audio when despawned
+                        if (audio_ok) ndspChnWaveBufClear(3); 
                     }
                 }
                 
-                // --- RUSH DYNAMIC AUDIO CALCULATION ---
                 if (audio_ok && sndRushScream.data_vaddr) {
                     float dist = 0.0f;
                     
                     if (rushState == 1) {
-                        // Crescendo: Fake distance drops from 150.0 to 40.0 during flicker warning
                         dist = 40.0f + (rushTimer / rushStartTimer) * 110.0f; 
                     } else if (rushState == 2) {
-                        // Peak & Decrescendo: Based on real physical distance
                         dist = abs(rushZ - camZ);
-                        
-                        if (rushZ < camZ) {
-                            // FAST DECRESCENDO: Multiply distance when he is behind you to fade out faster
-                            dist *= 1.5f; 
-                        }
+                        if (rushZ < camZ) dist *= 1.5f; 
                     }
                     
-                    // Convert distance to volume (0.0 to 1.0)
                     float maxDist = 150.0f;
                     float vol = 1.0f - (dist / maxDist);
                     if (vol < 0.0f) vol = 0.0f;
                     if (vol > 1.0f) vol = 1.0f;
                     
-                    // Exponential curve (cubing it makes it start very quiet and spike heavily when close)
                     vol = vol * vol * vol; 
-                    
-                    // --- NEW: VOLUME BOOST ---
-                    // Adjust this number! 1.0f is normal, 3.5f is a huge boost. 
                     float rushVolumeMultiplier = 3.5f; 
                     
                     float mix[12] = {0};
-                    mix[0] = vol * rushVolumeMultiplier; // Left Channel
-                    mix[1] = vol * rushVolumeMultiplier; // Right Channel
+                    mix[0] = vol * rushVolumeMultiplier; 
+                    mix[1] = vol * rushVolumeMultiplier; 
                     ndspChnSetMix(3, mix);
                 }
             }
@@ -981,7 +1027,6 @@ int main() {
                     rushTimer = 300 + (rand() % 120); 
                     rushStartTimer = (float)rushTimer; 
                     
-                    // NEW: Start the scream audio at volume 0.0
                     if (audio_ok && sndRushScream.data_vaddr) {
                         float mix[12] = {0};
                         ndspChnSetMix(3, mix); 
@@ -1056,30 +1101,56 @@ int main() {
             }
         }
 
+        // --- DRAW FRAME ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
 
-        if (flashRedFrames > 0 && !isDead) {
-            C3D_TexEnvColor(env, 0xFF0000FF); 
-            C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
-            flashRedFrames--;
-        } else if (!isDead) {
-            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-        }
+        if (onTitleScreen) {
+            // Draw 2D Title Screen
+            C2D_SceneBegin(target);
+            if (spriteSheet) {
+                C2D_Image titleImg = C2D_SpriteSheetGetImage(spriteSheet, 0);
+                C2D_DrawImageAt(titleImg, 0, 0, 0.5f, NULL, 1.0f, 1.0f);
+            }
+        } else {
+            // Because 2D disrupts the 3D pipeline, we must restore our states right after hitting 'START'
+            if (needsC3DRestore) {
+                needsC3DRestore = false;
+                C3D_BindProgram(&program);
+                C3D_SetAttrInfo(attr);
+                C3D_SetBufInfo(buf);
+                C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+                C3D_CullFace(GPU_CULL_NONE);
+                C3D_TexEnvInit(env);
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+            }
 
-        C3D_Mtx proj, view;
-        Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
-        Mtx_Identity(&view);
-        Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
-        Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
-        Mtx_Multiply(&view, &proj, &view);
-        
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
-        C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
+            // Draw 3D Game
+            if (flashRedFrames > 0 && !isDead) {
+                C3D_TexEnvColor(env, 0xFF0000FF); 
+                C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
+                flashRedFrames--;
+            } else if (!isDead) {
+                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            }
+
+            C3D_Mtx proj, view;
+            Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
+            Mtx_Identity(&view);
+            Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
+            Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
+            Mtx_Multiply(&view, &proj, &view);
+            
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
+            C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
+        }
         
         C3D_FrameEnd(0);
     }
+    
+    if (spriteSheet) C2D_SpriteSheetFree(spriteSheet);
     
     if (audio_ok) {
         if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr);
@@ -1089,10 +1160,13 @@ int main() {
         if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr);
         if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
         if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); 
+        if (sndTitleTheme.data_vaddr) linearFree((void*)sndTitleTheme.data_vaddr); // Free Title Theme
         ndspExit();
     }
     
     romfsExit();
-    C3D_Fini(); gfxExit();
+    C2D_Fini(); 
+    C3D_Fini(); 
+    gfxExit();
     return 0;
 }
