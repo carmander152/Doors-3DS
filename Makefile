@@ -6,8 +6,7 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := hotel_doors
 OBJS := vshader.shbin.o main.o
-# NEW: Added -lcitro2d to the libraries
-LIBS := -L$(DEVKITPRO)/libcitro2d/lib -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro2d -lcitro3d -lctru -lm
+LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 ROMFS_DIR := romfs
 
 .PHONY: all clean
@@ -20,13 +19,7 @@ $(TARGET).smdh: icon.png
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
-# NEW RULE: Automatically convert the PNG into a 3DS SpriteSheet inside romfs!
-$(ROMFS_DIR)/sprites.t3x: sprites.t3s title.png
-	@mkdir -p $(ROMFS_DIR)
-	tex3ds -i $< -o $@
-
-# Updated to wait for the sprites to compile before packing the romfs
-romfs.bin: $(ROMFS_DIR) $(ROMFS_DIR)/sprites.t3x
+romfs.bin: $(ROMFS_DIR)
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
@@ -94,7 +87,7 @@ $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
 
 main.o: main.cpp vshader_shbin.h
-	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro2d/include -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
+	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
 vshader.shbin.o: vshader.v.pica
 	picasso -o vshader.shbin $<
@@ -106,4 +99,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf $(ROMFS_DIR)/sprites.t3x
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf
