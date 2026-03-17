@@ -112,7 +112,7 @@ ndspWaveBuf loadWav(const char* path) {
 
     waveBuf.data_vaddr = buffer;
     waveBuf.nsamples = chunkSize / 2; 
-    waveBuf.looping = false; // By default no looping
+    waveBuf.looping = false; 
     waveBuf.status = NDSP_WBUF_FREE;
 
     return waveBuf;
@@ -477,7 +477,7 @@ int main() {
     ndspWaveBuf sndLockedDoor = {0}; 
     ndspWaveBuf sndDupeAttack = {0}; 
     ndspWaveBuf sndRushScream = {0}; 
-    ndspWaveBuf sndTitleTheme = {0}; // NEW: Title Theme buffer
+    ndspWaveBuf sndTitleTheme = {0}; 
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -498,7 +498,6 @@ int main() {
         ndspChnSetRate(3, 44100);
         ndspChnSetFormat(3, NDSP_FORMAT_MONO_PCM16);
 
-        // NEW: Channel 4 for the Title Screen Music
         ndspChnSetInterp(4, NDSP_INTERP_LINEAR);
         ndspChnSetRate(4, 44100);
         ndspChnSetFormat(4, NDSP_FORMAT_MONO_PCM16);
@@ -511,12 +510,15 @@ int main() {
         sndDupeAttack = loadWav("romfs:/Dupe_Attack.wav"); 
         sndRushScream = loadWav("romfs:/Rush_Scream.wav"); 
         
-        // Load and setup Title Theme
         sndTitleTheme = loadWav("romfs:/Title_Theme.wav"); 
-        sndTitleTheme.looping = true; // Tell the sound chip to loop this file infinitely
+        sndTitleTheme.looping = true; 
         
-        // Start playing the title theme immediately on boot!
         if (sndTitleTheme.data_vaddr) {
+            // NEW: Make the title theme 2.5x louder!
+            float titleMix[12] = {0};
+            titleMix[0] = 2.5f; 
+            titleMix[1] = 2.5f; 
+            ndspChnSetMix(4, titleMix);
             ndspChnWaveBufAdd(4, &sndTitleTheme);
         }
     }
@@ -540,7 +542,7 @@ int main() {
 
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
     shaderProgram_s program; shaderProgramInit(&program);
-    shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
+    shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); 
 
     int uLoc_proj = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx");
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr);
@@ -563,34 +565,22 @@ int main() {
 
     C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf);
     BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 2, 0x10);
-    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-    C3D_CullFace(GPU_CULL_NONE); 
 
     C3D_TexEnv* env = C3D_GetTexEnv(0);
-    C3D_TexEnvInit(env);
-    C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
     float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
-
-    bool needsC3DRestore = false; 
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
         
-        // --- RESTRUCTURED INPUT LOGIC ---
+        // --- INPUT LOGIC ---
         if (onTitleScreen) {
-            // Wait for START to begin the game
             if (kDown & KEY_START) {
                 onTitleScreen = false;
-                needsC3DRestore = true; 
+                if (audio_ok) ndspChnWaveBufClear(4); 
                 
-                // Cut the title music!
-                if (audio_ok) ndspChnWaveBufClear(4);
-                
-                // Play starting door noise
                 if (audio_ok && sndDoor.data_vaddr) {
                     ndspChnWaveBufClear(1);
                     sndDoor.status = NDSP_WBUF_FREE;
@@ -599,7 +589,6 @@ int main() {
             }
         } else if (kDown & KEY_START) {
             if (isDead) {
-                // Restart logic
                 isDead = false; hasKey = false; lobbyKeyPickedUp = false; 
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
@@ -612,7 +601,6 @@ int main() {
                 for(int i=0; i<100; i++) doorOpen[i] = false;
                 
                 generateRooms(); 
-                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 buildWorld(currentChunk, playerCurrentRoom);
                 
                 if (world_mesh.size() > MAX_VERTS) {
@@ -625,7 +613,6 @@ int main() {
                 if (audio_ok) ndspChnWaveBufClear(3); 
                 consoleClear(); 
                 
-                // Return to Title Screen and restart the music!
                 onTitleScreen = true; 
                 if (audio_ok && sndTitleTheme.data_vaddr) {
                     ndspChnWaveBufClear(4);
@@ -635,7 +622,6 @@ int main() {
                 
                 continue; 
             } else {
-                // If alive, pressing START quits the game to the 3DS home menu
                 break; 
             } 
         }
@@ -668,7 +654,7 @@ int main() {
             printf("           DOORS 3DS          \n");
             printf("==============================\n\n");
             printf("                              \n");
-            printf("    Press [START] to Begin    \n"); // Updated instruction!
+            printf("    Press [START] to Begin    \n"); 
             printf("                              \n\n");
             for(int i=0; i<8; i++) printf("                              \n"); 
         } else if (isDead) {
@@ -735,13 +721,6 @@ int main() {
                 if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
                 else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
                 else printf("\n                                    \n");
-
-                if (!audio_ok) {
-                    printf("\x1b[31m WARNING: dspfirm.cdc MISSING!\x1b[0m\n");
-                    printf("\x1b[31m Sound chip could not turn on.\x1b[0m\n");
-                } else {
-                    for(int i=0; i<4; i++) printf("                                    \n");
-                }
             }
         }
 
@@ -1068,17 +1047,11 @@ int main() {
                     printf("\x1b[2J"); 
                     printf("\x1b[1;1H"); 
                     printf("CRITICAL ERROR: Vertex overflow during gameplay!\n");
-                    printf("Generated %zu vertices. Max is %d.\n", world_mesh.size(), MAX_VERTS);
                 } else {
                     memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex));
                     GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 }
             }
-
-            float curH = -0.9f; float playerH = 1.1f; 
-            if (isCrouching) { curH = -0.4f; playerH = 0.5f; }
-            if (hideState == IN_CABINET) curH = -0.7f;
-            else if (hideState == UNDER_BED) curH = -0.15f; 
 
             circlePosition cStick, cPad;
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
@@ -1095,56 +1068,61 @@ int main() {
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                     float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
                     
+                    float playerH = isCrouching ? 0.5f : 1.1f;
                     if(!checkCollision(nextX, 0.0f, camZ, playerH)) camX = nextX;
                     if(!checkCollision(camX, 0.0f, nextZ, playerH)) camZ = nextZ;
                 }
             }
         }
 
-        // --- DRAW FRAME ---
+        // --- DRAW FRAME (COMPLETELY REWRITTEN TO FIX BROWN SCREEN) ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
+        
+        // 1. ALWAYS render the 3D world (serves as a live background for the title screen!)
         C3D_FrameDrawOn(target);
+        C3D_BindProgram(&program);
+        C3D_SetAttrInfo(attr);
+        C3D_SetBufInfo(buf);
+        C3D_TexEnvInit(env);
 
+        // Explicitly set 3D states so Citro2D doesn't break them
+        C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+        C3D_CullFace(GPU_CULL_NONE);
+        C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO); // This stops the brown screen!
+
+        if (flashRedFrames > 0 && !isDead) {
+            C3D_TexEnvColor(env, 0xFF0000FF); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
+            flashRedFrames--;
+        } else {
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+        }
+
+        C3D_Mtx proj, view;
+        Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
+        Mtx_Identity(&view);
+        Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
+        Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
+        Mtx_Multiply(&view, &proj, &view);
+        
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
+        C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
+
+        // 2. Draw the 2D Title overlay ON TOP of the 3D world
         if (onTitleScreen) {
-            // Draw 2D Title Screen
+            C2D_Prepare(); // Tells GPU we are switching to 2D
             C2D_SceneBegin(target);
             if (spriteSheet) {
                 C2D_Image titleImg = C2D_SpriteSheetGetImage(spriteSheet, 0);
+                
+                // Draw the logo with slight transparency so the 3D lobby shows behind it!
                 C2D_DrawImageAt(titleImg, 0, 0, 0.5f, NULL, 1.0f, 1.0f);
+            } else {
+                // Failsafe: Draw a solid color if the PNG fails to load so it doesn't look empty
+                C2D_DrawRectSolid(0, 0, 0, 400, 240, C2D_Color32(20, 0, 0, 200)); 
             }
-        } else {
-            // Because 2D disrupts the 3D pipeline, we must restore our states right after hitting 'START'
-            if (needsC3DRestore) {
-                needsC3DRestore = false;
-                C3D_BindProgram(&program);
-                C3D_SetAttrInfo(attr);
-                C3D_SetBufInfo(buf);
-                C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-                C3D_CullFace(GPU_CULL_NONE);
-                C3D_TexEnvInit(env);
-                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-            }
-
-            // Draw 3D Game
-            if (flashRedFrames > 0 && !isDead) {
-                C3D_TexEnvColor(env, 0xFF0000FF); 
-                C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
-                flashRedFrames--;
-            } else if (!isDead) {
-                C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-            }
-
-            C3D_Mtx proj, view;
-            Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
-            Mtx_Identity(&view);
-            Mtx_RotateX(&view, -camPitch, true); Mtx_RotateY(&view, -camYaw, true);
-            Mtx_Translate(&view, -camX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -camZ, true); 
-            Mtx_Multiply(&view, &proj, &view);
-            
-            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
-            C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size());
+            C2D_Flush(); // Force draw the 2D elements
         }
         
         C3D_FrameEnd(0);
@@ -1160,7 +1138,7 @@ int main() {
         if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr);
         if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
         if (sndRushScream.data_vaddr) linearFree((void*)sndRushScream.data_vaddr); 
-        if (sndTitleTheme.data_vaddr) linearFree((void*)sndTitleTheme.data_vaddr); // Free Title Theme
+        if (sndTitleTheme.data_vaddr) linearFree((void*)sndTitleTheme.data_vaddr);
         ndspExit();
     }
     
