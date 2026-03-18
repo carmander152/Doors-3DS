@@ -92,7 +92,7 @@ float rushTargetZ = 0.0f;
 bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
-float seekSpeed = 0.28f;
+float seekSpeed = 0.42f; // CHANGED: Now matches player's exact sprint speed
 int seekTimer = 0; 
 
 // --- Eyes States ---
@@ -404,7 +404,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         // --- RED GLOW DURING CUTSCENE ONLY ---
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
-        } else if (i > 0 && rooms[i-1].hasEyes) {
+        } else if (rooms[i].hasEyes) { // CHANGED: Fixed purple light rendering bug
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
         } else {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
@@ -938,10 +938,15 @@ int main() {
                 float hallwayEndZ = -10.0f - ((seekStartRoom + 2) * 10.0f) - 8.0f; 
                 
                 if (camZ < hallwayEndZ && seekState == 0) {
+                    // CHANGED: Camera snap logic during Seek rise
                     seekState = 1; 
                     seekActive = true;
                     seekTimer = 0;
-                    seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
+                    
+                    camX = 0.0f; 
+                    camZ = hallwayEndZ;
+                    seekZ = camZ + 8.0f; 
+                    
                     needsVBOUpdate = true;
                     
                     if (audio_ok && sndSeekRise.data_vaddr) {
