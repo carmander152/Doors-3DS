@@ -63,7 +63,7 @@ bool doorOpen[100] = {false};
 bool isCrouching = false;
 bool isDead = false; 
 HideState hideState = NOT_HIDING; 
-int seekStartRoom = 0; // Starts between 30 and 40
+int seekStartRoom = 0; 
 
 int messageTimer = 0;
 char uiMessage[50] = "";
@@ -89,9 +89,10 @@ float rushTargetZ = 0.0f;
 
 // --- SEEK VARIABLES ---
 bool seekActive = false;
-int seekState = 0; // 0=Inactive, 1=Rising from floor, 2=Chasing
+int seekState = 0; 
 float seekZ = 0.0f;
 float seekSpeed = 0.28f;
+int seekTimer = 0; 
 
 // --- Eyes States ---
 bool inEyesRoom = false;
@@ -290,6 +291,17 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(0.4f, 1.4f, rushZ - 0.55f, 0.4f, 0.4f, 0.1f, 0.9f, 0.9f, 0.9f, false);  
         addBox(-0.6f, 0.5f, rushZ - 0.55f, 1.2f, 0.6f, 0.1f, 0.8f, 0.8f, 0.8f, false); 
     }
+
+    // --- DRAW SEEK ---
+    if (seekActive) {
+        float sY = 0.0f;
+        if (seekState == 1) sY = -1.5f + (seekTimer / 120.0f) * 1.5f; 
+        else if (seekState == 2) sY = 0.0f; 
+        
+        addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, 1.6f, 0.6f, 0.05f, 0.05f, 0.05f, false); 
+        addBox(-0.1f, sY + 1.3f, seekZ - 0.35f, 0.2f, 0.2f, 0.1f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+        if (seekState == 1) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
+    }
     
     if (currentChunk < 2) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
@@ -364,7 +376,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
         }
 
-        // --- DRAW SEEK EYES ---
         if (rooms[i].hasSeekEyes) {
             srand(i * 12345); 
             for (int e = 0; e < rooms[i].seekEyeCount; e++) {
@@ -683,6 +694,11 @@ int main() {
                 playerCurrentRoom = -1;
                 for(int i=0; i<100; i++) doorOpen[i] = false;
                 
+                // Reset Seek
+                seekActive = false;
+                seekState = 0;
+                seekTimer = 0;
+
                 generateRooms(); 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 buildWorld(currentChunk, playerCurrentRoom);
@@ -783,6 +799,47 @@ int main() {
         }
 
         if (!isDead) {
+
+            // --- SEEK: TRIGGER & CHASE LOGIC ---
+            if (playerCurrentRoom >= 0 && playerCurrentRoom < 100 && rooms[playerCurrentRoom].isSeekHallway) {
+                float hallwayEndZ = -10.0f - (playerCurrentRoom * 10.0f) - 8.0f; 
+                
+                if (camZ < hallwayEndZ && seekState == 0) {
+                    seekState = 1; 
+                    seekActive = true;
+                    seekTimer = 0;
+                    seekZ = -10.0f - (playerCurrentRoom * 10.0f) + 1.0f; 
+                    needsVBOUpdate = true;
+                }
+            }
+
+            if (seekState == 1) {
+                seekTimer++;
+                camPitch = 0.0f; 
+                camYaw = camYaw + (3.14159f - camYaw) * 0.1f; 
+                needsVBOUpdate = true; 
+                
+                if (seekTimer >= 120) { 
+                    seekState = 2; 
+                    sprintf(uiMessage, "RUN!"); messageTimer = 90;
+                    flashRedFrames = 10; 
+                }
+            } else if (seekState == 2) {
+                seekZ -= seekSpeed; 
+                needsVBOUpdate = true;
+                
+                if (abs(seekZ - camZ) < 1.2f) {
+                    playerHealth = 0; isDead = true; flashRedFrames = 50;
+                    sprintf(uiMessage, "Seek caught you..."); messageTimer = 120;
+                }
+                
+                if (playerCurrentRoom >= 0 && rooms[playerCurrentRoom].isSeekFinale) {
+                    seekActive = false;
+                    seekState = 0;
+                    sprintf(uiMessage, "You escaped... for now."); messageTimer = 90;
+                }
+            }
+
             bool currentlyInEyesRoom = (playerCurrentRoom >= 0 && playerCurrentRoom < 100 && rooms[playerCurrentRoom].hasEyes);
 
             if (currentlyInEyesRoom && !inEyesRoom) {
@@ -1151,7 +1208,8 @@ int main() {
             circlePosition cStick, cPad;
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             
-            if (hideState == NOT_HIDING) {
+            // --- UPDATED FOR SEEK CAMERA LOCK ---
+            if (hideState == NOT_HIDING && seekState != 1) {
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
