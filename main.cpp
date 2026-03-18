@@ -981,9 +981,9 @@ int main() {
                 }
             } else if (seekState == 2) {
                 
-                // --- CHASE ACCELERATION SCALED DOWN ---
+                // --- CHASE ACCELERATION TWEAKED ---
                 if (seekSpeed < seekMaxSpeed) {
-                    seekSpeed += 0.0001f; 
+                    seekSpeed += 0.0005f; // Gets to full speed in ~76 frames
                 } else {
                     seekSpeed = seekMaxSpeed; 
                 }
