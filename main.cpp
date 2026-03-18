@@ -14,6 +14,7 @@
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
 #define MAX_VERTS 120000 
+#define TOTAL_ROOMS 102 // Increased to account for the 2 invisible hallway segments!
 
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
@@ -52,14 +53,14 @@ struct RoomSetup {
     bool isSeekHallway; 
     bool isSeekChase;   
     bool isSeekFinale;  
-} rooms[100];
+} rooms[TOTAL_ROOMS];
 
 // --- GAME STATE VARIABLES ---
 int playerHealth = 100;
 int flashRedFrames = 0; 
 bool hasKey = false;
 bool lobbyKeyPickedUp = false;
-bool doorOpen[100] = {false}; 
+bool doorOpen[TOTAL_ROOMS] = {false}; 
 bool isCrouching = false;
 bool isDead = false; 
 HideState hideState = NOT_HIDING; 
@@ -100,6 +101,22 @@ bool isLookingAtEyes = false;
 int eyesDamageTimer = 0;
 int eyesDamageAccumulator = 0; 
 int eyesGraceTimer = 0; 
+
+// --- ROOM DISPLAY HELPERS ---
+int getDisplayRoom(int idx) {
+    if (idx < 0) return 0;
+    if (idx <= seekStartRoom) return idx + 1; // Normal counting before hallway
+    // Freeze the room counter while inside the 3-segment mega hallway
+    if (idx == seekStartRoom + 1 || idx == seekStartRoom + 2) return seekStartRoom + 1;
+    // Resume counting, but offset by the 2 invisible rooms we used
+    return idx - 1; 
+}
+
+int getNextDoorIndex(int currentIdx) {
+    // If you are anywhere in the hallway, the next physical door is the exit!
+    if (currentIdx >= seekStartRoom && currentIdx <= seekStartRoom + 2) return seekStartRoom + 3;
+    return currentIdx + 1;
+}
 
 // --- AUDIO SYSTEM ---
 ndspWaveBuf loadWav(const char* path) {
@@ -347,7 +364,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     int startRoom = currentChunk - 1;
     int endRoom = currentChunk + 2;
     if (startRoom < 0) startRoom = 0;
-    if (endRoom > 99) endRoom = 99;
+    if (endRoom > TOTAL_ROOMS - 1) endRoom = TOTAL_ROOMS - 1;
 
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
@@ -360,24 +377,30 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
-        if (rooms[i].isDupeRoom) {
-            if (playerCurrentRoom >= i) { 
-                bool doorIsOpen = doorOpen[i];
-                bool isL = (rooms[i].correctDupePos == 0);
-                bool isC = (rooms[i].correctDupePos == 1);
-                bool isR = (rooms[i].correctDupePos == 2);
-                addWallWithDoors(z, isL, (isL && doorIsOpen), isC, (isC && doorIsOpen), isR, (isR && doorIsOpen), i, wallL);
+        // --- SEAMLESS MEGA-HALLWAY LOGIC ---
+        // If we are currently processing the walls that lead into segments 2 or 3 of the hallway, SKIP THEM!
+        bool isHallwayMid = (i == seekStartRoom + 1 || i == seekStartRoom + 2);
+
+        if (!isHallwayMid) {
+            if (rooms[i].isDupeRoom) {
+                if (playerCurrentRoom >= i) { 
+                    bool doorIsOpen = doorOpen[i];
+                    bool isL = (rooms[i].correctDupePos == 0);
+                    bool isC = (rooms[i].correctDupePos == 1);
+                    bool isR = (rooms[i].correctDupePos == 2);
+                    addWallWithDoors(z, isL, (isL && doorIsOpen), isC, (isC && doorIsOpen), isR, (isR && doorIsOpen), i, wallL);
+                } else {
+                    bool leftOpen = (rooms[i].correctDupePos == 0 && doorOpen[i]);
+                    bool centerOpen = (rooms[i].correctDupePos == 1 && doorOpen[i]);
+                    bool rightOpen = (rooms[i].correctDupePos == 2 && doorOpen[i]);
+                    addWallWithDoors(z, true, leftOpen, true, centerOpen, true, rightOpen, i, wallL);
+                }
             } else {
-                bool leftOpen = (rooms[i].correctDupePos == 0 && doorOpen[i]);
-                bool centerOpen = (rooms[i].correctDupePos == 1 && doorOpen[i]);
-                bool rightOpen = (rooms[i].correctDupePos == 2 && doorOpen[i]);
-                addWallWithDoors(z, true, leftOpen, true, centerOpen, true, rightOpen, i, wallL);
+                bool isL = (rooms[i].doorPos == 0);
+                bool isC = (rooms[i].doorPos == 1);
+                bool isR = (rooms[i].doorPos == 2);
+                addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
             }
-        } else {
-            bool isL = (rooms[i].doorPos == 0);
-            bool isC = (rooms[i].doorPos == 1);
-            bool isR = (rooms[i].doorPos == 2);
-            addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
         }
 
         // --- DRAW SEEK EYES ---
@@ -405,17 +428,14 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         if (rooms[i].isSeekChase) {
             srand(i * 777); 
             int obType = rand() % 3; // 0=Full, 1=LeftBlock, 2=RightBlock
-            float obZ = z - 5.0f;    // Place right in the middle of the room
+            float obZ = z - 5.0f;    
             
             if (obType == 0) {
-                // Duck anywhere
                 addBox(-3.0f, 0.7f, obZ, 6.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
             } else if (obType == 1) {
-                // Solid left block, duck right
                 addBox(-3.0f, 0.0f, obZ, 3.0f, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
                 addBox(0.0f, 0.7f, obZ, 3.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L);  
             } else {
-                // Solid right block, duck left
                 addBox(0.0f, 0.0f, obZ, 3.0f, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
                 addBox(-3.0f, 0.7f, obZ, 3.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
             }
@@ -441,6 +461,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             }
             srand(time(NULL));
         } else if (rooms[i].isSeekHallway) {
+            // Draw one huge 7-unit window per segment so it links up nicely
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
         } else if (rooms[i].hasEyes) {
@@ -481,29 +502,14 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 addBox(2.89f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false, 0, L); 
             }
         }
-
-        globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
-        
-        if (rooms[i].hasEyes) {
-            float ex = rooms[i].eyesX;
-            float ey = rooms[i].eyesY;
-            float ez = rooms[i].eyesZ;
-            
-            addBox(ex - 0.15f, ey - 0.15f, ez - 0.15f, 0.3f, 0.3f, 0.3f, 0.6f, 0.0f, 0.8f, false, 0, 1.5f); 
-            addBox(ex - 0.2f, ey - 0.05f, ez - 0.1f, 0.4f, 0.1f, 0.2f, 0.0f, 0.8f, 0.8f, false, 0, 1.5f);   
-            addBox(ex - 0.05f, ey - 0.2f, ez - 0.1f, 0.1f, 0.4f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f);   
-        }
     }
-
     globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
 }
 
 void generateRooms() {
-    // Max start room is 38. That means Finale is at 47. 
-    // This perfectly guarantees the entire event ends before door 49!
     seekStartRoom = 30 + (rand() % 9);
 
-    for(int i=0; i<100; i++) {
+    for(int i=0; i<TOTAL_ROOMS; i++) {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
         rooms[i].hasSeekEyes = false;
@@ -514,7 +520,6 @@ void generateRooms() {
         
         bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
         
-        // Force normal lights if it is a Seek event! No dark rooms allowed.
         if (i > 0 && rand() % 100 < 8 && !isSeekEvent) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
         
@@ -585,7 +590,7 @@ void generateRooms() {
             }
 
             int inDoor = rooms[i].doorPos;
-            int outDoor = (i < 99) ? rooms[i+1].doorPos : 1;
+            int outDoor = (i < TOTAL_ROOMS - 1) ? rooms[i+1].doorPos : 1;
             
             for(int s=0; s<3; s++) {
                 if (rooms[i].slotType[s] == 3) { 
@@ -601,7 +606,6 @@ void generateRooms() {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
         }
 
-        // --- BLOCK PAINTINGS IN SEEK EVENT ---
         if (!isSeekEvent) {
             rooms[i].pCount = rand() % 5 + 3; 
             for(int p=0; p<rooms[i].pCount; p++) {
@@ -642,7 +646,7 @@ void generateRooms() {
     rooms[0].isLocked = true; 
     rooms[0].hasEyes = false;
     
-    for(int i=2; i<98; i++) {
+    for(int i=2; i<TOTAL_ROOMS - 1; i++) {
         bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
         bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 9);
 
@@ -748,7 +752,7 @@ int main() {
                 camX = 0.0f; camZ = -1.0f; camYaw = 0.0f; camPitch = 0.0f;
                 currentChunk = 0;
                 playerCurrentRoom = -1;
-                for(int i=0; i<100; i++) doorOpen[i] = false;
+                for(int i=0; i<TOTAL_ROOMS; i++) doorOpen[i] = false;
                 
                 seekActive = false;
                 seekState = 0;
@@ -774,11 +778,11 @@ int main() {
         
         playerCurrentRoom = (camZ > -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f);
         if (playerCurrentRoom < -1) playerCurrentRoom = -1;
-        if (playerCurrentRoom > 98) playerCurrentRoom = 98;
+        if (playerCurrentRoom > TOTAL_ROOMS - 2) playerCurrentRoom = TOTAL_ROOMS - 2;
         
         bool isGlitching = false;
         int targetDupeRoom = -1;
-        for (int k = 1; k < 100; k++) {
+        for (int k = 1; k < TOTAL_ROOMS; k++) {
             if (rooms[k].isDupeRoom && playerCurrentRoom == (k - 1)) {
                 isGlitching = true; targetDupeRoom = k; break;
             }
@@ -809,6 +813,11 @@ int main() {
                 printf("        PLAYER STATUS         \n");
                 printf("==============================\n\n");
                 
+                // Get the displayed numbers for the UI (skips the extra hallway rooms!)
+                int dispCurrent = getDisplayRoom(playerCurrentRoom);
+                int nextDoorIdx = getNextDoorIndex(playerCurrentRoom);
+                int dispNext = getDisplayRoom(nextDoorIdx);
+
                 if (playerCurrentRoom == -1) {
                     printf(" Current Room : 000 (Lobby) \n");
                     if (isGlitching) {
@@ -822,20 +831,19 @@ int main() {
                     printf(" Current Room : %s         \n", g1);
                     printf(" Next Door    : %s         \n\n", g2);
                 } else {
-                    printf(" Current Room : %03d         \n", playerCurrentRoom + 1);
-                    printf(" Next Door    : %03d         \n\n", playerCurrentRoom + 2);
+                    printf(" Current Room : %03d         \n", dispCurrent);
+                    printf(" Next Door    : %03d         \n\n", dispNext);
                 }
 
-                int nextDoorIndex = playerCurrentRoom + 1;
-                if (nextDoorIndex >= 0 && nextDoorIndex < 100 && !screechActive) {
-                    float nextDoorZ = -10.0f - (nextDoorIndex * 10.0f);
+                if (nextDoorIdx >= 0 && nextDoorIdx < TOTAL_ROOMS && !screechActive) {
+                    float nextDoorZ = -10.0f - (nextDoorIdx * 10.0f);
                     if (abs(camZ - nextDoorZ) < 4.0f) {
-                        if (isGlitching && targetDupeRoom == nextDoorIndex) {
+                        if (isGlitching && targetDupeRoom == nextDoorIdx) {
                             if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[0]);
                             else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[1]);
                             else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[2]);
                             else printf("                           \n\n");
-                        } else printf(" >> PLAQUE READS: %03d <<  \n\n", nextDoorIndex + 1);
+                        } else printf(" >> PLAQUE READS: %03d <<  \n\n", dispNext);
                     } else printf("                           \n\n");
                 } else if (!screechActive) printf("                           \n\n");
 
@@ -855,18 +863,15 @@ int main() {
 
         if (!isDead) {
             // --- SEEK: TRIGGER & CHASE LOGIC ---
-            if (playerCurrentRoom >= 0 && playerCurrentRoom < 100 && rooms[playerCurrentRoom].isSeekHallway) {
-                int lastHallwayRoom = seekStartRoom + 2; 
-                if (playerCurrentRoom == lastHallwayRoom) {
-                    float hallwayEndZ = -10.0f - (playerCurrentRoom * 10.0f) - 8.0f; 
-                    
-                    if (camZ < hallwayEndZ && seekState == 0) {
-                        seekState = 1; 
-                        seekActive = true;
-                        seekTimer = 0;
-                        seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
-                        needsVBOUpdate = true;
-                    }
+            if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) {
+                float hallwayEndZ = -10.0f - ((seekStartRoom + 2) * 10.0f) - 8.0f; 
+                
+                if (camZ < hallwayEndZ && seekState == 0) {
+                    seekState = 1; 
+                    seekActive = true;
+                    seekTimer = 0;
+                    seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
+                    needsVBOUpdate = true;
                 }
             }
 
@@ -934,7 +939,7 @@ int main() {
                 }
             }
 
-            bool currentlyInEyesRoom = (playerCurrentRoom >= 0 && playerCurrentRoom < 100 && rooms[playerCurrentRoom].hasEyes);
+            bool currentlyInEyesRoom = (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS && rooms[playerCurrentRoom].hasEyes);
 
             if (currentlyInEyesRoom && !inEyesRoom) {
                 inEyesRoom = true;
@@ -1098,7 +1103,7 @@ int main() {
                     rushTimer--;
                     if (rushTimer % 10 == 0) { 
                         float flicker = (rand() % 2 == 0) ? 0.3f : 1.0f;
-                        if (playerCurrentRoom >= 0 && playerCurrentRoom < 100) rooms[playerCurrentRoom].lightLevel = flicker;
+                        if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) rooms[playerCurrentRoom].lightLevel = flicker;
                         needsVBOUpdate = true;
                     }
                     if (rushTimer <= 0) {
@@ -1108,9 +1113,9 @@ int main() {
                     rushZ -= 0.8f; needsVBOUpdate = true; 
                     
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
-                    if (rushRoomIndex >= 0 && rushRoomIndex < 100) {
+                    if (rushRoomIndex >= 0 && rushRoomIndex < TOTAL_ROOMS) {
                         rooms[rushRoomIndex].lightLevel = 0.3f;
-                        if (rushRoomIndex + 1 < 100) {
+                        if (rushRoomIndex + 1 < TOTAL_ROOMS) {
                             rooms[rushRoomIndex + 1].lightLevel = 0.3f;
                         }
                     }
@@ -1139,7 +1144,7 @@ int main() {
             if (kDown & KEY_X) {
                 if (hideState == NOT_HIDING) {
                     bool interactedWithDrawer = false;
-                    if (playerCurrentRoom >= 0 && playerCurrentRoom < 100) {
+                    if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
                         for(int s=0; s<3; s++) {
                             float zCenter = (-10.0f - (playerCurrentRoom * 10.0f)) - 2.5f - (s * 2.5f);
                             int type = rooms[playerCurrentRoom].slotType[s];
@@ -1176,7 +1181,7 @@ int main() {
             }
 
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
-                if (playerCurrentRoom >= 0 && playerCurrentRoom < 100) {
+                if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
                     for(int s=0; s<3; s++) {
                         float zCenter = (-10.0f - (playerCurrentRoom * 10.0f)) - 2.5f - (s * 2.5f);
                         int type = rooms[playerCurrentRoom].slotType[s];
@@ -1212,7 +1217,10 @@ int main() {
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
                 }
 
-                for(int i=0; i<100; i++) {
+                for(int i=0; i<TOTAL_ROOMS; i++) {
+                    bool isHallwayMid = (i == seekStartRoom + 1 || i == seekStartRoom + 2);
+                    if (isHallwayMid) continue; // No doors to interact with here!
+
                     if (rooms[i].isLocked) {
                         float doorZ = -10.0f - (i * 10.0f);
                         float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
@@ -1232,11 +1240,11 @@ int main() {
                     }
                 }
 
-                int nextRoom = playerCurrentRoom + 1;
-                if (nextRoom >= 0 && nextRoom < 100) {
-                    int interactRoom = rooms[nextRoom].isDupeRoom ? nextRoom : -1;
+                int nextRoomIdx = getNextDoorIndex(playerCurrentRoom);
+                if (nextRoomIdx >= 0 && nextRoomIdx < TOTAL_ROOMS) {
+                    int interactRoom = rooms[nextRoomIdx].isDupeRoom ? nextRoomIdx : -1;
                     if (interactRoom != -1) {
-                        float lockDoorZ = -10.0f - (nextRoom * 10.0f);
+                        float lockDoorZ = -10.0f - (nextRoomIdx * 10.0f);
                         if (abs(camZ - lockDoorZ) < 1.8f) {
                             bool leftT = (camX < -1.4f), centerT = (camX >= -1.4f && camX <= 0.6f), rightT = (camX > 0.6f);
                             int correctPos = rooms[interactRoom].correctDupePos;
@@ -1281,10 +1289,15 @@ int main() {
             }
 
             int startRoom = currentChunk - 1; int endRoom = currentChunk + 2;
-            if (startRoom < 0) startRoom = 0; if (endRoom > 99) endRoom = 99;
+            if (startRoom < 0) startRoom = 0; if (endRoom > TOTAL_ROOMS - 1) endRoom = TOTAL_ROOMS - 1;
 
             for(int i = startRoom; i <= endRoom; i++) {
                 if (rooms[i].isDupeRoom) continue; 
+                
+                // --- SEAMLESS HALLWAY DOOR FIX ---
+                bool isHallwayMid = (i == seekStartRoom + 1 || i == seekStartRoom + 2);
+                if (isHallwayMid) continue; // No physical doors to process here
+
                 float wallZ = -10.0f - (i * 10.0f);
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
