@@ -93,7 +93,6 @@ bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
 float seekSpeed = 0.0f; 
-// Scaled down to match the 3DS Circle Pad math
 float seekMaxSpeed = 0.038f; 
 int seekTimer = 0; 
 
@@ -960,9 +959,9 @@ int main() {
                 seekTimer++;
                 needsVBOUpdate = true; 
 
-                // --- CUTSCENE SPRINT SCALED DOWN ---
+                // --- CUTSCENE SPRINT BLAST OFF ---
                 if (seekTimer >= 180 && seekTimer < 230) {
-                    if (seekSpeed < 0.02f) seekSpeed += 0.0008f; 
+                    if (seekSpeed < 0.12f) seekSpeed += 0.005f; 
                     seekZ -= seekSpeed; 
                 }
 
@@ -981,11 +980,13 @@ int main() {
                 }
             } else if (seekState == 2) {
                 
-                // --- CHASE ACCELERATION TWEAKED ---
-                if (seekSpeed < seekMaxSpeed) {
-                    seekSpeed += 0.0005f; // Gets to full speed in ~76 frames
+                // --- DYNAMIC CHASE SPEED ---
+                float firstDoorZ = -10.0f - ((seekStartRoom + 2) * 10.0f); 
+                
+                if (seekZ > firstDoorZ) {
+                    seekSpeed = 0.065f; // Sprinting to catch up in the first room/hallway
                 } else {
-                    seekSpeed = seekMaxSpeed; 
+                    seekSpeed = seekMaxSpeed; // Instantly drops to 0.038f after passing the door
                 }
                 
                 seekZ -= seekSpeed; 
