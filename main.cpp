@@ -93,7 +93,8 @@ bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
 float seekSpeed = 0.0f; 
-float seekMaxSpeed = 0.38f; // Slightly slower than player max speed (0.42f) for more forgiveness
+// Scaled down to match the 3DS Circle Pad math
+float seekMaxSpeed = 0.038f; 
 int seekTimer = 0; 
 
 // --- Eyes States ---
@@ -312,14 +313,13 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         float sH = 1.1f; 
         
         if (seekState == 1) {
-            if (seekTimer <= 130) { // Rise from puddle 
+            if (seekTimer <= 130) { 
                 sY = -1.1f + (seekTimer / 130.0f) * 1.1f; 
-            } else { // Stare menacingly 
+            } else {  
                 sY = 0.0f;
                 sH = 1.1f;
             }
 
-            // Dripping Goo Effect from ceiling
             srand(seekTimer); 
             for (int d = 0; d < 8; d++) {
                 float dropX = -1.5f + (rand() % 30) / 10.0f;
@@ -336,12 +336,11 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         
         // Body (Black)
         addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, sH, 0.6f, 0.05f, 0.05f, 0.05f, false); 
-        // White Sclera (Centered at Y=0.9f)
+        // White Sclera 
         addBox(-0.15f, sY + 0.8f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
         // Black Pupil
         addBox(-0.05f, sY + 0.8f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
 
-        // Puddle he rises from (Matches his Z safely)
         if (seekState == 1) {
             addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
         }
@@ -478,7 +477,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);
 
-            // --- THE GAUNTLET (Guaranteed Safe Path) ---
+            // --- THE GAUNTLET ---
             addBox(-3.0f, 0.0f, z - 2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); 
             addBox(-0.1f, 0.5f, z - 2.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
             rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = z - 2.0f; rooms[i].pSide[0] = 1; 
@@ -961,9 +960,9 @@ int main() {
                 seekTimer++;
                 needsVBOUpdate = true; 
 
-                // --- CUTSCENE SPRINT ---
+                // --- CUTSCENE SPRINT SCALED DOWN ---
                 if (seekTimer >= 180 && seekTimer < 230) {
-                    if (seekSpeed < 0.2f) seekSpeed += 0.008f; 
+                    if (seekSpeed < 0.02f) seekSpeed += 0.0008f; 
                     seekZ -= seekSpeed; 
                 }
 
@@ -982,9 +981,9 @@ int main() {
                 }
             } else if (seekState == 2) {
                 
-                // --- CHASE ACCELERATION ---
+                // --- CHASE ACCELERATION SCALED DOWN ---
                 if (seekSpeed < seekMaxSpeed) {
-                    seekSpeed += 0.001f; 
+                    seekSpeed += 0.0001f; 
                 } else {
                     seekSpeed = seekMaxSpeed; 
                 }
