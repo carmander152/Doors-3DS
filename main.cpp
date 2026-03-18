@@ -487,6 +487,21 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
         } else if (rooms[i].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
+            
+            // --- NEW: ACTUAL DRAW CODE FOR EYES ---
+            float ex = rooms[i].eyesX;
+            float ey = rooms[i].eyesY;
+            float ez = rooms[i].eyesZ;
+            
+            // Main body (Purple)
+            addBox(ex - 0.2f, ey - 0.2f, ez - 0.2f, 0.4f, 0.4f, 0.4f, 0.6f, 0.1f, 0.8f, false, 0, L);
+            // Smaller eye clusters sticking out
+            addBox(ex - 0.25f, ey - 0.1f, ez - 0.1f, 0.5f, 0.2f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, L);
+            addBox(ex - 0.1f, ey - 0.25f, ez - 0.1f, 0.2f, 0.5f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, L);
+            // Pupils
+            addBox(ex - 0.26f, ey - 0.05f, ez - 0.05f, 0.02f, 0.1f, 0.1f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f);
+            addBox(ex + 0.24f, ey - 0.05f, ez - 0.05f, 0.02f, 0.1f, 0.1f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f);
+            
         } else {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
         }
@@ -571,12 +586,13 @@ void generateRooms() {
 
         bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
 
+        // --- DUPE BUG FIX ---
         rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
             rooms[i].correctDupePos = rand() % 3;
             
-            int realNextRoom = i + 1; 
-            int dispNext = getDisplayRoom(realNextRoom); 
+            // Replaced `i + 1` with `i` because the door entering Room i is Door i.
+            int dispNext = getDisplayRoom(i); 
             
             int fake1 = dispNext + (rand() % 3 + 1);
             int fake2 = dispNext - (rand() % 3 + 1);
@@ -590,8 +606,9 @@ void generateRooms() {
 
         rooms[i].hasEyes = (!isSeekEvent && i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
         if (rooms[i].hasEyes) {
-            rooms[i].eyesX = (rand() % 10 / 10.0f) - 0.5f; 
-            rooms[i].eyesY = 0.6f + (rand() % 8 / 10.0f); 
+            // --- EYES POSITION FIX ---
+            rooms[i].eyesX = 0.0f; // Dead center X
+            rooms[i].eyesY = 0.9f; // Dead center Y
             rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; 
         }
 
@@ -799,6 +816,16 @@ int main() {
             } else break; 
         }
 
+        // --- NEW TELEPORT TO SEEK KEY ---
+        if ((kDown & KEY_Y) && playerCurrentRoom == -1 && !isDead) {
+            camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; 
+            camX = 0.0f;
+            camYaw = 0.0f;
+            camPitch = 0.0f;
+            needsVBOUpdate = true;
+            sprintf(uiMessage, "Teleported to Seek!"); messageTimer = 90;
+        }
+
         bool needsVBOUpdate = false;
         
         playerCurrentRoom = (camZ > -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f);
@@ -848,6 +875,9 @@ int main() {
                         char g2[4]; for(int i=0; i<3; i++) g2[i]=symbols[rand()%8]; g2[3]='\0';
                         printf(" Next Door    : %s         \n\n", g2);
                     } else printf(" Next Door    : 001         \n\n");
+                    
+                    // --- TELEPORT REMINDER ---
+                    printf(" [PRESS Y] Teleport to Seek \n");
                 } else if (isGlitching) {
                     char g1[4], g2[4];
                     for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; }
@@ -869,7 +899,7 @@ int main() {
                             else printf("                           \n\n");
                         } else printf(" >> PLAQUE READS: %03d <<  \n\n", dispNext);
                     } else printf("                           \n\n");
-                } else if (!screechActive) printf("                           \n\n");
+                } else if (!screechActive && playerCurrentRoom != -1) printf("                           \n\n");
 
                 printf(" Health       : %d / 100   \n", playerHealth);
                 printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
@@ -1054,7 +1084,6 @@ int main() {
 
             bool inSeekEvent = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 9);
 
-            // --- NEW: SCREECH LIT ROOM PROBABILITY TWEAK ---
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 12000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && !inSeekEvent && (rand() % screechChance == 0)) {
                 screechActive = true;
