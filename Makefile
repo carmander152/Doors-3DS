@@ -14,7 +14,7 @@ ROMFS_DIR := romfs
 all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
 $(TARGET).smdh: icon.png
-	smdhtool --create "Doors 3DS" "Remake of LSplash's Roblox game Doors" "Carmander152" icon.png $@
+	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
