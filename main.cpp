@@ -388,32 +388,39 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 float eyeZ = z - 1.0f - (rand() % 80) / 10.0f; 
                 float eyeY = 0.5f + (rand() % 120) / 100.0f;   
                 
-                float scleraX = isLeftWall ? -2.95f : 2.85f;
-                addBox(scleraX, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L); 
-                
-                float whiteX = isLeftWall ? -2.93f : 2.83f;
-                addBox(whiteX, eyeY + 0.05f, eyeZ + 0.05f, 0.06f, 0.2f, 0.3f, 0.9f, 0.9f, 0.9f, false, 0, L);
-                
-                float pupilX = isLeftWall ? -2.90f : 2.80f; 
-                addBox(pupilX, eyeY + 0.1f, eyeZ + 0.12f, 0.04f, 0.1f, 0.16f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                if (isLeftWall) {
+                    addBox(-2.95f, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L); 
+                    addBox(-2.88f, eyeY + 0.05f, eyeZ + 0.05f, 0.06f, 0.2f, 0.3f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                    addBox(-2.84f, eyeY + 0.1f, eyeZ + 0.12f, 0.04f, 0.1f, 0.16f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                } else {
+                    addBox(2.85f, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L); 
+                    addBox(2.82f, eyeY + 0.05f, eyeZ + 0.05f, 0.06f, 0.2f, 0.3f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                    addBox(2.80f, eyeY + 0.1f, eyeZ + 0.12f, 0.04f, 0.1f, 0.16f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                }
             }
             srand(time(NULL)); 
         }
 
         // --- DRAW CHASE OBSTACLES & HAZARDS ---
         if (rooms[i].isSeekChase) {
-            globalTintR = 1.0f; globalTintG = 0.3f; globalTintB = 0.3f; 
-            
             srand(i * 777); 
-            int obCount = 1 + (rand() % 2); 
-            for(int ob = 0; ob < obCount; ob++) {
-                float obZ = z - 2.5f - (rand() % 50) / 10.0f;
+            int obType = rand() % 3; // 0=Full, 1=LeftBlock, 2=RightBlock
+            float obZ = z - 5.0f;    // Place right in the middle of the room
+            
+            if (obType == 0) {
+                // Duck anywhere
                 addBox(-3.0f, 0.7f, obZ, 6.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
+            } else if (obType == 1) {
+                // Solid left block, duck right
+                addBox(-3.0f, 0.0f, obZ, 3.0f, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
+                addBox(0.0f, 0.7f, obZ, 3.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L);  
+            } else {
+                // Solid right block, duck left
+                addBox(0.0f, 0.0f, obZ, 3.0f, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
+                addBox(-3.0f, 0.7f, obZ, 3.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
             }
             srand(time(NULL));
         } else if (rooms[i].isSeekFinale) {
-            globalTintR = 1.0f; globalTintG = 0.3f; globalTintB = 0.3f; 
-            
             srand(i * 888); 
             for(int h = 0; h < 6; h++) {
                 if (h < 3) {
@@ -434,7 +441,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             }
             srand(time(NULL));
         } else if (rooms[i].isSeekHallway) {
-            globalTintR = 1.0f; globalTintG = 0.3f; globalTintB = 0.3f; 
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
         } else if (rooms[i].hasEyes) {
@@ -493,7 +499,9 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 }
 
 void generateRooms() {
-    seekStartRoom = 30 + (rand() % 11);
+    // Max start room is 38. That means Finale is at 47. 
+    // This perfectly guarantees the entire event ends before door 49!
+    seekStartRoom = 30 + (rand() % 9);
 
     for(int i=0; i<100; i++) {
         rooms[i].doorPos = rand() % 3; 
@@ -504,7 +512,10 @@ void generateRooms() {
         rooms[i].isSeekFinale = false;
         rooms[i].seekEyeCount = 0;
         
-        if (i > 0 && rand() % 100 < 8) rooms[i].lightLevel = 0.3f; 
+        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
+        
+        // Force normal lights if it is a Seek event! No dark rooms allowed.
+        if (i > 0 && rand() % 100 < 8 && !isSeekEvent) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
         
         for(int s=0; s<3; s++) {
@@ -515,19 +526,16 @@ void generateRooms() {
         if (i >= seekStartRoom - 5 && i < seekStartRoom) {
             rooms[i].hasSeekEyes = true;
             rooms[i].seekEyeCount = (i - (seekStartRoom - 5) + 1) * 2; 
-            rooms[i].lightLevel = 0.4f; 
         }
         
         if (i >= seekStartRoom && i <= seekStartRoom + 2) {
             rooms[i].isSeekHallway = true;
             rooms[i].doorPos = 1; 
-            rooms[i].lightLevel = 0.8f;
         }
 
         if (i >= seekStartRoom + 3 && i <= seekStartRoom + 8) {
             rooms[i].isSeekChase = true;
             rooms[i].doorPos = 1; 
-            rooms[i].lightLevel = 1.0f; 
         }
 
         if (i == seekStartRoom + 9) {
@@ -536,7 +544,6 @@ void generateRooms() {
         }
 
         bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
-        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
 
         rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
@@ -556,7 +563,6 @@ void generateRooms() {
             rooms[i].eyesX = (rand() % 10 / 10.0f) - 0.5f; 
             rooms[i].eyesY = 1.0f + (rand() % 10 / 10.0f); 
             rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; 
-            rooms[i].lightLevel = 1.0f; 
         }
 
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
@@ -595,34 +601,39 @@ void generateRooms() {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
         }
 
-        rooms[i].pCount = rand() % 5 + 3; 
-        for(int p=0; p<rooms[i].pCount; p++) {
-            bool overlap;
-            int tries = 0;
-            do {
-                overlap = false;
-                rooms[i].pSide[p] = rand() % 2; 
-                rooms[i].pZ[p] = 1.0f + (rand() % 70) / 10.0f; 
-                rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; 
-                rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
-                rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
-                
-                for(int op=0; op<p; op++) {
-                    if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
-                        float zDist = abs(rooms[i].pZ[p] - rooms[i].pZ[op]);
-                        float yDist = abs(rooms[i].pY[p] - rooms[i].pY[op]);
-                        if (zDist < (rooms[i].pW[p] + rooms[i].pW[op]) * 0.6f && 
-                            yDist < (rooms[i].pH[p] + rooms[i].pH[op]) * 0.6f) {
-                            overlap = true; break;
+        // --- BLOCK PAINTINGS IN SEEK EVENT ---
+        if (!isSeekEvent) {
+            rooms[i].pCount = rand() % 5 + 3; 
+            for(int p=0; p<rooms[i].pCount; p++) {
+                bool overlap;
+                int tries = 0;
+                do {
+                    overlap = false;
+                    rooms[i].pSide[p] = rand() % 2; 
+                    rooms[i].pZ[p] = 1.0f + (rand() % 70) / 10.0f; 
+                    rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; 
+                    rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
+                    rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
+                    
+                    for(int op=0; op<p; op++) {
+                        if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
+                            float zDist = abs(rooms[i].pZ[p] - rooms[i].pZ[op]);
+                            float yDist = abs(rooms[i].pY[p] - rooms[i].pY[op]);
+                            if (zDist < (rooms[i].pW[p] + rooms[i].pW[op]) * 0.6f && 
+                                yDist < (rooms[i].pH[p] + rooms[i].pH[op]) * 0.6f) {
+                                overlap = true; break;
+                            }
                         }
                     }
-                }
-                tries++;
-            } while (overlap && tries < 10);
-            
-            rooms[i].pR[p] = 0.15f + (rand() % 35) / 100.0f; 
-            rooms[i].pG[p] = 0.15f + (rand() % 35) / 100.0f; 
-            rooms[i].pB[p] = 0.15f + (rand() % 35) / 100.0f; 
+                    tries++;
+                } while (overlap && tries < 10);
+                
+                rooms[i].pR[p] = 0.15f + (rand() % 35) / 100.0f; 
+                rooms[i].pG[p] = 0.15f + (rand() % 35) / 100.0f; 
+                rooms[i].pB[p] = 0.15f + (rand() % 35) / 100.0f; 
+            }
+        } else {
+            rooms[i].pCount = 0; 
         }
     }
     
@@ -1013,8 +1024,10 @@ int main() {
                 isLookingAtEyes = false; eyesDamageTimer = 0; eyesDamageAccumulator = 0;
             }
 
+            bool inSeekEvent = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 9);
+
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 2000;
-            if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && (rand() % screechChance == 0)) {
+            if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && !inSeekEvent && (rand() % screechChance == 0)) {
                 screechActive = true;
                 screechTimer = 240; 
                 
@@ -1257,7 +1270,7 @@ int main() {
             if (camZ < -10.0f) newChunk = (int)((abs(camZ) - 10.0f) / 10.0f) + 1;
             
             if (newChunk != currentChunk || needsVBOUpdate) { 
-                if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && rand() % 100 < 12) {
+                if (newChunk != currentChunk && playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !inSeekEvent && rand() % 100 < 12) {
                     rushActive = true; rushState = 1; rushTimer = 300 + (rand() % 120); rushStartTimer = (float)rushTimer; 
                     if (audio_ok && sndRushScream.data_vaddr) {
                         float mix[12] = {0}; ndspChnSetMix(3, mix); ndspChnWaveBufClear(3);
