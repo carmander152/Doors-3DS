@@ -315,10 +315,10 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 sY = -1.5f + (seekTimer / 180.0f) * 1.5f; 
             } else if (seekTimer <= 360) { // Next 3 seconds: Grow taller
                 sY = 0.0f;
-                sH = 1.6f + ((seekTimer - 180) / 180.0f) * 1.2f; 
+                sH = 1.6f + ((seekTimer - 180) / 180.0f) * 0.6f; 
             } else { // Final 1 second: Slide backwards and hold max height
                 sY = 0.0f;
-                sH = 2.8f;
+                sH = 2.2f;
             }
 
             // Dripping Goo Effect from ceiling
@@ -333,7 +333,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
         } else if (seekState == 2) {
             sY = 0.0f; 
-            sH = 2.8f; // Stay huge during the chase
+            sH = 2.2f; // Stay huge during the chase
         }
         
         // Body (Black)
@@ -384,10 +384,16 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         }
     }
 
-    int startRoom = currentChunk - 1;
-    int endRoom = currentChunk + 2;
+    int startRoom = playerCurrentRoom - 1;
+    int endRoom = playerCurrentRoom + 2;
     if (startRoom < 0) startRoom = 0;
     if (endRoom > TOTAL_ROOMS - 1) endRoom = TOTAL_ROOMS - 1;
+
+    // Force entire Seek Hallway to render if player is anywhere inside it
+    if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) {
+        startRoom = seekStartRoom;
+        endRoom = seekStartRoom + 3;
+    }
 
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
@@ -404,7 +410,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
-        if (i == seekStartRoom + 10 && rooms[i].isLocked) {
+        if (i == seekStartRoom + 9 && rooms[i].isLocked) {
             addBox(-3.0f, 0.0f, z + 0.2f, 6.0f, 1.8f, 0.1f, 0.4f, 0.7f, 1.0f, true, 0, 1.5f);
         }
 
@@ -504,8 +510,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
         } else if (rooms[i].hasEyes) {
-            // Tint handled above now for Seek conflict
-            
             float ex = rooms[i].eyesX;
             float ey = rooms[i].eyesY;
             float ez = rooms[i].eyesZ;
@@ -566,7 +570,7 @@ void generateRooms() {
         rooms[i].isSeekFinale = false;
         rooms[i].seekEyeCount = 0;
         
-        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
+        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 8); 
         
         if (i > 0 && rand() % 100 < 8 && !isSeekEvent) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f; 
@@ -586,17 +590,17 @@ void generateRooms() {
             rooms[i].doorPos = 1; 
         }
 
-        if (i >= seekStartRoom + 3 && i <= seekStartRoom + 8) {
+        if (i >= seekStartRoom + 3 && i <= seekStartRoom + 7) {
             rooms[i].isSeekChase = true;
             rooms[i].doorPos = 1; 
         }
 
-        if (i == seekStartRoom + 9) {
+        if (i == seekStartRoom + 8) {
             rooms[i].isSeekFinale = true;
             rooms[i].doorPos = 1; 
         }
 
-        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 8);
 
         rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
@@ -698,8 +702,8 @@ void generateRooms() {
     rooms[0].hasEyes = false;
     
     for(int i=2; i<TOTAL_ROOMS - 1; i++) {
-        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
-        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 9);
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 8);
+        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 8);
 
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && !isSeekChaseEvent && !prevIsSeekChaseEvent && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
@@ -799,7 +803,7 @@ int main() {
         u32 kDown = hidKeysDown();
         u32 kHeld = hidKeysHeld(); 
         
-        bool needsVBOUpdate = false; // --- MOVED TO TOP OF LOOP TO FIX SCOPING ERROR ---
+        bool needsVBOUpdate = false; 
 
         if (kDown & KEY_START) {
             if (isDead) {
@@ -1002,22 +1006,27 @@ int main() {
                     }
                 }
                 
-                if (playerCurrentRoom > seekStartRoom + 9) { 
-                    seekActive = false;
-                    seekState = 0;
+                // SAFE ESCAPE CHECK (Requires running completely past the threshold)
+                if (playerCurrentRoom > seekStartRoom + 8 && seekActive) { 
+                    float finishLineZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 12.0f; 
                     
-                    int safeRoom = seekStartRoom + 10;
-                    doorOpen[safeRoom] = false; 
-                    rooms[safeRoom].isLocked = true;
-                    needsVBOUpdate = true;
-                    
-                    sprintf(uiMessage, "You escaped!"); messageTimer = 150;
-                    if (audio_ok) ndspChnWaveBufClear(7); 
-                    
-                    if (audio_ok && sndDoor.data_vaddr) {
-                        ndspChnWaveBufClear(1);
-                        sndDoor.status = NDSP_WBUF_FREE;
-                        ndspChnWaveBufAdd(1, &sndDoor);
+                    if (camZ < finishLineZ) {
+                        seekActive = false;
+                        seekState = 0;
+                        
+                        int safeRoom = seekStartRoom + 9;
+                        doorOpen[safeRoom] = false; 
+                        rooms[safeRoom].isLocked = true;
+                        needsVBOUpdate = true;
+                        
+                        sprintf(uiMessage, "You escaped!"); messageTimer = 150;
+                        if (audio_ok) ndspChnWaveBufClear(7); 
+                        
+                        if (audio_ok && sndDoor.data_vaddr) {
+                            ndspChnWaveBufClear(1);
+                            sndDoor.status = NDSP_WBUF_FREE;
+                            ndspChnWaveBufAdd(1, &sndDoor);
+                        }
                     }
                 }
             }
@@ -1112,7 +1121,7 @@ int main() {
                 isLookingAtEyes = false; eyesDamageTimer = 0; eyesDamageAccumulator = 0;
             }
 
-            bool inSeekEvent = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 9);
+            bool inSeekEvent = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 8);
 
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 12000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && !inSeekEvent && (rand() % screechChance == 0)) {
