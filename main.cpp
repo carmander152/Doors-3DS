@@ -93,7 +93,7 @@ bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
 float seekSpeed = 0.0f; 
-float seekMaxSpeed = 0.42f; 
+float seekMaxSpeed = 0.38f; // Slightly slower than player max speed (0.42f) for more forgiveness
 int seekTimer = 0; 
 
 // --- Eyes States ---
@@ -735,6 +735,7 @@ int main() {
     ndspWaveBuf sndEyesHit = {0};
     ndspWaveBuf sndSeekRise = {0}; 
     ndspWaveBuf sndSeekChase = {0}; 
+    ndspWaveBuf sndSeekEscaped = {0}; 
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -761,6 +762,7 @@ int main() {
         sndSeekRise = loadWav("romfs:/Seek_Rise.wav"); 
         sndSeekChase = loadWav("romfs:/Seek_Chase.wav"); 
         sndSeekChase.looping = true; 
+        sndSeekEscaped = loadWav("romfs:/Seek_Escaped.wav"); 
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -943,7 +945,6 @@ int main() {
                     seekTimer = 0;
                     seekSpeed = 0.0f; 
                     
-                    // SPAWN: At the very start of the hallway, 28-30 units behind the player!
                     seekZ = -10.0f - (seekStartRoom * 10.0f); 
                     
                     needsVBOUpdate = true;
@@ -968,7 +969,6 @@ int main() {
 
                 if (seekTimer >= 230) { 
                     seekState = 2; 
-                    // IMPORTANT: Speed is hard-reset to 0.0f to give breathing room!
                     seekSpeed = 0.0f; 
                     
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
@@ -983,7 +983,6 @@ int main() {
             } else if (seekState == 2) {
                 
                 // --- CHASE ACCELERATION ---
-                // Slower acceleration (0.001f) so you can get a head start!
                 if (seekSpeed < seekMaxSpeed) {
                     seekSpeed += 0.001f; 
                 } else {
@@ -1034,7 +1033,15 @@ int main() {
                         needsVBOUpdate = true;
                         
                         sprintf(uiMessage, "You escaped!"); messageTimer = 150;
-                        if (audio_ok) ndspChnWaveBufClear(7); 
+                        
+                        // PLAY ESCAPE SOUND
+                        if (audio_ok) {
+                            ndspChnWaveBufClear(7); 
+                            if (sndSeekEscaped.data_vaddr) {
+                                sndSeekEscaped.status = NDSP_WBUF_FREE;
+                                ndspChnWaveBufAdd(7, &sndSeekEscaped);
+                            }
+                        }
                         
                         if (audio_ok && sndDoor.data_vaddr) {
                             ndspChnWaveBufClear(1);
@@ -1505,6 +1512,7 @@ int main() {
         if (sndEyesHit.data_vaddr) linearFree((void*)sndEyesHit.data_vaddr); 
         if (sndSeekRise.data_vaddr) linearFree((void*)sndSeekRise.data_vaddr); 
         if (sndSeekChase.data_vaddr) linearFree((void*)sndSeekChase.data_vaddr); 
+        if (sndSeekEscaped.data_vaddr) linearFree((void*)sndSeekEscaped.data_vaddr); 
         ndspExit();
     }
     
