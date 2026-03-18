@@ -320,10 +320,12 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         float z = -10 - (i * 10);
         float L = rooms[i].lightLevel; 
         
-        if (rooms[i].hasEyes) {
-            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
+        // --- NEW FIX: ENTRANCE WALL USES PREVIOUS ROOM'S LIGHT & TINT ---
+        float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
+        if (i > 0 && rooms[i-1].hasEyes) {
+            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
         } else {
-            globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
+            globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
         if (rooms[i].isDupeRoom) {
@@ -332,18 +334,25 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 bool isL = (rooms[i].correctDupePos == 0);
                 bool isC = (rooms[i].correctDupePos == 1);
                 bool isR = (rooms[i].correctDupePos == 2);
-                addWallWithDoors(z, isL, (isL && doorIsOpen), isC, (isC && doorIsOpen), isR, (isR && doorIsOpen), i, L);
+                addWallWithDoors(z, isL, (isL && doorIsOpen), isC, (isC && doorIsOpen), isR, (isR && doorIsOpen), i, wallL);
             } else {
                 bool leftOpen = (rooms[i].correctDupePos == 0 && doorOpen[i]);
                 bool centerOpen = (rooms[i].correctDupePos == 1 && doorOpen[i]);
                 bool rightOpen = (rooms[i].correctDupePos == 2 && doorOpen[i]);
-                addWallWithDoors(z, true, leftOpen, true, centerOpen, true, rightOpen, i, L);
+                addWallWithDoors(z, true, leftOpen, true, centerOpen, true, rightOpen, i, wallL);
             }
         } else {
             bool isL = (rooms[i].doorPos == 0);
             bool isC = (rooms[i].doorPos == 1);
             bool isR = (rooms[i].doorPos == 2);
-            addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, L);
+            addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
+        }
+
+        // --- SWITCH TO CURRENT ROOM'S LIGHT & TINT FOR THE INTERIOR ---
+        if (rooms[i].hasEyes) {
+            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
+        } else {
+            globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
         }
 
         addBox(-3, 0, z, 6, 0.01f, -10, 0.2f, 0.1f, 0.05f, false, 0, L); 
@@ -423,9 +432,10 @@ void generateRooms() {
 
         rooms[i].hasEyes = (i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
         if (rooms[i].hasEyes) {
-            rooms[i].eyesX = (rand() % 20 / 10.0f) - 1.0f; 
+            // NEW FIX: Tighter X constraint, and exactly Z - 5.0f for dead center!
+            rooms[i].eyesX = (rand() % 10 / 10.0f) - 0.5f; 
             rooms[i].eyesY = 1.0f + (rand() % 10 / 10.0f); 
-            rooms[i].eyesZ = -10.0f - (i * 10.0f); 
+            rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; 
             rooms[i].lightLevel = 1.0f; 
         }
 
@@ -527,7 +537,7 @@ int main() {
     ndspWaveBuf sndEyesAppear = {0};
     ndspWaveBuf sndEyesGarble = {0};
     ndspWaveBuf sndEyesAttack = {0};
-    ndspWaveBuf sndEyesHit = {0}; // Renamed to Eyes_Hit
+    ndspWaveBuf sndEyesHit = {0};
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -572,7 +582,7 @@ int main() {
         sndEyesGarble = loadWav("romfs:/Eyes_Garble.wav");
         sndEyesGarble.looping = true; 
         sndEyesAttack = loadWav("romfs:/Eyes_Attack.wav");
-        sndEyesHit = loadWav("romfs:/Eyes_Hit.wav"); // Updated filename
+        sndEyesHit = loadWav("romfs:/Eyes_Hit.wav"); 
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -775,6 +785,12 @@ int main() {
                     }
                     ndspChnWaveBufClear(5);
                     if (sndEyesGarble.data_vaddr) {
+                        // --- NEW FIX: BOOST GARBLE VOLUME ---
+                        float garbleMix[12] = {0};
+                        garbleMix[0] = 1.8f; 
+                        garbleMix[1] = 1.8f; 
+                        ndspChnSetMix(5, garbleMix);
+
                         sndEyesGarble.status = NDSP_WBUF_FREE;
                         ndspChnWaveBufAdd(5, &sndEyesGarble); 
                     }
