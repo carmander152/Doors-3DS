@@ -92,7 +92,7 @@ float rushTargetZ = 0.0f;
 bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
-float seekSpeed = 0.42f; // CHANGED: Now matches player's exact sprint speed
+float seekSpeed = 0.62f; // Tuned so he perfectly closes the 30-unit gap during the chase
 int seekTimer = 0; 
 
 // --- Eyes States ---
@@ -308,17 +308,14 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
     if (seekActive) {
         float sY = 0.0f;
-        float sH = 1.6f;
+        float sH = 1.1f; // Changed to match player height
         
         if (seekState == 1) {
             if (seekTimer <= 180) { // First 3 seconds: Rise from puddle
-                sY = -1.5f + (seekTimer / 180.0f) * 1.5f; 
-            } else if (seekTimer <= 360) { // Next 3 seconds: Grow taller
+                sY = -1.1f + (seekTimer / 180.0f) * 1.1f; 
+            } else { // Next 4 seconds: Stare menacingly before running
                 sY = 0.0f;
-                sH = 1.6f + ((seekTimer - 180) / 180.0f) * 0.6f; 
-            } else { // Final 1 second: Slide backwards and hold max height
-                sY = 0.0f;
-                sH = 2.2f;
+                sH = 1.1f;
             }
 
             // Dripping Goo Effect from ceiling
@@ -333,15 +330,15 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
         } else if (seekState == 2) {
             sY = 0.0f; 
-            sH = 2.2f; // Stay huge during the chase
+            sH = 1.1f; 
         }
         
         // Body (Black)
         addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, sH, 0.6f, 0.05f, 0.05f, 0.05f, false); 
-        // White Sclera
-        addBox(-0.15f, sY + sH - 0.35f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
+        // White Sclera (Centered at exactly Y=0.9f)
+        addBox(-0.15f, sY + 0.8f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
         // Black Pupil
-        addBox(-0.05f, sY + sH - 0.35f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+        addBox(-0.05f, sY + 0.8f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
 
         // Puddle he rises from
         if (seekState == 1 && seekTimer <= 180) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
@@ -404,7 +401,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         // --- RED GLOW DURING CUTSCENE ONLY ---
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
-        } else if (rooms[i].hasEyes) { // CHANGED: Fixed purple light rendering bug
+        } else if (rooms[i].hasEyes) { 
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
         } else {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
@@ -938,14 +935,15 @@ int main() {
                 float hallwayEndZ = -10.0f - ((seekStartRoom + 2) * 10.0f) - 8.0f; 
                 
                 if (camZ < hallwayEndZ && seekState == 0) {
-                    // CHANGED: Camera snap logic during Seek rise
                     seekState = 1; 
                     seekActive = true;
                     seekTimer = 0;
                     
                     camX = 0.0f; 
                     camZ = hallwayEndZ;
-                    seekZ = camZ + 8.0f; 
+                    
+                    // CHANGED: Seek spawns at the very beginning of the hallway (the "other end")
+                    seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
                     
                     needsVBOUpdate = true;
                     
@@ -960,19 +958,14 @@ int main() {
             if (seekState == 1) {
                 seekTimer++;
                 camPitch = 0.0f; 
-                camYaw = camYaw + (3.14159f - camYaw) * 0.1f; 
+                camYaw = camYaw + (3.14159f - camYaw) * 0.1f; // Turn around to watch him rise
                 needsVBOUpdate = true; 
-                
-                // Final second of 7 second cutscene
-                if (seekTimer > 360) {
-                    seekZ -= (seekSpeed * 2.0f); 
-                }
 
                 if (seekTimer >= 420) { 
                     seekState = 2; 
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
                     flashRedFrames = 10; 
-                    camYaw = 0.0f; 
+                    camYaw = 0.0f; // Snap camera back forward to start running
                     
                     if (audio_ok && sndSeekChase.data_vaddr) {
                         ndspChnWaveBufClear(7);
@@ -981,6 +974,7 @@ int main() {
                     }
                 }
             } else if (seekState == 2) {
+                // CHANGED: Constant forward movement during the chase
                 seekZ -= seekSpeed; 
                 needsVBOUpdate = true;
                 
@@ -1011,7 +1005,7 @@ int main() {
                     }
                 }
                 
-                // SAFE ESCAPE CHECK (Requires running completely past the threshold)
+                // SAFE ESCAPE CHECK 
                 if (playerCurrentRoom > seekStartRoom + 8 && seekActive) { 
                     float finishLineZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 12.0f; 
                     
