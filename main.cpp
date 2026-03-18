@@ -399,11 +399,10 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         
         float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
         
-        // --- RED GLOW DURING CUTSCENE ONLY ---
+        // --- 1. SEPARATE WALL TINT ---
+        // Keep the dividing wall neutral so it doesn't spoil the next room
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
-        } else if (rooms[i].hasEyes) { 
-            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
         } else {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
@@ -434,6 +433,16 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 bool isR = (rooms[i].doorPos == 2);
                 addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
             }
+        }
+
+        // --- 2. ROOM INTERIOR TINT ---
+        // Apply the purple glow only to the inside of the room
+        if (seekState == 1) {
+            globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
+        } else if (rooms[i].hasEyes) { 
+            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
+        } else {
+            globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
         if (rooms[i].hasSeekEyes) {
