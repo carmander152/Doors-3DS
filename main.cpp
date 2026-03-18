@@ -488,7 +488,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         } else if (rooms[i].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
             
-            // --- NEW: ACTUAL DRAW CODE FOR EYES ---
             float ex = rooms[i].eyesX;
             float ey = rooms[i].eyesY;
             float ez = rooms[i].eyesZ;
@@ -586,12 +585,10 @@ void generateRooms() {
 
         bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
 
-        // --- DUPE BUG FIX ---
         rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
             rooms[i].correctDupePos = rand() % 3;
             
-            // Replaced `i + 1` with `i` because the door entering Room i is Door i.
             int dispNext = getDisplayRoom(i); 
             
             int fake1 = dispNext + (rand() % 3 + 1);
@@ -606,9 +603,8 @@ void generateRooms() {
 
         rooms[i].hasEyes = (!isSeekEvent && i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
         if (rooms[i].hasEyes) {
-            // --- EYES POSITION FIX ---
-            rooms[i].eyesX = 0.0f; // Dead center X
-            rooms[i].eyesY = 0.9f; // Dead center Y
+            rooms[i].eyesX = 0.0f; 
+            rooms[i].eyesY = 0.9f; 
             rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; 
         }
 
@@ -720,11 +716,13 @@ int main() {
     ndspWaveBuf sndEyesGarble = {0};
     ndspWaveBuf sndEyesAttack = {0};
     ndspWaveBuf sndEyesHit = {0};
+    ndspWaveBuf sndSeekRise = {0}; // --- NEW ---
+    ndspWaveBuf sndSeekChase = {0}; // --- NEW ---
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        for(int i=0; i<=6; i++) {
+        for(int i=0; i<=7; i++) { // Increased to 7 for Seek's channel
             ndspChnSetInterp(i, NDSP_INTERP_LINEAR);
             ndspChnSetRate(i, 44100);
             ndspChnSetFormat(i, NDSP_FORMAT_MONO_PCM16);
@@ -742,6 +740,10 @@ int main() {
         sndEyesGarble.looping = true; 
         sndEyesAttack = loadWav("romfs:/Eyes_Attack.wav");
         sndEyesHit = loadWav("romfs:/Eyes_Hit.wav"); 
+        
+        sndSeekRise = loadWav("romfs:/Seek_Rise.wav"); // --- NEW ---
+        sndSeekChase = loadWav("romfs:/Seek_Chase.wav"); // --- NEW ---
+        sndSeekChase.looping = true; // --- NEW ---
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -782,6 +784,7 @@ int main() {
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
+        u32 kHeld = hidKeysHeld(); // --- NEW: Track held keys ---
         
         if (kDown & KEY_START) {
             if (isDead) {
@@ -807,7 +810,7 @@ int main() {
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 
                 if (audio_ok) {
-                    for(int i=3; i<=6; i++) ndspChnWaveBufClear(i);
+                    for(int i=3; i<=7; i++) ndspChnWaveBufClear(i); // Increased bounds to clear Seek Audio on reset
                 }
                 inEyesRoom = false; isLookingAtEyes = false;
                 eyesDamageTimer = 0; eyesDamageAccumulator = 0; eyesGraceTimer = 0;
@@ -816,8 +819,8 @@ int main() {
             } else break; 
         }
 
-        // --- NEW TELEPORT TO SEEK KEY ---
-        if ((kDown & KEY_Y) && playerCurrentRoom == -1 && !isDead) {
+        // --- R + Y TELEPORT ---
+        if ((kDown & KEY_Y) && (kHeld & KEY_R) && playerCurrentRoom == -1 && !isDead) {
             camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; 
             camX = 0.0f;
             camYaw = 0.0f;
@@ -876,8 +879,7 @@ int main() {
                         printf(" Next Door    : %s         \n\n", g2);
                     } else printf(" Next Door    : 001         \n\n");
                     
-                    // --- TELEPORT REMINDER ---
-                    printf(" [PRESS Y] Teleport to Seek \n");
+                    printf(" [HOLD R + Y] Tp to Seek    \n"); // Updated shortcut UI
                 } else if (isGlitching) {
                     char g1[4], g2[4];
                     for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; }
@@ -925,6 +927,13 @@ int main() {
                     seekTimer = 0;
                     seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
                     needsVBOUpdate = true;
+                    
+                    // --- NEW: START SEEK RISE AUDIO ---
+                    if (audio_ok && sndSeekRise.data_vaddr) {
+                        ndspChnWaveBufClear(7);
+                        sndSeekRise.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(7, &sndSeekRise);
+                    }
                 }
             }
 
@@ -943,6 +952,13 @@ int main() {
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
                     flashRedFrames = 10; 
                     camYaw = 0.0f; 
+                    
+                    // --- NEW: SWITCH TO CHASE LOOP ---
+                    if (audio_ok && sndSeekChase.data_vaddr) {
+                        ndspChnWaveBufClear(7);
+                        sndSeekChase.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(7, &sndSeekChase);
+                    }
                 }
             } else if (seekState == 2) {
                 seekZ -= seekSpeed; 
@@ -951,6 +967,7 @@ int main() {
                 if (abs(seekZ - camZ) < 1.2f) {
                     playerHealth = 0; isDead = true; flashRedFrames = 50;
                     sprintf(uiMessage, "Seek caught you..."); messageTimer = 120;
+                    if (audio_ok) ndspChnWaveBufClear(7); // Kill chase music on death
                 }
                 
                 if (playerCurrentRoom >= 0 && rooms[playerCurrentRoom].isSeekFinale) {
@@ -964,10 +981,11 @@ int main() {
                                 playerHealth -= 40; flashRedFrames = 25;
                                 camZ += 1.5f; 
                                 sprintf(uiMessage, "Burned! (-40 HP)"); messageTimer = 60;
-                                if(playerHealth <= 0) isDead = true;
+                                if(playerHealth <= 0) { isDead = true; if (audio_ok) ndspChnWaveBufClear(7); }
                             } else if (type == 1 && !isDead) { 
                                 playerHealth = 0; isDead = true; flashRedFrames = 50;
                                 sprintf(uiMessage, "The hands grabbed you!"); messageTimer = 120;
+                                if (audio_ok) ndspChnWaveBufClear(7); // Kill chase music on death
                             }
                         }
                     }
@@ -983,6 +1001,7 @@ int main() {
                     needsVBOUpdate = true;
                     
                     sprintf(uiMessage, "You escaped!"); messageTimer = 150;
+                    if (audio_ok) ndspChnWaveBufClear(7); // Stop chase music!
                     
                     if (audio_ok && sndDoor.data_vaddr) {
                         ndspChnWaveBufClear(1);
@@ -1430,6 +1449,8 @@ int main() {
         if (sndEyesGarble.data_vaddr) linearFree((void*)sndEyesGarble.data_vaddr); 
         if (sndEyesAttack.data_vaddr) linearFree((void*)sndEyesAttack.data_vaddr); 
         if (sndEyesHit.data_vaddr) linearFree((void*)sndEyesHit.data_vaddr); 
+        if (sndSeekRise.data_vaddr) linearFree((void*)sndSeekRise.data_vaddr); 
+        if (sndSeekChase.data_vaddr) linearFree((void*)sndSeekChase.data_vaddr); 
         ndspExit();
     }
     
