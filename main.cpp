@@ -22,7 +22,7 @@ typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED } HideState;
 std::vector<vertex> world_mesh;
 std::vector<BBox> collisions;
 
-// --- Global Light Tint for Eyes ---
+// --- Global Light Tint ---
 float globalTintR = 1.0f;
 float globalTintG = 1.0f;
 float globalTintB = 1.0f;
@@ -43,7 +43,6 @@ struct RoomSetup {
     int correctDupePos; 
     int dupeNumbers[3]; 
 
-    // --- Eyes Variables ---
     bool hasEyes;
     float eyesX, eyesY, eyesZ; 
 } rooms[100];
@@ -58,7 +57,6 @@ bool isCrouching = false;
 bool isDead = false; 
 HideState hideState = NOT_HIDING; 
 
-// UI Message Variables
 int messageTimer = 0;
 char uiMessage[50] = "";
 
@@ -67,7 +65,11 @@ bool screechActive = false;
 int screechTimer = 0;
 int screechCooldown = 0; 
 float screechX = 0.0f;
+float screechY = 0.0f;
 float screechZ = 0.0f;
+float screechOffsetX = 0.0f; // NEW: Tracks relative offset to player
+float screechOffsetY = 0.0f;
+float screechOffsetZ = 0.0f;
 
 bool rushActive = false;
 int rushState = 0; 
@@ -261,10 +263,11 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     world_mesh.clear(); 
     collisions.clear();
     
+    // --- UPDATED SCREECH DRAWING ---
     if (screechActive) {
-        addBox(screechX - 0.2f, 0.8f, screechZ - 0.2f, 0.4f, 0.4f, 0.4f, 0.05f, 0.05f, 0.05f, false);
-        addBox(screechX - 0.22f, 0.9f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
-        addBox(screechX - 0.22f, 1.05f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
+        addBox(screechX - 0.2f, screechY, screechZ - 0.2f, 0.4f, 0.4f, 0.4f, 0.05f, 0.05f, 0.05f, false);
+        addBox(screechX - 0.22f, screechY + 0.1f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
+        addBox(screechX - 0.22f, screechY + 0.25f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
     }
 
     if (rushActive && rushState == 2) {
@@ -320,7 +323,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         float z = -10 - (i * 10);
         float L = rooms[i].lightLevel; 
         
-        // --- NEW FIX: ENTRANCE WALL USES PREVIOUS ROOM'S LIGHT & TINT ---
         float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
         if (i > 0 && rooms[i-1].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
@@ -348,7 +350,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
         }
 
-        // --- SWITCH TO CURRENT ROOM'S LIGHT & TINT FOR THE INTERIOR ---
         if (rooms[i].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
         } else {
@@ -432,7 +433,6 @@ void generateRooms() {
 
         rooms[i].hasEyes = (i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
         if (rooms[i].hasEyes) {
-            // NEW FIX: Tighter X constraint, and exactly Z - 5.0f for dead center!
             rooms[i].eyesX = (rand() % 10 / 10.0f) - 0.5f; 
             rooms[i].eyesY = 1.0f + (rand() % 10 / 10.0f); 
             rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; 
@@ -785,7 +785,6 @@ int main() {
                     }
                     ndspChnWaveBufClear(5);
                     if (sndEyesGarble.data_vaddr) {
-                        // --- NEW FIX: BOOST GARBLE VOLUME ---
                         float garbleMix[12] = {0};
                         garbleMix[0] = 1.8f; 
                         garbleMix[1] = 1.8f; 
@@ -823,7 +822,18 @@ int main() {
                 float dotProduct = (fx * vx) + (fy * vy) + (fz * vz);
 
                 if (dotProduct > 0.85f) { 
-                    isLookingAtEyes = true;
+                    // --- NEW: FORCED IMMEDIATE INITIAL HIT ---
+                    if (!isLookingAtEyes) {
+                        isLookingAtEyes = true;
+                        eyesDamageTimer = 5; // Forces damage block on the very next line
+                        eyesDamageAccumulator = 4; // Forces hit sound on the very next line
+                        
+                        if (audio_ok && sndEyesAttack.data_vaddr) {
+                            ndspChnWaveBufClear(4); 
+                            sndEyesAttack.status = NDSP_WBUF_FREE;
+                            ndspChnWaveBufAdd(4, &sndEyesAttack);
+                        }
+                    }
                     
                     if (audio_ok && sndEyesAttack.data_vaddr) {
                         if (sndEyesAttack.status == NDSP_WBUF_DONE || sndEyesAttack.status == NDSP_WBUF_FREE) {
@@ -870,9 +880,15 @@ int main() {
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && (rand() % screechChance == 0)) {
                 screechActive = true;
                 screechTimer = 180; 
-                screechX = camX + sinf(camYaw) * 2.0f; 
-                screechZ = camZ + cosf(camYaw) * 2.0f;
-                needsVBOUpdate = true;
+                
+                // --- NEW SCREECH SPAWN LOGIC ---
+                // Random angle between 90 and 270 degrees away from where you are currently looking
+                float angleOffset = 1.57f + ((rand() % 200) / 100.0f) * 1.57f; 
+                float spawnYaw = camYaw + angleOffset;
+                
+                screechOffsetX = -sinf(spawnYaw) * 1.5f; 
+                screechOffsetZ = -cosf(spawnYaw) * 1.5f;
+                screechOffsetY = (rand() % 15) / 10.0f; // Can spawn up to 1.5 units above normal height
                 
                 if (audio_ok) {
                     ndspChnWaveBufClear(0); 
@@ -885,12 +901,33 @@ int main() {
 
             if (screechActive) {
                 screechTimer--;
-                float fx = -sinf(camYaw); float fz = -cosf(camYaw);
-                float vx = screechX - camX; float vz = screechZ - camZ;
-                float dist = sqrt(vx*vx + vz*vz);
-                if (dist > 0.0f) { vx /= dist; vz /= dist; }
                 
-                float dotProduct = (fx * vx) + (fz * vz);
+                // --- NEW SCREECH TRACKING LOGIC ---
+                float newScreechX = camX + screechOffsetX;
+                float newScreechZ = camZ + screechOffsetZ;
+                
+                // Only trigger VBO update if the player actually moved
+                if (screechX != newScreechX || screechZ != newScreechZ) {
+                    screechX = newScreechX;
+                    screechZ = newScreechZ;
+                    screechY = 0.8f + screechOffsetY;
+                    needsVBOUpdate = true;
+                }
+
+                // --- NEW SCREECH 3D HIT MATH ---
+                float vx = screechX - camX; 
+                float vy = screechY - (isCrouching ? 0.4f : 0.9f); // Camera Y
+                float vz = screechZ - camZ;
+                
+                float dist = sqrt(vx*vx + vy*vy + vz*vz);
+                if (dist > 0.0f) { vx /= dist; vy /= dist; vz /= dist; }
+                
+                float fx = -sinf(camYaw) * cosf(camPitch);
+                float fy = sinf(camPitch);
+                float fz = -cosf(camYaw) * cosf(camPitch);
+                
+                float dotProduct = (fx * vx) + (fy * vy) + (fz * vz);
+
                 if (dotProduct > 0.85f) { 
                     screechActive = false; 
                     screechCooldown = 1800; 
@@ -1014,10 +1051,13 @@ int main() {
                             if (b.type == 1 || b.type == 2) { 
                                 if (camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
                                     if (b.type == 1) { 
+                                        // --- NEW: FORCE CAMERA TO LOOK OUT ---
                                         hideState = IN_CABINET; camZ = (b.minZ + b.maxZ) / 2.0f;
+                                        camPitch = 0.0f; 
                                         if (b.minX < 0) { camX = -2.5f; camYaw = -1.57f; } else { camX = 2.5f; camYaw = 1.57f; } 
                                     } else { 
                                         hideState = UNDER_BED; camZ = (b.minZ + b.maxZ) / 2.0f; 
+                                        camPitch = 0.0f; 
                                         if (b.minX < 0) { camX = -2.2f; camYaw = -1.57f; } else { camX = 2.2f; camYaw = 1.57f; } 
                                     }
                                     isCrouching = false; needsVBOUpdate = true; break; 
@@ -1211,7 +1251,8 @@ int main() {
                 if (camPitch > 1.57f) camPitch = 1.57f; 
                 if (camPitch < -1.57f) camPitch = -1.57f;
                 
-                if (abs(cPad.dy) > 10 || abs(cPad.dx) > 10) {
+                // --- NEW: WIDER DEADZONE FOR CIRCLE PAD (15) ---
+                if (abs(cPad.dy) > 15 || abs(cPad.dx) > 15) {
                     float s = isCrouching ? 0.16f : 0.28f; 
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
