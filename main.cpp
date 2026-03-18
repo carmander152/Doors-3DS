@@ -93,7 +93,7 @@ bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
 float seekSpeed = 0.0f; 
-float seekMaxSpeed = 0.42f; // Matches your sprint perfectly!
+float seekMaxSpeed = 0.42f; 
 int seekTimer = 0; 
 
 // --- Eyes States ---
@@ -943,10 +943,8 @@ int main() {
                     seekTimer = 0;
                     seekSpeed = 0.0f; 
                     
-                    // --- PLAYER PHYSICAL LOCATION IS LOCKED AND UNTOUCHED ---
-                    // Notice camX, camZ, and camYaw are NOT changed!
-                    
-                    seekZ = -10.0f - (seekStartRoom * 10.0f) - 2.0f; // Safely spawns down the hall
+                    // SPAWN: At the very start of the hallway, 28-30 units behind the player!
+                    seekZ = -10.0f - (seekStartRoom * 10.0f); 
                     
                     needsVBOUpdate = true;
                     
@@ -962,15 +960,17 @@ int main() {
                 seekTimer++;
                 needsVBOUpdate = true; 
 
-                // --- SPRINT AT THE CAMERA CUTSCENE EVENT ---
+                // --- CUTSCENE SPRINT ---
                 if (seekTimer >= 180 && seekTimer < 230) {
-                    if (seekSpeed < 0.2f) seekSpeed += 0.008f; // Fast, scary initial acceleration
-                    seekZ -= seekSpeed; // He physically runs at the static camera lens
+                    if (seekSpeed < 0.2f) seekSpeed += 0.008f; 
+                    seekZ -= seekSpeed; 
                 }
 
                 if (seekTimer >= 230) { 
                     seekState = 2; 
-                    // When it snaps back, you get breathing room before he hits 0.42f max speed
+                    // IMPORTANT: Speed is hard-reset to 0.0f to give breathing room!
+                    seekSpeed = 0.0f; 
+                    
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
                     flashRedFrames = 10; 
                     
@@ -982,10 +982,10 @@ int main() {
                 }
             } else if (seekState == 2) {
                 
-                // --- BREATHING ROOM ACCELERATION ---
-                // Over the next 1.5 seconds, he continues to slowly rev up to his top speed
+                // --- CHASE ACCELERATION ---
+                // Slower acceleration (0.001f) so you can get a head start!
                 if (seekSpeed < seekMaxSpeed) {
-                    seekSpeed += 0.002f; 
+                    seekSpeed += 0.001f; 
                 } else {
                     seekSpeed = seekMaxSpeed; 
                 }
@@ -1458,37 +1458,28 @@ int main() {
             flashRedFrames--;
         } else if (!isDead) C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
 
-        // --- CUTSCENE CAMERA OVERRIDE SYSTEM ---
-        float drawCamX = camX;
-        float drawCamZ = camZ;
-        float drawCamYaw = camYaw;
-        float drawCamPitch = camPitch;
+        // --- CAMERA OVERRIDE ---
+        float drawCamX = camX, drawCamZ = camZ, drawCamYaw = camYaw, drawCamPitch = camPitch;
         static float lockedCutsceneCamZ = 0.0f;
 
         if (seekState == 1) {
-            if (seekTimer == 1) lockedCutsceneCamZ = seekZ - 3.5f; 
+            if (seekTimer == 1) lockedCutsceneCamZ = seekZ - 4.0f; 
             
-            if (seekTimer <= 90) { // Camera flies down the hall
+            if (seekTimer <= 90) { 
                 float t = seekTimer / 90.0f;
-                t = t * t * (3.0f - 2.0f * t); // Smooth acceleration
+                t = t * t * (3.0f - 2.0f * t); 
                 drawCamZ = camZ + (lockedCutsceneCamZ - camZ) * t;
                 drawCamYaw = camYaw + (3.14159f - camYaw) * t;
             } else {
-                // Lock the camera right in front of the puddle while Seek stares/runs at it
                 drawCamZ = lockedCutsceneCamZ;
                 drawCamYaw = 3.14159f; 
-                
-                if (seekTimer > 180) { // Slight camera shake as he runs
-                    drawCamPitch = sinf(seekTimer * 0.8f) * 0.03f; 
-                }
+                if (seekTimer > 180) drawCamPitch = sinf(seekTimer * 0.8f) * 0.03f; 
             }
         }
 
         C3D_Mtx proj, view;
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false);
         Mtx_Identity(&view);
-        
-        // Feed the specialized 'drawCam' variables into the Matrix!
         Mtx_RotateX(&view, -drawCamPitch, true); 
         Mtx_RotateY(&view, -drawCamYaw, true);
         Mtx_Translate(&view, -drawCamX, isDead ? -0.1f : (isCrouching ? -0.4f : (hideState==NOT_HIDING ? -0.9f : (hideState==IN_CABINET?-0.7f:-0.15f))), -drawCamZ, true); 
