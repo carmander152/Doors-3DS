@@ -308,22 +308,43 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
     if (seekActive) {
         float sY = 0.0f;
+        float sH = 1.6f;
+        
         if (seekState == 1) {
-            if (seekTimer <= 120) sY = -1.5f + (seekTimer / 120.0f) * 1.5f; 
-            else sY = 0.0f; 
+            if (seekTimer <= 180) { // First 3 seconds: Rise from puddle
+                sY = -1.5f + (seekTimer / 180.0f) * 1.5f; 
+            } else if (seekTimer <= 360) { // Next 3 seconds: Grow taller
+                sY = 0.0f;
+                sH = 1.6f + ((seekTimer - 180) / 180.0f) * 1.2f; 
+            } else { // Final 1 second: Slide backwards and hold max height
+                sY = 0.0f;
+                sH = 2.8f;
+            }
+
+            // Dripping Goo Effect from ceiling
+            srand(seekTimer); 
+            for (int d = 0; d < 8; d++) {
+                float dropX = -1.5f + (rand() % 30) / 10.0f;
+                float dropZ = seekZ - 0.5f - (rand() % 30) / 10.0f;
+                float dropY = 1.8f - fmod((seekTimer + d * 20) * 0.05f, 1.8f);
+                addBox(dropX, dropY, dropZ, 0.08f, 0.2f, 0.08f, 0.05f, 0.05f, 0.05f, false);
+            }
+            srand(time(NULL));
+
         } else if (seekState == 2) {
             sY = 0.0f; 
+            sH = 2.8f; // Stay huge during the chase
         }
         
         // Body (Black)
-        addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, 1.6f, 0.6f, 0.05f, 0.05f, 0.05f, false); 
+        addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, sH, 0.6f, 0.05f, 0.05f, 0.05f, false); 
         // White Sclera
-        addBox(-0.15f, sY + 1.25f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
+        addBox(-0.15f, sY + sH - 0.35f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
         // Black Pupil
-        addBox(-0.05f, sY + 1.25f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+        addBox(-0.05f, sY + sH - 0.35f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
 
-        // The puddle he rises from during the cutscene
-        if (seekState == 1 && seekTimer <= 150) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
+        // Puddle he rises from
+        if (seekState == 1 && seekTimer <= 180) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
     }
     
     if (currentChunk < 2) {
@@ -373,7 +394,11 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         float L = rooms[i].lightLevel; 
         
         float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
-        if (i > 0 && rooms[i-1].hasEyes) {
+        
+        // --- RED GLOW DURING CUTSCENE ONLY ---
+        if (seekState == 1) {
+            globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
+        } else if (i > 0 && rooms[i-1].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f;
         } else {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
@@ -448,37 +473,30 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);
 
             // --- THE GAUNTLET (Guaranteed Safe Path) ---
-            
-            // 1. LEFT blocked by arm, RIGHT is safe. Put Hand on Right Wall to narrow lane.
-            addBox(-3.0f, 0.0f, z - 2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); // Left Arm
-            addBox(-0.1f, 0.5f, z - 2.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); // Claws
-            rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = z - 2.0f; rooms[i].pSide[0] = 1; // Hand data
+            addBox(-3.0f, 0.0f, z - 2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); 
+            addBox(-0.1f, 0.5f, z - 2.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+            rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = z - 2.0f; rooms[i].pSide[0] = 1; 
             addBox(2.0f, 0.8f, z - 2.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L);
 
-            // 2. RIGHT safe lane has fire at X = 1.8. Player must swerve to middle (X=0.5).
-            rooms[i].pW[1] = 1.8f; rooms[i].pZ[1] = z - 3.5f; rooms[i].pSide[1] = 0; // Fire data
+            rooms[i].pW[1] = 1.8f; rooms[i].pZ[1] = z - 3.5f; rooms[i].pSide[1] = 0; 
             addBox(1.4f, 0.0f, z - 3.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L);
             addBox(1.6f, 0.3f, z - 3.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L);
 
-            // 3. RIGHT blocked by arm, LEFT is safe. Put Hand on Left wall to narrow lane.
-            addBox(-0.5f, 0.0f, z - 5.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); // Right Arm
-            addBox(-0.5f, 0.5f, z - 5.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); // Claws
-            rooms[i].pW[2] = -2.6f; rooms[i].pZ[2] = z - 5.0f; rooms[i].pSide[2] = 1; // Hand data
+            addBox(-0.5f, 0.0f, z - 5.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); 
+            addBox(-0.5f, 0.5f, z - 5.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+            rooms[i].pW[2] = -2.6f; rooms[i].pZ[2] = z - 5.0f; rooms[i].pSide[2] = 1; 
             addBox(-3.0f, 0.8f, z - 5.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L);
 
-            // 4. LEFT safe lane has fire at X = -1.8. Player must swerve to middle (X=-0.5).
-            rooms[i].pW[3] = -1.8f; rooms[i].pZ[3] = z - 6.5f; rooms[i].pSide[3] = 0; // Fire data
+            rooms[i].pW[3] = -1.8f; rooms[i].pZ[3] = z - 6.5f; rooms[i].pSide[3] = 0; 
             addBox(-2.2f, 0.0f, z - 6.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L);
             addBox(-2.0f, 0.3f, z - 6.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L);
 
-            // 5. LEFT blocked by arm, RIGHT is safe. Put Hand on Right Wall to narrow lane.
-            addBox(-3.0f, 0.0f, z - 8.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); // Left Arm
-            addBox(-0.1f, 0.5f, z - 8.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); // Claws
-            rooms[i].pW[4] = 2.6f; rooms[i].pZ[4] = z - 8.0f; rooms[i].pSide[4] = 1; // Hand data
+            addBox(-3.0f, 0.0f, z - 8.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); 
+            addBox(-0.1f, 0.5f, z - 8.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+            rooms[i].pW[4] = 2.6f; rooms[i].pZ[4] = z - 8.0f; rooms[i].pSide[4] = 1; 
             addBox(2.0f, 0.8f, z - 8.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L);
 
-            // 6. RIGHT safe lane has fire near center (X = 0.8). Dodge Far Right.
-            rooms[i].pW[5] = 0.8f; rooms[i].pZ[5] = z - 9.0f; rooms[i].pSide[5] = 0; // Fire data
+            rooms[i].pW[5] = 0.8f; rooms[i].pZ[5] = z - 9.0f; rooms[i].pSide[5] = 0; 
             addBox(0.4f, 0.0f, z - 9.4f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L);
             addBox(0.6f, 0.3f, z - 9.2f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L);
 
@@ -486,24 +504,19 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
         } else if (rooms[i].hasEyes) {
-            globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
+            // Tint handled above now for Seek conflict
             
             float ex = rooms[i].eyesX;
             float ey = rooms[i].eyesY;
             float ez = rooms[i].eyesZ;
             
-            // Main body (Purple)
             addBox(ex - 0.2f, ey - 0.2f, ez - 0.2f, 0.4f, 0.4f, 0.4f, 0.6f, 0.1f, 0.8f, false, 0, L);
-            // Smaller eye clusters sticking out
             addBox(ex - 0.25f, ey - 0.1f, ez - 0.1f, 0.5f, 0.2f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, L);
             addBox(ex - 0.1f, ey - 0.25f, ez - 0.1f, 0.2f, 0.5f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, L);
-            // Pupils
             addBox(ex - 0.26f, ey - 0.05f, ez - 0.05f, 0.02f, 0.1f, 0.1f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f);
             addBox(ex + 0.24f, ey - 0.05f, ez - 0.05f, 0.02f, 0.1f, 0.1f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f);
             
-        } else {
-            globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
-        }
+        } 
 
         addBox(-3, 0, z, 6, 0.01f, -10, 0.2f, 0.1f, 0.05f, false, 0, L); 
         addBox(-3, 1.8f, z, 6, 0.01f, -10, 0.15f, 0.15f, 0.15f, false, 0, L); 
@@ -716,13 +729,13 @@ int main() {
     ndspWaveBuf sndEyesGarble = {0};
     ndspWaveBuf sndEyesAttack = {0};
     ndspWaveBuf sndEyesHit = {0};
-    ndspWaveBuf sndSeekRise = {0}; // --- NEW ---
-    ndspWaveBuf sndSeekChase = {0}; // --- NEW ---
+    ndspWaveBuf sndSeekRise = {0}; 
+    ndspWaveBuf sndSeekChase = {0}; 
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        for(int i=0; i<=7; i++) { // Increased to 7 for Seek's channel
+        for(int i=0; i<=7; i++) { 
             ndspChnSetInterp(i, NDSP_INTERP_LINEAR);
             ndspChnSetRate(i, 44100);
             ndspChnSetFormat(i, NDSP_FORMAT_MONO_PCM16);
@@ -741,9 +754,9 @@ int main() {
         sndEyesAttack = loadWav("romfs:/Eyes_Attack.wav");
         sndEyesHit = loadWav("romfs:/Eyes_Hit.wav"); 
         
-        sndSeekRise = loadWav("romfs:/Seek_Rise.wav"); // --- NEW ---
-        sndSeekChase = loadWav("romfs:/Seek_Chase.wav"); // --- NEW ---
-        sndSeekChase.looping = true; // --- NEW ---
+        sndSeekRise = loadWav("romfs:/Seek_Rise.wav"); 
+        sndSeekChase = loadWav("romfs:/Seek_Chase.wav"); 
+        sndSeekChase.looping = true; 
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -784,8 +797,10 @@ int main() {
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
-        u32 kHeld = hidKeysHeld(); // --- NEW: Track held keys ---
+        u32 kHeld = hidKeysHeld(); 
         
+        bool needsVBOUpdate = false; // --- MOVED TO TOP OF LOOP TO FIX SCOPING ERROR ---
+
         if (kDown & KEY_START) {
             if (isDead) {
                 isDead = false; hasKey = false; lobbyKeyPickedUp = false; 
@@ -810,7 +825,7 @@ int main() {
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 
                 if (audio_ok) {
-                    for(int i=3; i<=7; i++) ndspChnWaveBufClear(i); // Increased bounds to clear Seek Audio on reset
+                    for(int i=3; i<=7; i++) ndspChnWaveBufClear(i); 
                 }
                 inEyesRoom = false; isLookingAtEyes = false;
                 eyesDamageTimer = 0; eyesDamageAccumulator = 0; eyesGraceTimer = 0;
@@ -819,7 +834,6 @@ int main() {
             } else break; 
         }
 
-        // --- R + Y TELEPORT ---
         if ((kDown & KEY_Y) && (kHeld & KEY_R) && playerCurrentRoom == -1 && !isDead) {
             camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; 
             camX = 0.0f;
@@ -828,8 +842,6 @@ int main() {
             needsVBOUpdate = true;
             sprintf(uiMessage, "Teleported to Seek!"); messageTimer = 90;
         }
-
-        bool needsVBOUpdate = false;
         
         playerCurrentRoom = (camZ > -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f);
         if (playerCurrentRoom < -1) playerCurrentRoom = -1;
@@ -879,7 +891,7 @@ int main() {
                         printf(" Next Door    : %s         \n\n", g2);
                     } else printf(" Next Door    : 001         \n\n");
                     
-                    printf(" [HOLD R + Y] Tp to Seek    \n"); // Updated shortcut UI
+                    printf(" [HOLD R + Y] Tp to Seek    \n"); 
                 } else if (isGlitching) {
                     char g1[4], g2[4];
                     for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; }
@@ -928,7 +940,6 @@ int main() {
                     seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
                     needsVBOUpdate = true;
                     
-                    // --- NEW: START SEEK RISE AUDIO ---
                     if (audio_ok && sndSeekRise.data_vaddr) {
                         ndspChnWaveBufClear(7);
                         sndSeekRise.status = NDSP_WBUF_FREE;
@@ -943,17 +954,17 @@ int main() {
                 camYaw = camYaw + (3.14159f - camYaw) * 0.1f; 
                 needsVBOUpdate = true; 
                 
-                if (seekTimer > 180) {
-                    seekZ -= (seekSpeed * 1.5f); 
+                // Final second of 7 second cutscene
+                if (seekTimer > 360) {
+                    seekZ -= (seekSpeed * 2.0f); 
                 }
 
-                if (seekTimer >= 260) { 
+                if (seekTimer >= 420) { 
                     seekState = 2; 
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
                     flashRedFrames = 10; 
                     camYaw = 0.0f; 
                     
-                    // --- NEW: SWITCH TO CHASE LOOP ---
                     if (audio_ok && sndSeekChase.data_vaddr) {
                         ndspChnWaveBufClear(7);
                         sndSeekChase.status = NDSP_WBUF_FREE;
@@ -967,7 +978,7 @@ int main() {
                 if (abs(seekZ - camZ) < 1.2f) {
                     playerHealth = 0; isDead = true; flashRedFrames = 50;
                     sprintf(uiMessage, "Seek caught you..."); messageTimer = 120;
-                    if (audio_ok) ndspChnWaveBufClear(7); // Kill chase music on death
+                    if (audio_ok) ndspChnWaveBufClear(7); 
                 }
                 
                 if (playerCurrentRoom >= 0 && rooms[playerCurrentRoom].isSeekFinale) {
@@ -985,7 +996,7 @@ int main() {
                             } else if (type == 1 && !isDead) { 
                                 playerHealth = 0; isDead = true; flashRedFrames = 50;
                                 sprintf(uiMessage, "The hands grabbed you!"); messageTimer = 120;
-                                if (audio_ok) ndspChnWaveBufClear(7); // Kill chase music on death
+                                if (audio_ok) ndspChnWaveBufClear(7); 
                             }
                         }
                     }
@@ -1001,7 +1012,7 @@ int main() {
                     needsVBOUpdate = true;
                     
                     sprintf(uiMessage, "You escaped!"); messageTimer = 150;
-                    if (audio_ok) ndspChnWaveBufClear(7); // Stop chase music!
+                    if (audio_ok) ndspChnWaveBufClear(7); 
                     
                     if (audio_ok && sndDoor.data_vaddr) {
                         ndspChnWaveBufClear(1);
