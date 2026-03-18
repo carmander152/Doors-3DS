@@ -45,6 +45,13 @@ struct RoomSetup {
 
     bool hasEyes;
     float eyesX, eyesY, eyesZ; 
+
+    // --- Seek Variables ---
+    bool hasSeekEyes;
+    int seekEyeCount;
+    bool isSeekHallway; 
+    bool isSeekChase;   
+    bool isSeekFinale;  
 } rooms[100];
 
 // --- GAME STATE VARIABLES ---
@@ -56,6 +63,7 @@ bool doorOpen[100] = {false};
 bool isCrouching = false;
 bool isDead = false; 
 HideState hideState = NOT_HIDING; 
+int seekStartRoom = 0; // Starts between 30 and 40
 
 int messageTimer = 0;
 char uiMessage[50] = "";
@@ -79,12 +87,18 @@ int rushCooldown = 0;
 float rushZ = 0.0f;
 float rushTargetZ = 0.0f;
 
+// --- SEEK VARIABLES ---
+bool seekActive = false;
+int seekState = 0; // 0=Inactive, 1=Rising from floor, 2=Chasing
+float seekZ = 0.0f;
+float seekSpeed = 0.28f;
+
 // --- Eyes States ---
 bool inEyesRoom = false;
 bool isLookingAtEyes = false;
 int eyesDamageTimer = 0;
 int eyesDamageAccumulator = 0; 
-int eyesGraceTimer = 0; // Gives you a second to react!
+int eyesGraceTimer = 0; 
 
 // --- AUDIO SYSTEM ---
 ndspWaveBuf loadWav(const char* path) {
@@ -350,6 +364,23 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
         }
 
+        // --- DRAW SEEK EYES ---
+        if (rooms[i].hasSeekEyes) {
+            srand(i * 12345); 
+            for (int e = 0; e < rooms[i].seekEyeCount; e++) {
+                bool isLeftWall = (rand() % 2 == 0);
+                float eyeZ = z - 1.0f - (rand() % 80) / 10.0f; 
+                float eyeY = 0.5f + (rand() % 120) / 100.0f;   
+                
+                float scleraX = isLeftWall ? -2.95f : 2.85f;
+                addBox(scleraX, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.02f, 0.02f, 0.02f, false, 0, L); 
+                
+                float pupilX = isLeftWall ? -2.92f : 2.88f; 
+                addBox(pupilX, eyeY + 0.1f, eyeZ + 0.15f, 0.04f, 0.1f, 0.1f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
+            }
+            srand(time(NULL)); 
+        }
+
         if (rooms[i].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
         } else {
@@ -406,9 +437,16 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 }
 
 void generateRooms() {
+    seekStartRoom = 30 + (rand() % 11);
+
     for(int i=0; i<100; i++) {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
+        rooms[i].hasSeekEyes = false;
+        rooms[i].isSeekHallway = false;
+        rooms[i].isSeekChase = false;
+        rooms[i].isSeekFinale = false;
+        rooms[i].seekEyeCount = 0;
         
         if (i > 0 && rand() % 100 < 8) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f;
@@ -418,7 +456,33 @@ void generateRooms() {
             rooms[i].slotItem[s] = 0; 
         }
 
-        rooms[i].isDupeRoom = (i > 1 && (rand() % 100 < 15));
+        if (i >= seekStartRoom - 5 && i < seekStartRoom) {
+            rooms[i].hasSeekEyes = true;
+            rooms[i].seekEyeCount = (i - (seekStartRoom - 5) + 1) * 2; 
+            rooms[i].lightLevel = 0.4f; 
+        }
+        
+        if (i == seekStartRoom) {
+            rooms[i].isSeekHallway = true;
+            rooms[i].doorPos = 1; 
+            rooms[i].lightLevel = 0.8f;
+        }
+
+        if (i > seekStartRoom && i < seekStartRoom + 6) {
+            rooms[i].isSeekChase = true;
+            rooms[i].doorPos = 1; 
+            rooms[i].lightLevel = 1.0f; 
+        }
+
+        if (i == seekStartRoom + 6) {
+            rooms[i].isSeekFinale = true;
+            rooms[i].doorPos = 1; 
+        }
+
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 6);
+        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 6); 
+
+        rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
             rooms[i].correctDupePos = rand() % 3;
             int nextRoomNumber = i + 1; 
@@ -431,7 +495,7 @@ void generateRooms() {
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = nextRoomNumber;
         }
 
-        rooms[i].hasEyes = (i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
+        rooms[i].hasEyes = (!isSeekEvent && i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8);
         if (rooms[i].hasEyes) {
             rooms[i].eyesX = (rand() % 10 / 10.0f) - 0.5f; 
             rooms[i].eyesY = 1.0f + (rand() % 10 / 10.0f); 
@@ -439,36 +503,40 @@ void generateRooms() {
             rooms[i].lightLevel = 1.0f; 
         }
 
-        bool bandaidSpawned = false;
-        for(int s=0; s<3; s++) {
-            int r = rand() % 100;
-            if (r < 15) rooms[i].slotType[s] = 1;      
-            else if (r < 30) rooms[i].slotType[s] = 2; 
-            else if (r < 45) rooms[i].slotType[s] = 3; 
-            else if (r < 60) rooms[i].slotType[s] = 4; 
-            else if (r < 75) {
-                rooms[i].slotType[s] = 5; 
-                if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
+        if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
+            bool bandaidSpawned = false;
+            for(int s=0; s<3; s++) {
+                int r = rand() % 100;
+                if (r < 15) rooms[i].slotType[s] = 1;      
+                else if (r < 30) rooms[i].slotType[s] = 2; 
+                else if (r < 45) rooms[i].slotType[s] = 3; 
+                else if (r < 60) rooms[i].slotType[s] = 4; 
+                else if (r < 75) {
+                    rooms[i].slotType[s] = 5; 
+                    if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
+                }
+                else if (r < 90) {
+                    rooms[i].slotType[s] = 6; 
+                    if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
+                }
+                else rooms[i].slotType[s] = 0;             
             }
-            else if (r < 90) {
-                rooms[i].slotType[s] = 6; 
-                if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
-            }
-            else rooms[i].slotType[s] = 0;             
-        }
 
-        int inDoor = rooms[i].doorPos;
-        int outDoor = (i < 99) ? rooms[i+1].doorPos : 1;
-        
-        for(int s=0; s<3; s++) {
-            if (rooms[i].slotType[s] == 3) { 
-                if (s == 0 && inDoor == 0) rooms[i].slotType[s] = 5; 
-                if (s == 2 && outDoor == 0) rooms[i].slotType[s] = 5; 
+            int inDoor = rooms[i].doorPos;
+            int outDoor = (i < 99) ? rooms[i+1].doorPos : 1;
+            
+            for(int s=0; s<3; s++) {
+                if (rooms[i].slotType[s] == 3) { 
+                    if (s == 0 && inDoor == 0) rooms[i].slotType[s] = 5; 
+                    if (s == 2 && outDoor == 0) rooms[i].slotType[s] = 5; 
+                }
+                if (rooms[i].slotType[s] == 4) { 
+                    if (s == 0 && inDoor == 2) rooms[i].slotType[s] = 6; 
+                    if (s == 2 && outDoor == 2) rooms[i].slotType[s] = 6;
+                }
             }
-            if (rooms[i].slotType[s] == 4) { 
-                if (s == 0 && inDoor == 2) rooms[i].slotType[s] = 6; 
-                if (s == 2 && outDoor == 2) rooms[i].slotType[s] = 6;
-            }
+        } else {
+            rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
         }
 
         rooms[i].pCount = rand() % 5 + 3; 
@@ -508,7 +576,10 @@ void generateRooms() {
     rooms[0].hasEyes = false;
     
     for(int i=2; i<98; i++) {
-        if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && (rand() % 3 == 0)) {
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 6);
+        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 6);
+
+        if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && !isSeekChaseEvent && !prevIsSeekChaseEvent && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
             int s = rand() % 3;
             if (rand() % 100 < 15) rooms[i-1].slotType[s] = (rand() % 2 == 0) ? 3 : 4; 
@@ -716,7 +787,7 @@ int main() {
 
             if (currentlyInEyesRoom && !inEyesRoom) {
                 inEyesRoom = true;
-                eyesGraceTimer = 60; // 1 second grace period
+                eyesGraceTimer = 60; 
                 if (audio_ok) {
                     ndspChnWaveBufClear(4);
                     if (sndEyesAppear.data_vaddr) {
@@ -805,7 +876,7 @@ int main() {
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 2000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && (rand() % screechChance == 0)) {
                 screechActive = true;
-                screechTimer = 240; // Increased timer
+                screechTimer = 240; 
                 
                 float angleOffset = 1.57f + ((rand() % 200) / 100.0f) * 1.57f; 
                 float spawnYaw = camYaw + angleOffset;
@@ -1085,7 +1156,6 @@ int main() {
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
                 
-                // --- INCREASED CIRCLE PAD DEADZONE TO 15 ---
                 if (abs(cPad.dy) > 15 || abs(cPad.dx) > 15) {
                     float s = isCrouching ? 0.16f : 0.28f; 
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
