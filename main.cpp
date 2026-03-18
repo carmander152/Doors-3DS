@@ -92,7 +92,8 @@ float rushTargetZ = 0.0f;
 bool seekActive = false;
 int seekState = 0; 
 float seekZ = 0.0f;
-float seekSpeed = 0.62f; // Tuned so he perfectly closes the 30-unit gap during the chase
+float seekSpeed = 0.0f; 
+float seekMaxSpeed = 0.42f; // Matches your sprint. He only catches up when you duck!
 int seekTimer = 0; 
 
 // --- Eyes States ---
@@ -308,12 +309,12 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
     if (seekActive) {
         float sY = 0.0f;
-        float sH = 1.1f; // Changed to match player height
+        float sH = 1.1f; 
         
         if (seekState == 1) {
-            if (seekTimer <= 180) { // First 3 seconds: Rise from puddle
+            if (seekTimer <= 180) { // Rise from puddle
                 sY = -1.1f + (seekTimer / 180.0f) * 1.1f; 
-            } else { // Next 4 seconds: Stare menacingly before running
+            } else { // Stare menacingly (NO FORWARD MOVEMENT YET)
                 sY = 0.0f;
                 sH = 1.1f;
             }
@@ -335,13 +336,15 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         
         // Body (Black)
         addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, sH, 0.6f, 0.05f, 0.05f, 0.05f, false); 
-        // White Sclera (Centered at exactly Y=0.9f)
+        // White Sclera (Centered at Y=0.9f)
         addBox(-0.15f, sY + 0.8f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
         // Black Pupil
         addBox(-0.05f, sY + 0.8f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
 
-        // Puddle he rises from
-        if (seekState == 1 && seekTimer <= 180) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
+        // Puddle he rises from (Matches his Z safely)
+        if (seekState == 1 && seekTimer <= 180) {
+            addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
+        }
     }
     
     if (currentChunk < 2) {
@@ -942,8 +945,8 @@ int main() {
                     camX = 0.0f; 
                     camZ = hallwayEndZ;
                     
-                    // CHANGED: Seek spawns at the very beginning of the hallway (the "other end")
-                    seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
+                    // FIXED RENDERING: Spawns exactly in the clear hallway, safely in front of the blocked door
+                    seekZ = -10.0f - (seekStartRoom * 10.0f) - 2.0f; 
                     
                     needsVBOUpdate = true;
                     
@@ -958,11 +961,21 @@ int main() {
             if (seekState == 1) {
                 seekTimer++;
                 camPitch = 0.0f; 
-                camYaw = camYaw + (3.14159f - camYaw) * 0.1f; // Turn around to watch him rise
+                
+                // Turn around smoothly to watch him rise
+                camYaw = camYaw + (3.14159f - camYaw) * 0.1f; 
+                
+                // CINEMATIC PAN: Slowly pull the player back down the hallway towards Seek
+                if (seekTimer > 180 && seekTimer < 420) {
+                    camZ += 0.06f; 
+                }
+                
                 needsVBOUpdate = true; 
 
                 if (seekTimer >= 420) { 
                     seekState = 2; 
+                    seekSpeed = 0.0f; // Resets speed so his acceleration engine kicks in
+                    
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
                     flashRedFrames = 10; 
                     camYaw = 0.0f; // Snap camera back forward to start running
@@ -974,7 +987,14 @@ int main() {
                     }
                 }
             } else if (seekState == 2) {
-                // CHANGED: Constant forward movement during the chase
+                
+                // BREATHING ROOM ENGINE: Accelerate to max speed over ~1.4 seconds
+                if (seekSpeed < seekMaxSpeed) {
+                    seekSpeed += 0.005f; 
+                } else {
+                    seekSpeed = seekMaxSpeed; // Hard cap exactly at player sprint speed
+                }
+                
                 seekZ -= seekSpeed; 
                 needsVBOUpdate = true;
                 
