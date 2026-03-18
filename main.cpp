@@ -295,12 +295,16 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     // --- DRAW SEEK ---
     if (seekActive) {
         float sY = 0.0f;
-        if (seekState == 1) sY = -1.5f + (seekTimer / 120.0f) * 1.5f; 
-        else if (seekState == 2) sY = 0.0f; 
+        if (seekState == 1) {
+            if (seekTimer <= 120) sY = -1.5f + (seekTimer / 120.0f) * 1.5f; 
+            else sY = 0.0f; 
+        } else if (seekState == 2) {
+            sY = 0.0f; 
+        }
         
         addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, 1.6f, 0.6f, 0.05f, 0.05f, 0.05f, false); 
         addBox(-0.1f, sY + 1.3f, seekZ - 0.35f, 0.2f, 0.2f, 0.1f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
-        if (seekState == 1) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
+        if (seekState == 1 && seekTimer <= 150) addBox(-1.0f, 0.01f, seekZ - 1.0f, 2.0f, 0.01f, 2.0f, 0.02f, 0.02f, 0.02f, false);
     }
     
     if (currentChunk < 2) {
@@ -376,6 +380,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addWallWithDoors(z, isL, (isL && doorOpen[i]), isC, (isC && doorOpen[i]), isR, (isR && doorOpen[i]), i, wallL);
         }
 
+        // --- DRAW SEEK EYES ---
         if (rooms[i].hasSeekEyes) {
             srand(i * 12345); 
             for (int e = 0; e < rooms[i].seekEyeCount; e++) {
@@ -384,15 +389,55 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 float eyeY = 0.5f + (rand() % 120) / 100.0f;   
                 
                 float scleraX = isLeftWall ? -2.95f : 2.85f;
-                addBox(scleraX, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.02f, 0.02f, 0.02f, false, 0, L); 
+                addBox(scleraX, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L); 
                 
-                float pupilX = isLeftWall ? -2.92f : 2.88f; 
-                addBox(pupilX, eyeY + 0.1f, eyeZ + 0.15f, 0.04f, 0.1f, 0.1f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
+                float whiteX = isLeftWall ? -2.93f : 2.83f;
+                addBox(whiteX, eyeY + 0.05f, eyeZ + 0.05f, 0.06f, 0.2f, 0.3f, 0.9f, 0.9f, 0.9f, false, 0, L);
+                
+                float pupilX = isLeftWall ? -2.90f : 2.80f; 
+                addBox(pupilX, eyeY + 0.1f, eyeZ + 0.12f, 0.04f, 0.1f, 0.16f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
             }
             srand(time(NULL)); 
         }
 
-        if (rooms[i].hasEyes) {
+        // --- DRAW CHASE OBSTACLES & HAZARDS ---
+        if (rooms[i].isSeekChase) {
+            globalTintR = 1.0f; globalTintG = 0.3f; globalTintB = 0.3f; 
+            
+            srand(i * 777); 
+            int obCount = 1 + (rand() % 2); 
+            for(int ob = 0; ob < obCount; ob++) {
+                float obZ = z - 2.5f - (rand() % 50) / 10.0f;
+                addBox(-3.0f, 0.7f, obZ, 6.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L); 
+            }
+            srand(time(NULL));
+        } else if (rooms[i].isSeekFinale) {
+            globalTintR = 1.0f; globalTintG = 0.3f; globalTintB = 0.3f; 
+            
+            srand(i * 888); 
+            for(int h = 0; h < 6; h++) {
+                if (h < 3) {
+                    float fireX = (rand() % 40) / 10.0f - 2.0f; 
+                    float fireZ = z - 1.5f - (rand() % 70) / 10.0f;
+                    rooms[i].pW[h] = fireX; rooms[i].pZ[h] = fireZ; rooms[i].pSide[h] = 0; 
+                    
+                    addBox(fireX - 0.4f, 0.0f, fireZ - 0.4f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L); 
+                    addBox(fireX - 0.2f, 0.3f, fireZ - 0.2f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L);
+                } else {
+                    bool isLeft = (rand() % 2 == 0);
+                    float handZ = z - 1.5f - (rand() % 70) / 10.0f;
+                    float handX = isLeft ? -2.6f : 2.6f;
+                    rooms[i].pW[h] = handX; rooms[i].pZ[h] = handZ; rooms[i].pSide[h] = 1; 
+                    
+                    addBox(isLeft ? -3.0f : 2.0f, 0.8f, handZ - 0.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L);
+                }
+            }
+            srand(time(NULL));
+        } else if (rooms[i].isSeekHallway) {
+            globalTintR = 1.0f; globalTintG = 0.3f; globalTintB = 0.3f; 
+            addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
+            addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
+        } else if (rooms[i].hasEyes) {
             globalTintR = 0.8f; globalTintG = 0.3f; globalTintB = 1.0f; 
         } else {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
@@ -473,25 +518,25 @@ void generateRooms() {
             rooms[i].lightLevel = 0.4f; 
         }
         
-        if (i == seekStartRoom) {
+        if (i >= seekStartRoom && i <= seekStartRoom + 2) {
             rooms[i].isSeekHallway = true;
             rooms[i].doorPos = 1; 
             rooms[i].lightLevel = 0.8f;
         }
 
-        if (i > seekStartRoom && i < seekStartRoom + 6) {
+        if (i >= seekStartRoom + 3 && i <= seekStartRoom + 8) {
             rooms[i].isSeekChase = true;
             rooms[i].doorPos = 1; 
             rooms[i].lightLevel = 1.0f; 
         }
 
-        if (i == seekStartRoom + 6) {
+        if (i == seekStartRoom + 9) {
             rooms[i].isSeekFinale = true;
             rooms[i].doorPos = 1; 
         }
 
-        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 6);
-        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 6); 
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
+        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
 
         rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
@@ -587,8 +632,8 @@ void generateRooms() {
     rooms[0].hasEyes = false;
     
     for(int i=2; i<98; i++) {
-        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 6);
-        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 6);
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
+        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 9);
 
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && !isSeekChaseEvent && !prevIsSeekChaseEvent && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
@@ -694,7 +739,6 @@ int main() {
                 playerCurrentRoom = -1;
                 for(int i=0; i<100; i++) doorOpen[i] = false;
                 
-                // Reset Seek
                 seekActive = false;
                 seekState = 0;
                 seekTimer = 0;
@@ -799,17 +843,19 @@ int main() {
         }
 
         if (!isDead) {
-
             // --- SEEK: TRIGGER & CHASE LOGIC ---
             if (playerCurrentRoom >= 0 && playerCurrentRoom < 100 && rooms[playerCurrentRoom].isSeekHallway) {
-                float hallwayEndZ = -10.0f - (playerCurrentRoom * 10.0f) - 8.0f; 
-                
-                if (camZ < hallwayEndZ && seekState == 0) {
-                    seekState = 1; 
-                    seekActive = true;
-                    seekTimer = 0;
-                    seekZ = -10.0f - (playerCurrentRoom * 10.0f) + 1.0f; 
-                    needsVBOUpdate = true;
+                int lastHallwayRoom = seekStartRoom + 2; 
+                if (playerCurrentRoom == lastHallwayRoom) {
+                    float hallwayEndZ = -10.0f - (playerCurrentRoom * 10.0f) - 8.0f; 
+                    
+                    if (camZ < hallwayEndZ && seekState == 0) {
+                        seekState = 1; 
+                        seekActive = true;
+                        seekTimer = 0;
+                        seekZ = -10.0f - (seekStartRoom * 10.0f) + 2.0f; 
+                        needsVBOUpdate = true;
+                    }
                 }
             }
 
@@ -819,10 +865,15 @@ int main() {
                 camYaw = camYaw + (3.14159f - camYaw) * 0.1f; 
                 needsVBOUpdate = true; 
                 
-                if (seekTimer >= 120) { 
+                if (seekTimer > 180) {
+                    seekZ -= (seekSpeed * 1.5f); 
+                }
+
+                if (seekTimer >= 260) { 
                     seekState = 2; 
                     sprintf(uiMessage, "RUN!"); messageTimer = 90;
                     flashRedFrames = 10; 
+                    camYaw = 0.0f; 
                 }
             } else if (seekState == 2) {
                 seekZ -= seekSpeed; 
@@ -834,9 +885,41 @@ int main() {
                 }
                 
                 if (playerCurrentRoom >= 0 && rooms[playerCurrentRoom].isSeekFinale) {
+                    for(int h = 0; h < 6; h++) {
+                        float hX = rooms[playerCurrentRoom].pW[h];
+                        float hZ = rooms[playerCurrentRoom].pZ[h];
+                        int type = rooms[playerCurrentRoom].pSide[h];
+                        
+                        if (abs(camX - hX) < 0.6f && abs(camZ - hZ) < 0.6f) {
+                            if (type == 0 && !isDead && messageTimer <= 0) {
+                                playerHealth -= 40; flashRedFrames = 25;
+                                camZ += 1.5f; 
+                                sprintf(uiMessage, "Burned! (-40 HP)"); messageTimer = 60;
+                                if(playerHealth <= 0) isDead = true;
+                            } else if (type == 1 && !isDead) { 
+                                playerHealth = 0; isDead = true; flashRedFrames = 50;
+                                sprintf(uiMessage, "The hands grabbed you!"); messageTimer = 120;
+                            }
+                        }
+                    }
+                }
+                
+                if (playerCurrentRoom > seekStartRoom + 9) { 
                     seekActive = false;
                     seekState = 0;
-                    sprintf(uiMessage, "You escaped... for now."); messageTimer = 90;
+                    
+                    int finaleRoom = seekStartRoom + 9;
+                    doorOpen[finaleRoom] = false; 
+                    rooms[finaleRoom].isLocked = true; 
+                    needsVBOUpdate = true;
+                    
+                    sprintf(uiMessage, "You escaped!"); messageTimer = 150;
+                    
+                    if (audio_ok && sndDoor.data_vaddr) {
+                        ndspChnWaveBufClear(1);
+                        sndDoor.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(1, &sndDoor);
+                    }
                 }
             }
 
@@ -1010,8 +1093,15 @@ int main() {
                     }
                 } else if (rushState == 2) { 
                     rushZ -= 0.8f; needsVBOUpdate = true; 
+                    
                     int rushRoomIndex = (int)((-rushZ - 10.0f) / 10.0f);
-                    if (rushRoomIndex >= 0 && rushRoomIndex < 100) rooms[rushRoomIndex].lightLevel = 0.3f;
+                    if (rushRoomIndex >= 0 && rushRoomIndex < 100) {
+                        rooms[rushRoomIndex].lightLevel = 0.3f;
+                        if (rushRoomIndex + 1 < 100) {
+                            rooms[rushRoomIndex + 1].lightLevel = 0.3f;
+                        }
+                    }
+                    
                     if (abs(rushZ - camZ) < 3.0f && hideState == NOT_HIDING) {
                         playerHealth = 0; isDead = true; flashRedFrames = 50;
                     }
@@ -1208,7 +1298,6 @@ int main() {
             circlePosition cStick, cPad;
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             
-            // --- UPDATED FOR SEEK CAMERA LOCK ---
             if (hideState == NOT_HIDING && seekState != 1) {
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
@@ -1216,6 +1305,10 @@ int main() {
                 
                 if (abs(cPad.dy) > 15 || abs(cPad.dx) > 15) {
                     float s = isCrouching ? 0.16f : 0.28f; 
+                    if (seekState == 2) {
+                        s = isCrouching ? 0.25f : 0.42f; 
+                    }
+
                     float sy = cPad.dy/1560.0f, sx = cPad.dx/1560.0f;
                     float nextX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
                     float nextZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s;
