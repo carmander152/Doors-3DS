@@ -33,6 +33,7 @@ struct RoomSetup {
     bool drawerOpen[3]; 
     int slotItem[3]; 
     bool isLocked;      
+    bool isJammed;      
     float lightLevel; 
 
     int doorPos;     
@@ -102,7 +103,7 @@ bool isLookingAtEyes = false;
 int eyesDamageTimer = 0;
 int eyesDamageAccumulator = 0; 
 int eyesGraceTimer = 0; 
-int eyesSoundCooldown = 0; // Prevent audio spam
+int eyesSoundCooldown = 0; 
 
 // --- ROOM DISPLAY HELPERS ---
 int getDisplayRoom(int idx) {
@@ -212,6 +213,12 @@ void buildCabinet(float zCenter, bool isLeft, float L = 1.0f) {
     addBox(topX, 0, zCenter + 0.4f, 0.8f, 1.5f, 0.1f, 0.3f, 0.18f, 0.1f, false, 0, L); 
     addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false, 0, L); 
     addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false, 0, L); 
+
+    // --- GOLD DOOR HANDLES ---
+    float handleX = isLeft ? frontX + 0.1f : frontX - 0.03f;
+    float hR = 0.9f, hG = 0.75f, hB = 0.1f; 
+    addBox(handleX, 0.6f, zCenter - 0.15f, 0.03f, 0.15f, 0.04f, hR, hG, hB, false, 0, L); 
+    addBox(handleX, 0.6f, zCenter + 0.11f, 0.03f, 0.15f, 0.04f, hR, hG, hB, false, 0, L); 
 
     if (hideState != IN_CABINET) {
         float voidX = isLeft ? -2.85f : 2.25f;
@@ -546,18 +553,50 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
         }
 
+        // --- DRAW PAINTINGS ---
         for(int p=0; p<rooms[i].pCount; p++) {
             float pZ = rooms[i].pZ[p]; 
             float pH = rooms[i].pH[p];
             float pW = rooms[i].pW[p];
             float pY = rooms[i].pY[p];
 
+            bool isSeekPainting = rooms[i].hasSeekEyes;
+            float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p];
+            float canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p];
+            float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
+
             if (rooms[i].pSide[p] == 0) {
-                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
-                addBox(-2.94f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false, 0, L); 
+                // Left Wall
+                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.08f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
+                
+                if (isSeekPainting) {
+                    srand(i * 100 + p); 
+                    int numEyes = 3 + (rand() % 3);
+                    for(int e=0; e<numEyes; e++) {
+                        float eY = pY + 0.05f + (rand() % (int)(pH * 100)) / 100.0f * 0.8f;
+                        float eZ = z - pZ - 0.05f - (rand() % (int)(pW * 100)) / 100.0f * 0.8f;
+                        addBox(-2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                        addBox(-2.86f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                    }
+                    srand(time(NULL));
+                }
             } else if (rooms[i].pSide[p] == 1) {
-                addBox(2.90f, pY - 0.05f, z - pZ + 0.05f, 0.05f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
-                addBox(2.89f, pY, z - pZ, 0.05f, pH, -pW, rooms[i].pR[p], rooms[i].pG[p], rooms[i].pB[p], false, 0, L); 
+                // Right Wall
+                addBox(2.87f, pY - 0.05f, z - pZ + 0.05f, 0.08f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
+                
+                if (isSeekPainting) {
+                    srand(i * 100 + p);
+                    int numEyes = 3 + (rand() % 3);
+                    for(int e=0; e<numEyes; e++) {
+                        float eY = pY + 0.05f + (rand() % (int)(pH * 100)) / 100.0f * 0.8f;
+                        float eZ = z - pZ - 0.05f - (rand() % (int)(pW * 100)) / 100.0f * 0.8f;
+                        addBox(2.86f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                        addBox(2.85f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                    }
+                    srand(time(NULL));
+                }
             }
         }
     }
@@ -570,6 +609,7 @@ void generateRooms() {
     for(int i=0; i<TOTAL_ROOMS; i++) {
         rooms[i].doorPos = rand() % 3; 
         rooms[i].isLocked = false;
+        rooms[i].isJammed = false; 
         rooms[i].hasSeekEyes = false;
         rooms[i].isSeekHallway = false;
         rooms[i].isSeekChase = false;
@@ -667,7 +707,10 @@ void generateRooms() {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
         }
 
-        if (!isSeekEvent) {
+        // --- EXPLICIT PAINTING SPAWN LOGIC ---
+        if (rooms[i].isSeekHallway || rooms[i].isSeekChase || rooms[i].isSeekFinale) {
+            rooms[i].pCount = 0; // Strictly enforce no paintings during the chase
+        } else if (!isSeekEvent || rooms[i].hasSeekEyes) {
             rooms[i].pCount = rand() % 5 + 3; 
             for(int p=0; p<rooms[i].pCount; p++) {
                 bool overlap;
@@ -705,6 +748,7 @@ void generateRooms() {
     rooms[0].doorPos = 1; 
     rooms[0].isDupeRoom = false; 
     rooms[0].isLocked = true; 
+    rooms[0].isJammed = false; 
     rooms[0].hasEyes = false;
     
     for(int i=2; i<TOTAL_ROOMS - 1; i++) {
@@ -994,9 +1038,9 @@ int main() {
                 float firstDoorZ = -10.0f - ((seekStartRoom + 2) * 10.0f); 
                 
                 if (seekZ > firstDoorZ) {
-                    seekSpeed = 0.065f; // Sprinting to catch up in the first room/hallway
+                    seekSpeed = 0.065f; 
                 } else {
-                    seekSpeed = seekMaxSpeed; // Instantly drops to 0.038f after passing the door
+                    seekSpeed = seekMaxSpeed; 
                 }
                 
                 seekZ -= seekSpeed; 
@@ -1039,7 +1083,8 @@ int main() {
                         
                         int safeRoom = seekStartRoom + 9;
                         doorOpen[safeRoom] = false; 
-                        rooms[safeRoom].isLocked = true;
+                        rooms[safeRoom].isLocked = false; 
+                        rooms[safeRoom].isJammed = true;  
                         needsVBOUpdate = true;
                         
                         sprintf(uiMessage, "You escaped!"); messageTimer = 150;
@@ -1347,12 +1392,17 @@ int main() {
                     bool isHallwayMid = (i == seekStartRoom + 1 || i == seekStartRoom + 2);
                     if (isHallwayMid) continue; 
 
-                    if (rooms[i].isLocked) {
+                    if (rooms[i].isLocked || rooms[i].isJammed) {
                         float doorZ = -10.0f - (i * 10.0f);
                         float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
                         
                         if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
-                            if (hasKey) {
+                            if (rooms[i].isJammed) {
+                                if (audio_ok && sndLockedDoor.data_vaddr) {
+                                    ndspChnWaveBufClear(1); sndLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndLockedDoor);
+                                }
+                                sprintf(uiMessage, "The door is jammed shut!"); messageTimer = 60;
+                            } else if (hasKey) {
                                 rooms[i].isLocked = false; hasKey = false; needsVBOUpdate = true;
                                 sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
                             } else {
