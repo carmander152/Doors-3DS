@@ -390,16 +390,18 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         }
     }
 
+    // --- OPTIMIZED RENDERING CHUNKS ---
     int startRoom = playerCurrentRoom - 1;
-    int endRoom = playerCurrentRoom + 2;
+    int endRoom = playerCurrentRoom + 1; // Only render +1 in normal hotel
+    
+    // Strict Chase Optimization: Only render current and +1
+    if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 9) {
+        startRoom = playerCurrentRoom; 
+        endRoom = playerCurrentRoom + 1;
+    }
+
     if (startRoom < 0) startRoom = 0;
     if (endRoom > TOTAL_ROOMS - 1) endRoom = TOTAL_ROOMS - 1;
-
-    // Force entire Seek Hallway to render if player is anywhere inside it
-    if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) {
-        startRoom = seekStartRoom;
-        endRoom = seekStartRoom + 3;
-    }
 
     for(int i = startRoom; i <= endRoom; i++) {
         float z = -10 - (i * 10);
@@ -451,10 +453,10 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
-        // --- WALL EYES (Massive swarm during Chase) ---
+        // --- WALL EYES (Optimized spawn during Chase) ---
         if (rooms[i].hasSeekEyes || rooms[i].isSeekChase) {
             srand(i * 12345); 
-            int wallEyeCount = rooms[i].hasSeekEyes ? rooms[i].seekEyeCount : 50; 
+            int wallEyeCount = rooms[i].hasSeekEyes ? rooms[i].seekEyeCount : 15; // Reduced from 50 to 15
             for (int e = 0; e < wallEyeCount; e++) {
                 bool isLeftWall = (rand() % 2 == 0);
                 float eyeZ = z - 0.5f - (rand() % 90) / 10.0f; 
@@ -568,15 +570,17 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
 
             if (rooms[i].pSide[p] == 0) {
-                // Left Wall - Adjusted math so canvas naturally sits in front of the frame
+                // Left Wall
                 addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
                 addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
                 
                 if (isSeekPainting) {
                     srand(i * 100 + p); 
-                    int numEyes = 15 + (rand() % 15);
+                    // Dynamic eye count relative to area
+                    float area = pH * pW;
+                    int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                    
                     for(int e=0; e<numEyes; e++) {
-                        // Adjusted math to keep eyes fully inside the canvas borders
                         float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
                         float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
                         addBox(-2.88f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
@@ -585,15 +589,16 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                     srand(time(NULL));
                 }
             } else if (rooms[i].pSide[p] == 1) {
-                // Right Wall - Adjusted math so canvas naturally sits in front of the frame
+                // Right Wall
                 addBox(2.89f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
                 addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
                 
                 if (isSeekPainting) {
                     srand(i * 100 + p);
-                    int numEyes = 15 + (rand() % 15);
+                    float area = pH * pW;
+                    int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                    
                     for(int e=0; e<numEyes; e++) {
-                        // Adjusted math to keep eyes fully inside the canvas borders
                         float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
                         float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
                         addBox(2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
@@ -790,11 +795,13 @@ int main() {
     ndspWaveBuf sndSeekRise = {0}; 
     ndspWaveBuf sndSeekChase = {0}; 
     ndspWaveBuf sndSeekEscaped = {0}; 
+    ndspWaveBuf sndDeath = {0}; // --- NEW DEATH SOUND ---
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        for(int i=0; i<=7; i++) { 
+        // Expanded to 9 channels (0-8) to support standard looping sounds + dedicated death track
+        for(int i=0; i<=8; i++) { 
             ndspChnSetInterp(i, NDSP_INTERP_LINEAR);
             ndspChnSetRate(i, 44100);
             ndspChnSetFormat(i, NDSP_FORMAT_MONO_PCM16);
@@ -817,6 +824,8 @@ int main() {
         sndSeekChase = loadWav("romfs:/Seek_Chase.wav"); 
         sndSeekChase.looping = true; 
         sndSeekEscaped = loadWav("romfs:/Seek_Escaped.wav"); 
+        
+        sndDeath = loadWav("romfs:/Player_Death.wav"); 
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -860,6 +869,36 @@ int main() {
         u32 kHeld = hidKeysHeld(); 
         
         bool needsVBOUpdate = false; 
+        static bool deathSoundPlayed = false;
+
+        // --- DEATH SOUND MANAGER ---
+        if (isDead) {
+            if (!deathSoundPlayed) {
+                if (audio_ok) {
+                    // Instantly cut ambient / chase loops
+                    ndspChnWaveBufClear(3); // Rush
+                    ndspChnWaveBufClear(5); // Eyes Garble
+                    ndspChnWaveBufClear(7); // Seek
+                    
+                    bool waitForAttackAudio = false;
+                    if (sndAttack.status == NDSP_WBUF_PLAYING || sndAttack.status == NDSP_WBUF_QUEUED) waitForAttackAudio = true;
+                    if (sndDupeAttack.status == NDSP_WBUF_PLAYING || sndDupeAttack.status == NDSP_WBUF_QUEUED) waitForAttackAudio = true;
+                    
+                    if (!waitForAttackAudio) {
+                        ndspChnWaveBufClear(8);
+                        if (sndDeath.data_vaddr) {
+                            sndDeath.status = NDSP_WBUF_FREE;
+                            ndspChnWaveBufAdd(8, &sndDeath);
+                        }
+                        deathSoundPlayed = true;
+                    }
+                } else {
+                    deathSoundPlayed = true;
+                }
+            }
+        } else {
+            deathSoundPlayed = false;
+        }
 
         if (kDown & KEY_START) {
             if (isDead) {
@@ -886,7 +925,7 @@ int main() {
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 
                 if (audio_ok) {
-                    for(int i=3; i<=7; i++) ndspChnWaveBufClear(i); 
+                    for(int i=3; i<=8; i++) ndspChnWaveBufClear(i); 
                 }
                 inEyesRoom = false; isLookingAtEyes = false;
                 eyesDamageTimer = 0; eyesDamageAccumulator = 0; eyesGraceTimer = 0;
@@ -1077,35 +1116,48 @@ int main() {
                     }
                 }
                 
-                // SAFE ESCAPE CHECK 
-                if (playerCurrentRoom > seekStartRoom + 8 && seekActive) { 
-                    float finishLineZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 12.0f; 
+                // --- SEEK FINALE & SAFE DOOR LOGIC ---
+                if (seekActive) {
+                    float finishLineZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 10.0f; 
+                    int safeRoom = seekStartRoom + 9;
                     
-                    if (camZ < finishLineZ) {
-                        seekActive = false;
-                        seekState = 0;
+                    bool playerSafe = (camZ < finishLineZ);
+                    
+                    // Seek approaches the door
+                    if (seekZ < finishLineZ + 3.0f) {
                         
-                        int safeRoom = seekStartRoom + 9;
-                        doorOpen[safeRoom] = false; 
-                        rooms[safeRoom].isLocked = false; 
-                        rooms[safeRoom].isJammed = true;  
-                        needsVBOUpdate = true;
-                        
-                        sprintf(uiMessage, "You escaped!"); messageTimer = 150;
-                        
-                        // PLAY ESCAPE SOUND
-                        if (audio_ok) {
-                            ndspChnWaveBufClear(7); 
-                            if (sndSeekEscaped.data_vaddr) {
-                                sndSeekEscaped.status = NDSP_WBUF_FREE;
-                                ndspChnWaveBufAdd(7, &sndSeekEscaped);
+                        // Slam the door if it isn't slammed already
+                        if (!rooms[safeRoom].isJammed) {
+                            doorOpen[safeRoom] = false; 
+                            rooms[safeRoom].isLocked = false; 
+                            rooms[safeRoom].isJammed = true;  
+                            needsVBOUpdate = true;
+                            
+                            if (audio_ok && sndDoor.data_vaddr) {
+                                ndspChnWaveBufClear(1);
+                                sndDoor.status = NDSP_WBUF_FREE;
+                                ndspChnWaveBufAdd(1, &sndDoor);
                             }
                         }
                         
-                        if (audio_ok && sndDoor.data_vaddr) {
-                            ndspChnWaveBufClear(1);
-                            sndDoor.status = NDSP_WBUF_FREE;
-                            ndspChnWaveBufAdd(1, &sndDoor);
+                        // Check player status
+                        if (playerSafe) {
+                            seekActive = false;
+                            seekState = 0;
+                            sprintf(uiMessage, "You escaped!"); messageTimer = 150;
+                            
+                            if (audio_ok) {
+                                ndspChnWaveBufClear(7); 
+                                if (sndSeekEscaped.data_vaddr) {
+                                    sndSeekEscaped.status = NDSP_WBUF_FREE;
+                                    ndspChnWaveBufAdd(7, &sndSeekEscaped);
+                                }
+                            }
+                        } else {
+                            playerHealth = 0; isDead = true; flashRedFrames = 50;
+                            sprintf(uiMessage, "The door slammed shut!"); messageTimer = 120;
+                            seekActive = false; seekState = 0;
+                            if (audio_ok) ndspChnWaveBufClear(7); 
                         }
                     }
                 }
@@ -1468,7 +1520,11 @@ int main() {
                 currentChunk = newChunk; needsVBOUpdate = true; 
             }
 
-            int startRoom = currentChunk - 1; int endRoom = currentChunk + 2;
+            // --- OPTIMIZED ROOM CHECK SYNC ---
+            int startRoom = currentChunk - 1; int endRoom = currentChunk + 1;
+            if (currentChunk >= seekStartRoom && currentChunk <= seekStartRoom + 9) {
+                startRoom = currentChunk;
+            }
             if (startRoom < 0) startRoom = 0; if (endRoom > TOTAL_ROOMS - 1) endRoom = TOTAL_ROOMS - 1;
 
             for(int i = startRoom; i <= endRoom; i++) {
@@ -1581,6 +1637,7 @@ int main() {
         if (sndSeekRise.data_vaddr) linearFree((void*)sndSeekRise.data_vaddr); 
         if (sndSeekChase.data_vaddr) linearFree((void*)sndSeekChase.data_vaddr); 
         if (sndSeekEscaped.data_vaddr) linearFree((void*)sndSeekEscaped.data_vaddr); 
+        if (sndDeath.data_vaddr) linearFree((void*)sndDeath.data_vaddr); 
         ndspExit();
     }
     
