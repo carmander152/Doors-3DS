@@ -69,7 +69,7 @@ int seekStartRoom = 0;
 
 // --- ELEVATOR VARIABLES ---
 bool inElevator = true;
-int elevatorTimer = 1593; // 26.544 seconds at 60fps (fallback if audio fails)
+int elevatorTimer = 1593; // 26.544 seconds at 60fps
 bool elevatorDoorsOpen = false;
 bool elevatorClosing = false; // Tracks if doors are sliding shut
 float elevatorDoorOffset = 0.0f; // Tracks the sliding doors
@@ -1085,7 +1085,7 @@ int main() {
             printf("                              \n");
             printf("                              \n\n\n");
             printf("    [PRESS START TO RESTART]  \n");
-            for(int i=0; i<8; i++) printf("                              \n"); 
+            printf("\x1b[0J"); // Clear ghosting
         } else {
             if (screechActive) {
                 printf("  >> SCREECH ATTACK!! <<      \n");
@@ -1093,7 +1093,7 @@ int main() {
                 printf("     (PSST!)                  \n");
                 printf("    LOOK AROUND QUICKLY!      \n");
                 printf("                              \n");
-                for(int i=0; i<8; i++) printf("                              \n"); 
+                printf("\x1b[0J"); // Clear ghosting
             } else {
                 printf("        PLAYER STATUS         \n");
                 printf("==============================\n\n");
@@ -1103,47 +1103,54 @@ int main() {
                 int dispNext = getDisplayRoom(nextDoorIdx);
 
                 if (playerCurrentRoom == -1) {
-                    printf(" Current Room : 000 (Lobby) \n");
+                    printf(" Current Room : 000 (Lobby) \x1b[K\n");
                     if (isGlitching) {
                         char g2[4]; for(int i=0; i<3; i++) g2[i]=symbols[rand()%8]; g2[3]='\0';
-                        printf(" Next Door    : %s         \n\n", g2);
-                    } else printf(" Next Door    : 001         \n\n");
+                        printf(" Next Door    : %s         \x1b[K\n", g2);
+                    } else printf(" Next Door    : 001         \x1b[K\n");
                     
-                    printf(" [HOLD R + Y] Tp to Seek    \n"); 
+                    printf(" [HOLD R + Y] Tp to Seek    \x1b[K\n\n"); 
                 } else if (isGlitching) {
                     char g1[4], g2[4];
                     for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; }
                     g1[3]='\0'; g2[3]='\0';
-                    printf(" Current Room : %s         \n", g1);
-                    printf(" Next Door    : %s         \n\n", g2);
+                    printf(" Current Room : %s         \x1b[K\n", g1);
+                    printf(" Next Door    : %s         \x1b[K\n", g2);
+                    printf("                            \x1b[K\n\n");
                 } else {
-                    printf(" Current Room : %03d         \n", dispCurrent);
-                    printf(" Next Door    : %03d         \n\n", dispNext);
+                    printf(" Current Room : %03d         \x1b[K\n", dispCurrent);
+                    printf(" Next Door    : %03d         \x1b[K\n", dispNext);
+                    printf("                            \x1b[K\n\n");
                 }
 
-                if (nextDoorIdx >= 0 && nextDoorIdx < TOTAL_ROOMS && !screechActive) {
+                if (nextDoorIdx >= 0 && nextDoorIdx < TOTAL_ROOMS) {
                     float nextDoorZ = -10.0f - (nextDoorIdx * 10.0f);
                     if (abs(camZ - nextDoorZ) < 4.0f) {
                         if (isGlitching && targetDupeRoom == nextDoorIdx) {
-                            if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[0]);
-                            else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[1]);
-                            else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \n\n", rooms[targetDupeRoom].dupeNumbers[2]);
-                            else printf("                           \n\n");
-                        } else printf(" >> PLAQUE READS: %03d <<  \n\n", dispNext);
-                    } else printf("                           \n\n");
-                } else if (!screechActive && playerCurrentRoom != -1) printf("                           \n\n");
+                            if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[targetDupeRoom].dupeNumbers[0]);
+                            else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[targetDupeRoom].dupeNumbers[1]);
+                            else if (camX > 0.6f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[targetDupeRoom].dupeNumbers[2]);
+                            else printf("                           \x1b[K\n\n");
+                        } else printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", dispNext);
+                    } else printf("                           \x1b[K\n\n");
+                } else printf("                           \x1b[K\n\n");
 
-                printf(" Health       : %d / 100   \n", playerHealth);
-                printf(" Golden Key   : %s         \n", hasKey ? "EQUIPPED" : "None    ");
+                printf(" Health       : %d / 100   \x1b[K\n", playerHealth);
+                printf(" Golden Key   : %s         \x1b[K\n", hasKey ? "EQUIPPED" : "None    ");
                 
-                if (messageTimer > 0) printf("\n ** %s ** \n", uiMessage);
-                else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \n");
-                else printf("\n                                    \n");
+                if (messageTimer > 0) printf("\n ** %s ** \x1b[K\n", uiMessage);
+                else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \x1b[K\n");
+                else printf("\n                                    \x1b[K\n");
 
                 if (!audio_ok) {
-                    printf("\x1b[31m WARNING: dspfirm.cdc MISSING!\x1b[0m\n");
-                    printf("\x1b[31m Sound chip could not turn on.\x1b[0m\n");
-                } else for(int i=0; i<4; i++) printf("                                    \n");
+                    printf("\x1b[31m WARNING: dspfirm.cdc MISSING!\x1b[0m\x1b[K\n");
+                    printf("\x1b[31m Sound chip could not turn on.\x1b[0m\x1b[K\n");
+                } else {
+                    printf("                                    \x1b[K\n");
+                    printf("                                    \x1b[K\n");
+                }
+                
+                printf("\x1b[0J"); // Instantly cleans any UI ghosting below this line!
             }
         }
 
