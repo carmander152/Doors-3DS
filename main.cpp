@@ -451,12 +451,14 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
-        if (rooms[i].hasSeekEyes) {
+        // --- WALL EYES (Massive swarm during Chase) ---
+        if (rooms[i].hasSeekEyes || rooms[i].isSeekChase) {
             srand(i * 12345); 
-            for (int e = 0; e < rooms[i].seekEyeCount; e++) {
+            int wallEyeCount = rooms[i].hasSeekEyes ? rooms[i].seekEyeCount : 50; 
+            for (int e = 0; e < wallEyeCount; e++) {
                 bool isLeftWall = (rand() % 2 == 0);
-                float eyeZ = z - 1.0f - (rand() % 80) / 10.0f; 
-                float eyeY = 0.5f + (rand() % 120) / 100.0f;   
+                float eyeZ = z - 0.5f - (rand() % 90) / 10.0f; 
+                float eyeY = 0.2f + (rand() % 160) / 100.0f;   
                 
                 if (isLeftWall) {
                     addBox(-2.95f, eyeY, eyeZ, 0.1f, 0.3f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L); 
@@ -560,40 +562,42 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             float pW = rooms[i].pW[p];
             float pY = rooms[i].pY[p];
 
-            bool isSeekPainting = rooms[i].hasSeekEyes;
+            bool isSeekPainting = (rooms[i].hasSeekEyes || rooms[i].isSeekChase);
             float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p];
             float canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p];
             float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
 
             if (rooms[i].pSide[p] == 0) {
-                // Left Wall
-                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.08f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                // Left Wall - Adjusted math so canvas naturally sits in front of the frame
+                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
                 addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
                 
                 if (isSeekPainting) {
                     srand(i * 100 + p); 
-                    int numEyes = 3 + (rand() % 3);
+                    int numEyes = 15 + (rand() % 15);
                     for(int e=0; e<numEyes; e++) {
-                        float eY = pY + 0.05f + (rand() % (int)(pH * 100)) / 100.0f * 0.8f;
-                        float eZ = z - pZ - 0.05f - (rand() % (int)(pW * 100)) / 100.0f * 0.8f;
-                        addBox(-2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
-                        addBox(-2.86f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                        // Adjusted math to keep eyes fully inside the canvas borders
+                        float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
+                        float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
+                        addBox(-2.88f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                        addBox(-2.875f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
                     }
                     srand(time(NULL));
                 }
             } else if (rooms[i].pSide[p] == 1) {
-                // Right Wall
-                addBox(2.87f, pY - 0.05f, z - pZ + 0.05f, 0.08f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                // Right Wall - Adjusted math so canvas naturally sits in front of the frame
+                addBox(2.89f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
                 addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
                 
                 if (isSeekPainting) {
                     srand(i * 100 + p);
-                    int numEyes = 3 + (rand() % 3);
+                    int numEyes = 15 + (rand() % 15);
                     for(int e=0; e<numEyes; e++) {
-                        float eY = pY + 0.05f + (rand() % (int)(pH * 100)) / 100.0f * 0.8f;
-                        float eZ = z - pZ - 0.05f - (rand() % (int)(pW * 100)) / 100.0f * 0.8f;
-                        addBox(2.86f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
-                        addBox(2.85f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                        // Adjusted math to keep eyes fully inside the canvas borders
+                        float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
+                        float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
+                        addBox(2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                        addBox(2.865f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
                     }
                     srand(time(NULL));
                 }
@@ -708,9 +712,9 @@ void generateRooms() {
         }
 
         // --- EXPLICIT PAINTING SPAWN LOGIC ---
-        if (rooms[i].isSeekHallway || rooms[i].isSeekChase || rooms[i].isSeekFinale) {
-            rooms[i].pCount = 0; // Strictly enforce no paintings during the chase
-        } else if (!isSeekEvent || rooms[i].hasSeekEyes) {
+        if (rooms[i].isSeekHallway || rooms[i].isSeekFinale) {
+            rooms[i].pCount = 0; 
+        } else if (!isSeekEvent || rooms[i].hasSeekEyes || rooms[i].isSeekChase) {
             rooms[i].pCount = rand() % 5 + 3; 
             for(int p=0; p<rooms[i].pCount; p++) {
                 bool overlap;
