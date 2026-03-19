@@ -69,10 +69,11 @@ int seekStartRoom = 0;
 
 // --- ELEVATOR VARIABLES ---
 bool inElevator = true;
-int elevatorTimer = 1593; // 26.544 seconds at 60fps
+int elevatorTimer = 1593; // 26.544 seconds at 60fps (fallback if audio fails)
 bool elevatorDoorsOpen = false;
 bool elevatorClosing = false; // Tracks if doors are sliding shut
 float elevatorDoorOffset = 0.0f; // Tracks the sliding doors
+bool elevatorJamFinished = false; // Tracks hardware audio completion
 
 int messageTimer = 0;
 char uiMessage[50] = "";
@@ -610,7 +611,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 float pW = rooms[i].pW[p];
                 float pY = rooms[i].pY[p];
 
-                bool isSeekPainting = (rooms[i].hasSeekEyes || rooms[i].isSeekChase);
+                bool isSeekPainting = rooms[i].hasSeekEyes; // Chase rooms no longer spawn paintings to save performance
                 float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p];
                 float canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p];
                 float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
@@ -761,10 +762,9 @@ void generateRooms() {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
         }
 
-        // --- EXPLICIT PAINTING SPAWN LOGIC ---
-        if (rooms[i].isSeekHallway || rooms[i].isSeekFinale) {
+        if (rooms[i].isSeekHallway || rooms[i].isSeekFinale || rooms[i].isSeekChase) {
             rooms[i].pCount = 0; 
-        } else if (!isSeekEvent || rooms[i].hasSeekEyes || rooms[i].isSeekChase) {
+        } else if (!isSeekEvent || rooms[i].hasSeekEyes) {
             rooms[i].pCount = rand() % 5 + 3; 
             for(int p=0; p<rooms[i].pCount; p++) {
                 bool overlap;
@@ -966,7 +966,7 @@ int main() {
                 messageTimer = 0;
                 
                 // Reset to Elevator state
-                inElevator = true; elevatorTimer = 1593; elevatorDoorsOpen = false; elevatorClosing = false; elevatorDoorOffset = 0.0f;
+                inElevator = true; elevatorTimer = 1593; elevatorDoorsOpen = false; elevatorClosing = false; elevatorDoorOffset = 0.0f; elevatorJamFinished = false;
                 camX = 0.0f; camZ = 7.5f; camYaw = 0.0f; camPitch = 0.0f;
                 
                 currentChunk = 0;
@@ -1020,7 +1020,7 @@ int main() {
         if (rushCooldown > 0) rushCooldown--; 
         if (eyesSoundCooldown > 0) eyesSoundCooldown--;
 
-        // --- ELEVATOR TIMER LOGIC ---
+        // --- ELEVATOR TIMER & AUDIO LOGIC ---
         if (inElevator && !elevatorDoorsOpen) {
             if (elevatorTimer == 1593 && audio_ok && sndElevatorJam.data_vaddr) {
                 ndspChnWaveBufClear(9);
@@ -1028,9 +1028,22 @@ int main() {
                 ndspChnWaveBufAdd(9, &sndElevatorJam);
             }
 
-            elevatorTimer--;
+            if (elevatorTimer > 0) elevatorTimer--;
 
-            if (elevatorTimer <= 0) {
+            bool timeToOpen = false;
+            
+            if (audio_ok && sndElevatorJam.data_vaddr) {
+                // Check if audio has finished playing (give it a few frames to actually start first)
+                if (elevatorTimer < 1590 && sndElevatorJam.status == NDSP_WBUF_DONE && !elevatorJamFinished) {
+                    timeToOpen = true;
+                }
+            } else if (elevatorTimer <= 0 && !elevatorJamFinished) {
+                // Fallback purely on frames if audio is entirely missing or broken
+                timeToOpen = true;
+            }
+
+            if (timeToOpen) {
+                elevatorJamFinished = true;
                 elevatorDoorsOpen = true; 
                 needsVBOUpdate = true;
                 if (audio_ok) {
@@ -1237,10 +1250,18 @@ int main() {
                             rooms[safeRoom].isJammed = true;  
                             needsVBOUpdate = true;
                             
-                            if (audio_ok && sndDoor.data_vaddr) {
-                                ndspChnWaveBufClear(1);
-                                sndDoor.status = NDSP_WBUF_FREE;
-                                ndspChnWaveBufAdd(1, &sndDoor);
+                            if (audio_ok) {
+                                if (sndDoor.data_vaddr) {
+                                    ndspChnWaveBufClear(1);
+                                    sndDoor.status = NDSP_WBUF_FREE;
+                                    ndspChnWaveBufAdd(1, &sndDoor);
+                                }
+                                
+                                ndspChnWaveBufClear(7); 
+                                if (sndSeekEscaped.data_vaddr) {
+                                    sndSeekEscaped.status = NDSP_WBUF_FREE;
+                                    ndspChnWaveBufAdd(7, &sndSeekEscaped);
+                                }
                             }
                         }
                         
@@ -1249,14 +1270,6 @@ int main() {
                             seekActive = false;
                             seekState = 0;
                             sprintf(uiMessage, "You escaped!"); messageTimer = 150;
-                            
-                            if (audio_ok) {
-                                ndspChnWaveBufClear(7); 
-                                if (sndSeekEscaped.data_vaddr) {
-                                    sndSeekEscaped.status = NDSP_WBUF_FREE;
-                                    ndspChnWaveBufAdd(7, &sndSeekEscaped);
-                                }
-                            }
                         } else {
                             playerHealth = 0; isDead = true; flashRedFrames = 50;
                             sprintf(uiMessage, "The door slammed shut!"); messageTimer = 120;
@@ -1517,11 +1530,12 @@ int main() {
                 // --- ELEVATOR BUTTON CHECK ---
                 if (inElevator && !elevatorDoorsOpen) {
                     if (camX > 0.0f && camZ > 5.0f && camZ < 8.0f) { 
+                        elevatorJamFinished = true; // Mark as finished so auto-open doesn't trigger again
                         elevatorDoorsOpen = true;
                         interacted = true;
                         needsVBOUpdate = true;
                         if (audio_ok) {
-                            ndspChnWaveBufClear(9); 
+                            ndspChnWaveBufClear(9); // Cuts off the grinding sound if it's still playing
                             if (sndElevatorJamEnd.data_vaddr) {
                                 sndElevatorJamEnd.status = NDSP_WBUF_FREE;
                                 ndspChnWaveBufAdd(9, &sndElevatorJamEnd);
