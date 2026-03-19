@@ -646,9 +646,8 @@ void generateRooms() {
 
         if (i >= seekStartRoom - 5 && i < seekStartRoom) {
             rooms[i].hasSeekEyes = true;
-            // Exponential scaling for a massive eye buildup
             int step = (i - (seekStartRoom - 5) + 1);
-            rooms[i].seekEyeCount = step * step * 6; 
+            rooms[i].seekEyeCount = (step * 2) + 3; 
         }
         
         if (i >= seekStartRoom && i <= seekStartRoom + 2) {
@@ -872,6 +871,10 @@ int main() {
 
     float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
+    
+    // --- Touch Control Variables ---
+    static u16 lastTouchX = 0, lastTouchY = 0;
+    static bool wasTouching = false;
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
@@ -1529,7 +1532,7 @@ int main() {
                 currentChunk = newChunk; needsVBOUpdate = true; 
             }
 
-            // --- OPTIMIZED ROOM CHECK SYNC ---
+            // --- OPTIMIZED ROOM CHECK SYNC & LOCKING ---
             int startRoom = currentChunk - 1; 
             int endRoom = currentChunk + 2;
             if (currentChunk >= seekStartRoom && currentChunk <= seekStartRoom + 2) {
@@ -1546,9 +1549,16 @@ int main() {
 
                 float wallZ = -10.0f - (i * 10.0f);
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                
+                // --- ANTI-BACKTRACKING LOCK ---
+                // If you fully cross the door while it's open, slam it shut and lock it permanently
+                if (camZ < wallZ - 1.5f && doorOpen[i]) {
+                    rooms[i].isJammed = true; 
+                }
+                
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
                 
-                // --- JAMMED DOORS WILL NEVER AUTO-OPEN ---
+                // JAMMED DOORS WILL NEVER AUTO-OPEN
                 if (rooms[i].isLocked || rooms[i].isJammed) shouldBeOpen = false; 
                 
                 if (doorOpen[i] != shouldBeOpen) {
@@ -1572,10 +1582,27 @@ int main() {
 
             circlePosition cStick, cPad;
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
+            touchPosition touch; hidTouchRead(&touch);
             
             if (hideState == NOT_HIDING && seekState != 1) {
+                // --- CAMERA CONTROLS (C-Stick + Touch Screen) ---
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
+                
+                if (kHeld & KEY_TOUCH) {
+                    if (wasTouching) {
+                        float dx = (float)touch.px - lastTouchX;
+                        float dy = (float)touch.py - lastTouchY;
+                        camYaw -= dx * 0.005f; 
+                        camPitch += dy * 0.005f; 
+                    }
+                    lastTouchX = touch.px;
+                    lastTouchY = touch.py;
+                    wasTouching = true;
+                } else {
+                    wasTouching = false;
+                }
+                
                 if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
                 
                 if (abs(cPad.dy) > 15 || abs(cPad.dx) > 15) {
