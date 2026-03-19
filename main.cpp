@@ -1238,7 +1238,8 @@ int main() {
                     float finishLineZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 10.0f; 
                     int safeRoom = seekStartRoom + 9;
                     
-                    bool playerSafe = (camZ < finishLineZ);
+                    // ADDED A 1.5 UNIT BUFFER SO THE PLAYER IS FULLY INSIDE THE ROOM BEFORE THE DOOR SLAMS
+                    bool playerSafe = (camZ < finishLineZ - 1.5f);
                     
                     // Trigger if player safely crosses the finish line OR if Seek catches up to the door
                     if (playerSafe || seekZ < finishLineZ + 3.0f) {
