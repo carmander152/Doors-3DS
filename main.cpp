@@ -71,6 +71,7 @@ int seekStartRoom = 0;
 bool inElevator = true;
 int elevatorTimer = 1800; // 30 seconds at 60fps
 bool elevatorDoorsOpen = false;
+bool elevatorClosing = false; // NEW: Tracks if doors are sliding shut
 float elevatorDoorOffset = 0.0f; // Tracks the sliding doors
 
 int messageTimer = 0;
@@ -376,17 +377,23 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(1.8f, 0.6f, 6.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); 
         addBox(1.75f, 0.7f, 6.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); 
 
-        // Sliding Doors at z=5.0f (Slide apart perfectly into the lobby wall gap)
-        addBox(-2.0f - elevatorDoorOffset, 0.0f, 5.0f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); 
-        addBox(0.0f + elevatorDoorOffset, 0.0f, 5.0f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  
+        // Sliding Doors (Moved back slightly to z=5.05 so they slide into the wall smoothly)
+        addBox(-2.0f - elevatorDoorOffset, 0.0f, 5.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); 
+        addBox(0.0f + elevatorDoorOffset, 0.0f, 5.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  
 
-        // Black Center Line (Disappears as soon as doors open)
+        // Black Center Line (Visible line between doors. Disappears when doors open wide enough)
         if (elevatorDoorOffset < 0.05f) {
-            addBox(-0.02f, 0.0f, 4.98f, 0.04f, 2.0f, 0.04f, 0.0f, 0.0f, 0.0f, false);
+            // Z=5.04 ensures it's directly in front of the z=5.05 doors to prevent clipping
+            addBox(-0.02f, 0.0f, 5.04f, 0.04f, 2.0f, 0.12f, 0.0f, 0.0f, 0.0f, false);
+        }
+
+        // --- INVISIBLE WALL (Blocks player when doors start closing) ---
+        if (elevatorClosing) {
+            collisions.push_back({-2.0f, 0.0f, 4.8f, 2.0f, 2.0f, 5.1f, 0});
         }
 
         // --- LOBBY STRUCTURE ---
-        // Lobby Floor (Collision false so you can walk on it)
+        // Lobby Floor
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
         // Lobby Ceiling
         addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
@@ -399,8 +406,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
         // --- SPLIT LOBBY BACK WALL ---
         // The wall is split to leave a 4-unit gap (from x=-2 to x=2) for the elevator!
-        addBox(-6.0f, 0.0f, 5.0f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Left section
-        addBox(2.0f, 0.0f, 5.0f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  // Right section
+        addBox(-6.0f, 0.0f, 4.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Left section
+        addBox(2.0f, 0.0f, 4.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  // Right section
 
         // Lobby Objects
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
@@ -411,17 +418,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(-2.5f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
-
-        addBox(-4.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(-4.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(-3.4f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        
-        addBox(2.5f, 0.0f, 4.9f, 2.0f, 1.5f, 0.1f, 0.4f, 0.4f, 0.4f, false);
-        addBox(2.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-        addBox(3.6f, 0.0f, 4.85f, 0.9f, 1.4f, 0.1f, 0.6f, 0.6f, 0.6f, false);
-
-        addBox(-1.0f, 0, 4.9f, 2.0f, 1.5f, -0.4f, 0.4f, 0.2f, 0.1f, true); 
-        addBox(-0.9f, 0, 4.5f, 1.8f, 1.4f, -0.2f, 0.5f, 0.5f, 0.5f, false); 
 
         if(!lobbyKeyPickedUp) {
             addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
@@ -915,6 +911,10 @@ int main() {
     // Starting location moved inside the elevator facing the doors
     float camX = 0.0f, camZ = 7.5f, camYaw = 0.0f, camPitch = 0.0f; 
     const char symbols[] = "@!$#&*%?";
+    
+    // --- Touch Control Variables ---
+    static float startTouchX = 0, startTouchY = 0;
+    static bool wasTouching = false;
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
@@ -966,7 +966,7 @@ int main() {
                 messageTimer = 0;
                 
                 // Reset to Elevator state
-                inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false; elevatorDoorOffset = 0.0f;
+                inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false; elevatorClosing = false; elevatorDoorOffset = 0.0f;
                 camX = 0.0f; camZ = 7.5f; camYaw = 0.0f; camPitch = 0.0f;
                 
                 currentChunk = 0;
@@ -1044,13 +1044,24 @@ int main() {
         }
         
         // --- SLIDING DOOR ANIMATION ---
-        if (elevatorDoorsOpen && elevatorDoorOffset < 2.0f) {
-            elevatorDoorOffset += 0.03f; // Speed of the doors sliding apart
+        if (elevatorDoorsOpen && !elevatorClosing && elevatorDoorOffset < 2.0f) {
+            elevatorDoorOffset += 0.03f; // Sliding open
             needsVBOUpdate = true; 
         }
 
-        if (elevatorDoorsOpen && camZ < 4.5f) {
+        // TRIGGER CLOSING
+        if (elevatorDoorsOpen && !elevatorClosing && camZ < 2.0f) {
             inElevator = false;
+            elevatorClosing = true;
+            needsVBOUpdate = true; // Sets the invisible wall
+        }
+
+        if (elevatorClosing && elevatorDoorOffset > 0.0f) {
+            elevatorDoorOffset -= 0.04f; // Sliding shut
+            if (elevatorDoorOffset <= 0.0f) {
+                elevatorDoorOffset = 0.0f;
+            }
+            needsVBOUpdate = true;
         }
 
         printf("\x1b[1;1H"); 
@@ -1696,19 +1707,26 @@ int main() {
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 
-                // --- NEW CAMERA CONTROLS (Joystick Touch Screen) ---
+                // --- CAMERA CONTROLS (Virtual Touch Joystick) ---
                 if (kHeld & KEY_TOUCH) {
-                    // Assuming standard 3DS lower screen 320x240 (center is 160, 120)
-                    float dx = (float)touch.px - 160.0f;
-                    float dy = (float)touch.py - 120.0f;
-                    
-                    // Deadzone to prevent drifting if not perfectly centered
-                    if (abs(dx) < 15.0f) dx = 0.0f;
-                    if (abs(dy) < 15.0f) dy = 0.0f;
+                    if (!wasTouching) {
+                        startTouchX = touch.px;
+                        startTouchY = touch.py;
+                        wasTouching = true;
+                    } else {
+                        float dx = (float)touch.px - startTouchX;
+                        float dy = (float)touch.py - startTouchY;
+                        
+                        // Small deadzone so your thumb doesn't accidentally cause drift
+                        if (abs(dx) < 10.0f) dx = 0.0f;
+                        if (abs(dy) < 10.0f) dy = 0.0f;
 
-                    // High sensitivity joystick panning (0.08f multiplier makes it fast!)
-                    camYaw -= (dx / 160.0f) * 0.08f; 
-                    camPitch -= (dy / 120.0f) * 0.08f; // Inverted mapping built in
+                        // Calculate sensitivity
+                        camYaw -= (dx / 160.0f) * 0.06f; 
+                        camPitch -= (dy / 120.0f) * 0.06f; // Y-Axis inverted natively 
+                    }
+                } else {
+                    wasTouching = false; // Reset the center when you let go
                 }
                 
                 if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
