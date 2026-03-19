@@ -71,6 +71,7 @@ int seekStartRoom = 0;
 bool inElevator = true;
 int elevatorTimer = 1800; // 30 seconds at 60fps
 bool elevatorDoorsOpen = false;
+float elevatorDoorOffset = 0.0f; // Tracks the sliding doors
 
 int messageTimer = 0;
 char uiMessage[50] = "";
@@ -181,7 +182,7 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     vertex v[] = {
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
-        {{x, y, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x2, y, z2, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
         {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
@@ -361,20 +362,27 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     if (currentChunk < 2) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         
-        // --- NEW ELEVATOR BOX ---
-        addBox(-2.0f, 0.0f, 6.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); // Back Wall
-        addBox(-2.0f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true); // Left Wall
-        addBox(1.9f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  // Right Wall
-        addBox(-2.0f, 2.0f, 6.0f, 4.0f, 0.1f, 4.0f, 0.8f, 0.8f, 0.8f, false); // Ceiling
+        // --- UPGRADED ELEVATOR BOX ---
+        // Floor & Ceiling
+        addBox(-2.0f, 0.0f, 5.9f, 4.0f, 0.01f, 4.2f, 0.2f, 0.2f, 0.2f, true); // Floor
+        addBox(-2.0f, 2.0f, 5.9f, 4.0f, 0.1f, 4.2f, 0.8f, 0.8f, 0.8f, false); // Ceiling
         
-        // Elevator Button Panel
-        addBox(1.8f, 1.0f, 7.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); // Panel
-        addBox(1.75f, 1.1f, 7.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); // Green Button
+        // Walls
+        addBox(-2.0f, 0.0f, 10.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); // Back Wall (behind player)
+        addBox(-2.0f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  // Left Wall
+        addBox(1.9f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);   // Right Wall
+        
+        // Elevator Button Panel (Moved down)
+        addBox(1.8f, 0.6f, 7.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); // Panel
+        addBox(1.75f, 0.7f, 7.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); // Green Button
 
-        if (!elevatorDoorsOpen) {
-            // Draw closed elevator doors at camZ = 5.9f
-            addBox(-2.0f, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); // Left sliding door
-            addBox(0.0f, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); // Right sliding door
+        // Sliding Doors (uses the offset variable to slide apart)
+        addBox(-2.0f - elevatorDoorOffset, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); // Left sliding door
+        addBox(0.0f + elevatorDoorOffset, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  // Right sliding door
+
+        // Black Center Line (Disappears as soon as doors start opening)
+        if (elevatorDoorOffset < 0.05f) {
+            addBox(-0.02f, 0.0f, 5.88f, 0.04f, 2.0f, 0.04f, 0.0f, 0.0f, 0.0f, false);
         }
 
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
@@ -908,6 +916,9 @@ int main() {
         u32 kDown = hidKeysDown();
         u32 kHeld = hidKeysHeld(); 
         
+        // EXIT GAME BUTTON (Mapped to SELECT now)
+        if (kDown & KEY_SELECT) break;
+        
         bool needsVBOUpdate = false; 
         static bool deathSoundPlayed = false;
 
@@ -950,7 +961,7 @@ int main() {
                 messageTimer = 0;
                 
                 // Reset to Elevator state
-                inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false;
+                inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false; elevatorDoorOffset = 0.0f;
                 camX = 0.0f; camZ = 8.0f; camYaw = 0.0f; camPitch = 0.0f;
                 
                 currentChunk = 0;
@@ -975,7 +986,8 @@ int main() {
                 eyesDamageTimer = 0; eyesDamageAccumulator = 0; eyesGraceTimer = 0;
                 consoleClear(); 
                 continue; 
-            } else break; 
+            }
+            // Removed the "else break;" here so you can press START anytime without quitting
         }
 
         if ((kDown & KEY_Y) && (kHeld & KEY_R) && playerCurrentRoom == -1 && !isDead) {
@@ -1027,6 +1039,12 @@ int main() {
             }
         }
         
+        // --- NEW: SLIDING DOOR ANIMATION ---
+        if (elevatorDoorsOpen && elevatorDoorOffset < 2.0f) {
+            elevatorDoorOffset += 0.03f; // Speed of the doors opening
+            needsVBOUpdate = true; 
+        }
+
         if (elevatorDoorsOpen && camZ < 5.0f) {
             inElevator = false;
         }
