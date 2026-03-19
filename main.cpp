@@ -102,6 +102,7 @@ bool isLookingAtEyes = false;
 int eyesDamageTimer = 0;
 int eyesDamageAccumulator = 0; 
 int eyesGraceTimer = 0; 
+int eyesSoundCooldown = 0; // Prevent audio spam
 
 // --- ROOM DISPLAY HELPERS ---
 int getDisplayRoom(int idx) {
@@ -400,7 +401,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
         
         // --- 1. SEPARATE WALL TINT ---
-        // Keep the dividing wall neutral so it doesn't spoil the next room
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
         } else {
@@ -436,7 +436,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         }
 
         // --- 2. ROOM INTERIOR TINT ---
-        // Apply the purple glow only to the inside of the room
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
         } else if (rooms[i].hasEyes) { 
@@ -577,7 +576,7 @@ void generateRooms() {
         rooms[i].isSeekFinale = false;
         rooms[i].seekEyeCount = 0;
         
-        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 8); 
+        bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
         
         if (i > 0 && rand() % 100 < 8 && !isSeekEvent) rooms[i].lightLevel = 0.3f; 
         else rooms[i].lightLevel = 1.0f; 
@@ -607,7 +606,7 @@ void generateRooms() {
             rooms[i].doorPos = 1; 
         }
 
-        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 8);
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
 
         rooms[i].isDupeRoom = (!isSeekChaseEvent && i > 1 && (rand() % 100 < 15));
         if (rooms[i].isDupeRoom) {
@@ -709,8 +708,8 @@ void generateRooms() {
     rooms[0].hasEyes = false;
     
     for(int i=2; i<TOTAL_ROOMS - 1; i++) {
-        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 8);
-        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 8);
+        bool isSeekChaseEvent = (i >= seekStartRoom && i <= seekStartRoom + 9);
+        bool prevIsSeekChaseEvent = ((i-1) >= seekStartRoom && (i-1) <= seekStartRoom + 9);
 
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && !isSeekChaseEvent && !prevIsSeekChaseEvent && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
@@ -830,6 +829,7 @@ int main() {
                 seekActive = false;
                 seekState = 0;
                 seekTimer = 0;
+                eyesSoundCooldown = 0;
 
                 generateRooms(); 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
@@ -871,6 +871,7 @@ int main() {
         if (messageTimer > 0) messageTimer--;
         if (screechCooldown > 0) screechCooldown--;
         if (rushCooldown > 0) rushCooldown--; 
+        if (eyesSoundCooldown > 0) eyesSoundCooldown--;
 
         printf("\x1b[1;1H"); 
         printf("==============================\n");
@@ -1019,7 +1020,7 @@ int main() {
                                 camZ += 1.5f; 
                                 sprintf(uiMessage, "Burned! (-40 HP)"); messageTimer = 60;
                                 if(playerHealth <= 0) { isDead = true; if (audio_ok) ndspChnWaveBufClear(7); }
-                            } else if (type == 1 && !isDead) { 
+                            } else if (type == 1 && !isDead && !isCrouching) { 
                                 playerHealth = 0; isDead = true; flashRedFrames = 50;
                                 sprintf(uiMessage, "The hands grabbed you!"); messageTimer = 120;
                                 if (audio_ok) ndspChnWaveBufClear(7); 
@@ -1112,18 +1113,22 @@ int main() {
                             eyesDamageTimer = 5; 
                             eyesDamageAccumulator = 4; 
                             
-                            if (audio_ok && sndEyesAttack.data_vaddr) {
+                            if (audio_ok && sndEyesAttack.data_vaddr && eyesSoundCooldown <= 0) {
                                 ndspChnWaveBufClear(4); 
                                 sndEyesAttack.status = NDSP_WBUF_FREE;
                                 ndspChnWaveBufAdd(4, &sndEyesAttack);
+                                eyesSoundCooldown = 90;
                             }
                         }
                         
                         if (audio_ok && sndEyesAttack.data_vaddr) {
                             if (sndEyesAttack.status == NDSP_WBUF_DONE || sndEyesAttack.status == NDSP_WBUF_FREE) {
-                                ndspChnWaveBufClear(4); 
-                                sndEyesAttack.status = NDSP_WBUF_FREE;
-                                ndspChnWaveBufAdd(4, &sndEyesAttack);
+                                if (eyesSoundCooldown <= 0) {
+                                    ndspChnWaveBufClear(4); 
+                                    sndEyesAttack.status = NDSP_WBUF_FREE;
+                                    ndspChnWaveBufAdd(4, &sndEyesAttack);
+                                    eyesSoundCooldown = 90;
+                                }
                             }
                         }
                         
@@ -1151,7 +1156,7 @@ int main() {
                 isLookingAtEyes = false; eyesDamageTimer = 0; eyesDamageAccumulator = 0;
             }
 
-            bool inSeekEvent = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 8);
+            bool inSeekEvent = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 9);
 
             int screechChance = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 12000;
             if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && !inSeekEvent && (rand() % screechChance == 0)) {
