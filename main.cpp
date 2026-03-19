@@ -1240,8 +1240,8 @@ int main() {
                     
                     bool playerSafe = (camZ < finishLineZ);
                     
-                    // Seek approaches the door
-                    if (seekZ < finishLineZ + 3.0f) {
+                    // Trigger if player safely crosses the finish line OR if Seek catches up to the door
+                    if (playerSafe || seekZ < finishLineZ + 3.0f) {
                         
                         // Slam the door if it isn't slammed already
                         if (!rooms[safeRoom].isJammed) {
@@ -1257,7 +1257,7 @@ int main() {
                                     ndspChnWaveBufAdd(1, &sndDoor);
                                 }
                                 
-                                ndspChnWaveBufClear(7); 
+                                ndspChnWaveBufClear(7); // Instantly stops the chase music
                                 if (sndSeekEscaped.data_vaddr) {
                                     sndSeekEscaped.status = NDSP_WBUF_FREE;
                                     ndspChnWaveBufAdd(7, &sndSeekEscaped);
@@ -1265,7 +1265,6 @@ int main() {
                             }
                         }
                         
-                        // Check player status
                         if (playerSafe) {
                             seekActive = false;
                             seekState = 0;
@@ -1684,10 +1683,7 @@ int main() {
                 float wallZ = -10.0f - (i * 10.0f);
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
                 
-                // --- ANTI-BACKTRACKING LOCK ---
-                if (camZ < wallZ - 1.5f && doorOpen[i]) {
-                    rooms[i].isJammed = true; 
-                }
+                // --- REMOVED ANTI-BACKTRACKING LOCK SO DOORS DON'T JAM ---
                 
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
                 
