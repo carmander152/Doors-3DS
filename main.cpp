@@ -182,7 +182,7 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     vertex v[] = {
         {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
         {{x2, y, z, 1}, {r,g,b,1}}, {{x2, y2, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}},
-        {{x, y, z, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
+        {{x, y, z2, 1}, {r,g,b,1}}, {{x2, y, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x2, y, z2, 1}, {r,g,b,1}}, {{x2, y2, z2, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}},
         {{x, y, z, 1}, {r,g,b,1}}, {{x, y2, z, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
         {{x, y2, z, 1}, {r,g,b,1}}, {{x, y2, z2, 1}, {r,g,b,1}}, {{x, y, z2, 1}, {r,g,b,1}},
@@ -363,36 +363,46 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         
         // --- UPGRADED ELEVATOR BOX ---
-        // Floor & Ceiling
-        addBox(-2.0f, 0.0f, 5.9f, 4.0f, 0.01f, 4.2f, 0.2f, 0.2f, 0.2f, true); // Floor
-        addBox(-2.0f, 2.0f, 5.9f, 4.0f, 0.1f, 4.2f, 0.8f, 0.8f, 0.8f, false); // Ceiling
+        // Floor & Ceiling (Floor collision is FALSE so player can walk on it freely)
+        addBox(-2.0f, 0.0f, 5.0f, 4.0f, 0.01f, 4.0f, 0.2f, 0.2f, 0.2f, false); 
+        addBox(-2.0f, 2.0f, 5.0f, 4.0f, 0.1f, 4.0f, 0.8f, 0.8f, 0.8f, false); 
         
         // Walls
-        addBox(-2.0f, 0.0f, 10.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); // Back Wall (behind player)
-        addBox(-2.0f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  // Left Wall
-        addBox(1.9f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);   // Right Wall
+        addBox(-2.0f, 0.0f, 9.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); // Back Wall (behind player)
+        addBox(-2.0f, 0.0f, 5.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  // Left Wall
+        addBox(1.9f, 0.0f, 5.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);   // Right Wall
         
         // Elevator Button Panel (Moved down)
-        addBox(1.8f, 0.6f, 7.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); // Panel
-        addBox(1.75f, 0.7f, 7.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); // Green Button
+        addBox(1.8f, 0.6f, 6.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); 
+        addBox(1.75f, 0.7f, 6.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); 
 
-        // Sliding Doors (uses the offset variable to slide apart)
-        addBox(-2.0f - elevatorDoorOffset, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); // Left sliding door
-        addBox(0.0f + elevatorDoorOffset, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  // Right sliding door
+        // Sliding Doors at z=5.0f (Slide apart perfectly into the lobby wall gap)
+        addBox(-2.0f - elevatorDoorOffset, 0.0f, 5.0f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); 
+        addBox(0.0f + elevatorDoorOffset, 0.0f, 5.0f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  
 
-        // Black Center Line (Disappears as soon as doors start opening)
+        // Black Center Line (Disappears as soon as doors open)
         if (elevatorDoorOffset < 0.05f) {
-            addBox(-0.02f, 0.0f, 5.88f, 0.04f, 2.0f, 0.04f, 0.0f, 0.0f, 0.0f, false);
+            addBox(-0.02f, 0.0f, 4.98f, 0.04f, 2.0f, 0.04f, 0.0f, 0.0f, 0.0f, false);
         }
 
+        // --- LOBBY STRUCTURE ---
+        // Lobby Floor (Collision false so you can walk on it)
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
+        // Lobby Ceiling
         addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
+        
+        // Lobby Outer Walls
         addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
         addBox(6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  
         addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
         addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  
-        addBox(-6.0f, 0, 5.0f, 12.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
 
+        // --- SPLIT LOBBY BACK WALL ---
+        // The wall is split to leave a 4-unit gap (from x=-2 to x=2) for the elevator!
+        addBox(-6.0f, 0.0f, 5.0f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Left section
+        addBox(2.0f, 0.0f, 5.0f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  // Right section
+
+        // Lobby Objects
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
@@ -841,7 +851,6 @@ int main() {
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        // Extended up to channel 10 to include elevator audio buffers safely
         for(int i=0; i<=10; i++) { 
             ndspChnSetInterp(i, NDSP_INTERP_LINEAR);
             ndspChnSetRate(i, 44100);
@@ -903,20 +912,16 @@ int main() {
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    // Starting location moved inside the elevator
-    float camX = 0, camZ = 8.0f, camYaw = 0, camPitch = 0; 
+    // Starting location moved inside the elevator facing the doors
+    float camX = 0.0f, camZ = 7.5f, camYaw = 0.0f, camPitch = 0.0f; 
     const char symbols[] = "@!$#&*%?";
-    
-    // --- Touch Control Variables ---
-    static u16 lastTouchX = 0, lastTouchY = 0;
-    static bool wasTouching = false;
 
     while (aptMainLoop()) {
         hidScanInput(); irrstScanInput();
         u32 kDown = hidKeysDown();
         u32 kHeld = hidKeysHeld(); 
         
-        // EXIT GAME BUTTON (Mapped to SELECT now)
+        // EXIT GAME BUTTON
         if (kDown & KEY_SELECT) break;
         
         bool needsVBOUpdate = false; 
@@ -962,7 +967,7 @@ int main() {
                 
                 // Reset to Elevator state
                 inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false; elevatorDoorOffset = 0.0f;
-                camX = 0.0f; camZ = 8.0f; camYaw = 0.0f; camPitch = 0.0f;
+                camX = 0.0f; camZ = 7.5f; camYaw = 0.0f; camPitch = 0.0f;
                 
                 currentChunk = 0;
                 playerCurrentRoom = -1;
@@ -987,7 +992,6 @@ int main() {
                 consoleClear(); 
                 continue; 
             }
-            // Removed the "else break;" here so you can press START anytime without quitting
         }
 
         if ((kDown & KEY_Y) && (kHeld & KEY_R) && playerCurrentRoom == -1 && !isDead) {
@@ -1039,13 +1043,13 @@ int main() {
             }
         }
         
-        // --- NEW: SLIDING DOOR ANIMATION ---
+        // --- SLIDING DOOR ANIMATION ---
         if (elevatorDoorsOpen && elevatorDoorOffset < 2.0f) {
-            elevatorDoorOffset += 0.03f; // Speed of the doors opening
+            elevatorDoorOffset += 0.03f; // Speed of the doors sliding apart
             needsVBOUpdate = true; 
         }
 
-        if (elevatorDoorsOpen && camZ < 5.0f) {
+        if (elevatorDoorsOpen && camZ < 4.5f) {
             inElevator = false;
         }
 
@@ -1499,9 +1503,9 @@ int main() {
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
                 bool interacted = false; // Prevents overlapping messages
 
-                // --- NEW ELEVATOR BUTTON CHECK ---
+                // --- ELEVATOR BUTTON CHECK ---
                 if (inElevator && !elevatorDoorsOpen) {
-                    if (camX > 0.5f && camZ > 6.5f) { 
+                    if (camX > 0.0f && camZ > 5.0f && camZ < 8.0f) { 
                         elevatorDoorsOpen = true;
                         interacted = true;
                         needsVBOUpdate = true;
@@ -1656,14 +1660,12 @@ int main() {
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
                 
                 // --- ANTI-BACKTRACKING LOCK ---
-                // If you fully cross the door while it's open, slam it shut and lock it permanently
                 if (camZ < wallZ - 1.5f && doorOpen[i]) {
                     rooms[i].isJammed = true; 
                 }
                 
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
                 
-                // JAMMED DOORS WILL NEVER AUTO-OPEN
                 if (rooms[i].isLocked || rooms[i].isJammed) shouldBeOpen = false; 
                 
                 if (doorOpen[i] != shouldBeOpen) {
@@ -1690,26 +1692,28 @@ int main() {
             touchPosition touch; hidTouchRead(&touch);
             
             if (hideState == NOT_HIDING && seekState != 1) {
-                // --- CAMERA CONTROLS (C-Stick + Touch Screen) ---
+                // --- CAMERA CONTROLS (C-Stick) ---
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 
+                // --- NEW CAMERA CONTROLS (Joystick Touch Screen) ---
                 if (kHeld & KEY_TOUCH) {
-                    if (wasTouching) {
-                        float dx = (float)touch.px - lastTouchX;
-                        float dy = (float)touch.py - lastTouchY;
-                        camYaw -= dx * 0.005f; 
-                        camPitch -= dy * 0.005f; // Inverted Y-Axis
-                    }
-                    lastTouchX = touch.px;
-                    lastTouchY = touch.py;
-                    wasTouching = true;
-                } else {
-                    wasTouching = false;
+                    // Assuming standard 3DS lower screen 320x240 (center is 160, 120)
+                    float dx = (float)touch.px - 160.0f;
+                    float dy = (float)touch.py - 120.0f;
+                    
+                    // Deadzone to prevent drifting if not perfectly centered
+                    if (abs(dx) < 15.0f) dx = 0.0f;
+                    if (abs(dy) < 15.0f) dy = 0.0f;
+
+                    // High sensitivity joystick panning (0.08f multiplier makes it fast!)
+                    camYaw -= (dx / 160.0f) * 0.08f; 
+                    camPitch -= (dy / 120.0f) * 0.08f; // Inverted mapping built in
                 }
                 
                 if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
                 
+                // Movement Controls
                 if (abs(cPad.dy) > 15 || abs(cPad.dx) > 15) {
                     float s = isCrouching ? 0.16f : 0.28f; 
                     if (seekState == 2) {
