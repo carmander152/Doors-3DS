@@ -67,6 +67,11 @@ bool isDead = false;
 HideState hideState = NOT_HIDING; 
 int seekStartRoom = 0; 
 
+// --- ELEVATOR VARIABLES ---
+bool inElevator = true;
+int elevatorTimer = 1800; // 30 seconds at 60fps
+bool elevatorDoorsOpen = false;
+
 int messageTimer = 0;
 char uiMessage[50] = "";
 
@@ -356,6 +361,22 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     if (currentChunk < 2) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         
+        // --- NEW ELEVATOR BOX ---
+        addBox(-2.0f, 0.0f, 6.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); // Back Wall
+        addBox(-2.0f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true); // Left Wall
+        addBox(1.9f, 0.0f, 6.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  // Right Wall
+        addBox(-2.0f, 2.0f, 6.0f, 4.0f, 0.1f, 4.0f, 0.8f, 0.8f, 0.8f, false); // Ceiling
+        
+        // Elevator Button Panel
+        addBox(1.8f, 1.0f, 7.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); // Panel
+        addBox(1.75f, 1.1f, 7.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); // Green Button
+
+        if (!elevatorDoorsOpen) {
+            // Draw closed elevator doors at camZ = 5.9f
+            addBox(-2.0f, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); // Left sliding door
+            addBox(0.0f, 0.0f, 5.9f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); // Right sliding door
+        }
+
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
         addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
         addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
@@ -806,11 +827,14 @@ int main() {
     ndspWaveBuf sndSeekChase = {0}; 
     ndspWaveBuf sndSeekEscaped = {0}; 
     ndspWaveBuf sndDeath = {0}; 
+    ndspWaveBuf sndElevatorJam = {0};
+    ndspWaveBuf sndElevatorJamEnd = {0};
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        for(int i=0; i<=8; i++) { 
+        // Extended up to channel 10 to include elevator audio buffers safely
+        for(int i=0; i<=10; i++) { 
             ndspChnSetInterp(i, NDSP_INTERP_LINEAR);
             ndspChnSetRate(i, 44100);
             ndspChnSetFormat(i, NDSP_FORMAT_MONO_PCM16);
@@ -835,6 +859,8 @@ int main() {
         sndSeekEscaped = loadWav("romfs:/Seek_Escaped.wav"); 
         
         sndDeath = loadWav("romfs:/Player_Death.wav"); 
+        sndElevatorJam = loadWav("romfs:/Elevator_Jam.wav");
+        sndElevatorJamEnd = loadWav("romfs:/Elevator_Jam_End.wav");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -869,7 +895,8 @@ int main() {
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    float camX = 0, camZ = -1.0f, camYaw = 0, camPitch = 0; 
+    // Starting location moved inside the elevator
+    float camX = 0, camZ = 8.0f, camYaw = 0, camPitch = 0; 
     const char symbols[] = "@!$#&*%?";
     
     // --- Touch Control Variables ---
@@ -891,6 +918,7 @@ int main() {
                     ndspChnWaveBufClear(3); // Cut Rush
                     ndspChnWaveBufClear(5); // Cut Eyes Garble
                     ndspChnWaveBufClear(7); // Cut Seek
+                    ndspChnWaveBufClear(9); // Cut Elevator audio
                     
                     bool waitForAttackAudio = false;
                     if (sndAttack.status == NDSP_WBUF_PLAYING || sndAttack.status == NDSP_WBUF_QUEUED) waitForAttackAudio = true;
@@ -920,7 +948,11 @@ int main() {
                 screechCooldown = 1800; rushActive = false; rushState = 0;
                 rushCooldown = 0; 
                 messageTimer = 0;
-                camX = 0.0f; camZ = -1.0f; camYaw = 0.0f; camPitch = 0.0f;
+                
+                // Reset to Elevator state
+                inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false;
+                camX = 0.0f; camZ = 8.0f; camYaw = 0.0f; camPitch = 0.0f;
+                
                 currentChunk = 0;
                 playerCurrentRoom = -1;
                 for(int i=0; i<TOTAL_ROOMS; i++) doorOpen[i] = false;
@@ -937,7 +969,7 @@ int main() {
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
                 
                 if (audio_ok) {
-                    for(int i=3; i<=8; i++) ndspChnWaveBufClear(i); 
+                    for(int i=3; i<=10; i++) ndspChnWaveBufClear(i); 
                 }
                 inEyesRoom = false; isLookingAtEyes = false;
                 eyesDamageTimer = 0; eyesDamageAccumulator = 0; eyesGraceTimer = 0;
@@ -971,6 +1003,33 @@ int main() {
         if (screechCooldown > 0) screechCooldown--;
         if (rushCooldown > 0) rushCooldown--; 
         if (eyesSoundCooldown > 0) eyesSoundCooldown--;
+
+        // --- ELEVATOR TIMER LOGIC ---
+        if (inElevator && !elevatorDoorsOpen) {
+            if (elevatorTimer == 1800 && audio_ok && sndElevatorJam.data_vaddr) {
+                ndspChnWaveBufClear(9);
+                sndElevatorJam.status = NDSP_WBUF_FREE;
+                ndspChnWaveBufAdd(9, &sndElevatorJam);
+            }
+
+            elevatorTimer--;
+
+            if (elevatorTimer <= 0) {
+                elevatorDoorsOpen = true; 
+                needsVBOUpdate = true;
+                if (audio_ok) {
+                    ndspChnWaveBufClear(9);
+                    if (sndElevatorJamEnd.data_vaddr) {
+                        sndElevatorJamEnd.status = NDSP_WBUF_FREE;
+                        ndspChnWaveBufAdd(9, &sndElevatorJamEnd);
+                    }
+                }
+            }
+        }
+        
+        if (elevatorDoorsOpen && camZ < 5.0f) {
+            inElevator = false;
+        }
 
         printf("\x1b[1;1H"); 
         printf("==============================\n");
@@ -1420,7 +1479,25 @@ int main() {
             }
 
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
-                if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
+                bool interacted = false; // Prevents overlapping messages
+
+                // --- NEW ELEVATOR BUTTON CHECK ---
+                if (inElevator && !elevatorDoorsOpen) {
+                    if (camX > 0.5f && camZ > 6.5f) { 
+                        elevatorDoorsOpen = true;
+                        interacted = true;
+                        needsVBOUpdate = true;
+                        if (audio_ok) {
+                            ndspChnWaveBufClear(9); 
+                            if (sndElevatorJamEnd.data_vaddr) {
+                                sndElevatorJamEnd.status = NDSP_WBUF_FREE;
+                                ndspChnWaveBufAdd(9, &sndElevatorJamEnd);
+                            }
+                        }
+                    }
+                }
+
+                if (!interacted && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
                     for(int s=0; s<3; s++) {
                         float zCenter = (-10.0f - (playerCurrentRoom * 10.0f)) - 2.5f - (s * 2.5f);
                         int type = rooms[playerCurrentRoom].slotType[s];
@@ -1440,72 +1517,82 @@ int main() {
                                     } else {
                                         sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60;
                                     }
+                                    interacted = true;
+                                    break;
                                 }
                             } else if (type == 3 || type == 4) { 
                                 if (rooms[playerCurrentRoom].slotItem[s] == 1) {
                                     hasKey = true; rooms[playerCurrentRoom].slotItem[s] = 0; needsVBOUpdate = true;
                                     sprintf(uiMessage, "Grabbed Key off the bed!"); messageTimer = 90;
+                                    interacted = true;
+                                    break;
                                 }
                             }
                         }
                     }
                 }
 
-                if(!lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
+                if(!interacted && !lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
                     lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true;
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 90;
+                    interacted = true;
                 }
 
-                for(int i=0; i<TOTAL_ROOMS; i++) {
-                    bool isHallwayMid = (i == seekStartRoom + 1 || i == seekStartRoom + 2);
-                    if (isHallwayMid) continue; 
+                if (!interacted) {
+                    for(int i=0; i<TOTAL_ROOMS; i++) {
+                        bool isHallwayMid = (i == seekStartRoom + 1 || i == seekStartRoom + 2);
+                        if (isHallwayMid) continue; 
 
-                    if (rooms[i].isLocked || rooms[i].isJammed) {
-                        float doorZ = -10.0f - (i * 10.0f);
-                        float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                        
-                        if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
-                            if (rooms[i].isJammed) {
-                                if (audio_ok && sndLockedDoor.data_vaddr) {
-                                    ndspChnWaveBufClear(1); sndLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndLockedDoor);
+                        if (rooms[i].isLocked || rooms[i].isJammed) {
+                            float doorZ = -10.0f - (i * 10.0f);
+                            float doorX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
+                            
+                            if (abs(camZ - doorZ) < 2.5f && abs(camX - doorX) < 2.0f) {
+                                if (rooms[i].isJammed) {
+                                    if (audio_ok && sndLockedDoor.data_vaddr) {
+                                        ndspChnWaveBufClear(1); sndLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndLockedDoor);
+                                    }
+                                    sprintf(uiMessage, "The door is jammed shut!"); messageTimer = 60;
+                                } else if (hasKey) {
+                                    rooms[i].isLocked = false; hasKey = false; needsVBOUpdate = true;
+                                    sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
+                                } else {
+                                    if (audio_ok && sndLockedDoor.data_vaddr) {
+                                        ndspChnWaveBufClear(1); sndLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndLockedDoor);
+                                    }
+                                    sprintf(uiMessage, "It's locked..."); messageTimer = 60;
                                 }
-                                sprintf(uiMessage, "The door is jammed shut!"); messageTimer = 60;
-                            } else if (hasKey) {
-                                rooms[i].isLocked = false; hasKey = false; needsVBOUpdate = true;
-                                sprintf(uiMessage, "Door Unlocked!"); messageTimer = 60;
-                            } else {
-                                if (audio_ok && sndLockedDoor.data_vaddr) {
-                                    ndspChnWaveBufClear(1); sndLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndLockedDoor);
-                                }
-                                sprintf(uiMessage, "It's locked..."); messageTimer = 60;
+                                interacted = true;
+                                break; 
                             }
-                            break; 
                         }
                     }
                 }
 
-                int nextRoomIdx = getNextDoorIndex(playerCurrentRoom);
-                if (nextRoomIdx >= 0 && nextRoomIdx < TOTAL_ROOMS) {
-                    int interactRoom = rooms[nextRoomIdx].isDupeRoom ? nextRoomIdx : -1;
-                    if (interactRoom != -1) {
-                        float lockDoorZ = -10.0f - (nextRoomIdx * 10.0f);
-                        if (abs(camZ - lockDoorZ) < 1.8f) {
-                            bool leftT = (camX < -1.4f), centerT = (camX >= -1.4f && camX <= 0.6f), rightT = (camX > 0.6f);
-                            int correctPos = rooms[interactRoom].correctDupePos;
+                if (!interacted) {
+                    int nextRoomIdx = getNextDoorIndex(playerCurrentRoom);
+                    if (nextRoomIdx >= 0 && nextRoomIdx < TOTAL_ROOMS) {
+                        int interactRoom = rooms[nextRoomIdx].isDupeRoom ? nextRoomIdx : -1;
+                        if (interactRoom != -1) {
+                            float lockDoorZ = -10.0f - (nextRoomIdx * 10.0f);
+                            if (abs(camZ - lockDoorZ) < 1.8f) {
+                                bool leftT = (camX < -1.4f), centerT = (camX >= -1.4f && camX <= 0.6f), rightT = (camX > 0.6f);
+                                int correctPos = rooms[interactRoom].correctDupePos;
 
-                            if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
-                                if (!doorOpen[interactRoom]) { 
-                                    if (audio_ok && sndDoor.data_vaddr) {
-                                        ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor);
+                                if ((leftT && correctPos == 0) || (centerT && correctPos == 1) || (rightT && correctPos == 2)) {
+                                    if (!doorOpen[interactRoom]) { 
+                                        if (audio_ok && sndDoor.data_vaddr) {
+                                            ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor);
+                                        }
+                                        doorOpen[interactRoom] = true; needsVBOUpdate = true;
                                     }
-                                    doorOpen[interactRoom] = true; needsVBOUpdate = true;
+                                } else if (leftT || centerT || rightT) {
+                                    if (audio_ok && sndDupeAttack.data_vaddr) {
+                                        ndspChnWaveBufClear(2); sndDupeAttack.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(2, &sndDupeAttack);
+                                    }
+                                    playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
+                                    if (playerHealth <= 0) isDead = true; 
                                 }
-                            } else if (leftT || centerT || rightT) {
-                                if (audio_ok && sndDupeAttack.data_vaddr) {
-                                    ndspChnWaveBufClear(2); sndDupeAttack.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(2, &sndDupeAttack);
-                                }
-                                playerHealth -= 34; flashRedFrames = 25; camZ += 2.0f; 
-                                if (playerHealth <= 0) isDead = true; 
                             }
                         }
                     }
@@ -1594,7 +1681,7 @@ int main() {
                         float dx = (float)touch.px - lastTouchX;
                         float dy = (float)touch.py - lastTouchY;
                         camYaw -= dx * 0.005f; 
-                        camPitch += dy * 0.005f; 
+                        camPitch -= dy * 0.005f; // Inverted Y-Axis
                     }
                     lastTouchX = touch.px;
                     lastTouchY = touch.py;
@@ -1679,6 +1766,8 @@ int main() {
         if (sndSeekChase.data_vaddr) linearFree((void*)sndSeekChase.data_vaddr); 
         if (sndSeekEscaped.data_vaddr) linearFree((void*)sndSeekEscaped.data_vaddr); 
         if (sndDeath.data_vaddr) linearFree((void*)sndDeath.data_vaddr); 
+        if (sndElevatorJam.data_vaddr) linearFree((void*)sndElevatorJam.data_vaddr); 
+        if (sndElevatorJamEnd.data_vaddr) linearFree((void*)sndElevatorJamEnd.data_vaddr); 
         ndspExit();
     }
     
