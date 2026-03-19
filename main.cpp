@@ -392,12 +392,12 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
     // --- OPTIMIZED RENDERING CHUNKS ---
     int startRoom = playerCurrentRoom - 1;
-    int endRoom = playerCurrentRoom + 1; // Only render +1 in normal hotel
+    int endRoom = playerCurrentRoom + 2; 
     
-    // Strict Chase Optimization: Only render current and +1
-    if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 9) {
-        startRoom = playerCurrentRoom; 
-        endRoom = playerCurrentRoom + 1;
+    // Force entire Seek Hallway to stay rendered while you're anywhere inside it
+    if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) {
+        startRoom = seekStartRoom;
+        endRoom = seekStartRoom + 3;
     }
 
     if (startRoom < 0) startRoom = 0;
@@ -409,6 +409,9 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         
         float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
         
+        // Skip heavily detailing +2 unless in chase setup
+        bool isTwoAheadNormal = (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale && i == playerCurrentRoom + 2);
+
         // --- 1. SEPARATE WALL TINT ---
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
@@ -453,10 +456,18 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
-        // --- WALL EYES (Optimized spawn during Chase) ---
-        if (rooms[i].hasSeekEyes || rooms[i].isSeekChase) {
+        // --- OPTIMIZED EYE RENDERING: Only render eyes in current and current+1 ---
+        bool renderEyes = true;
+        if (rooms[i].isSeekChase || rooms[i].hasSeekEyes) {
+            if (i < playerCurrentRoom || i > playerCurrentRoom + 1) {
+                renderEyes = false;
+            }
+        }
+
+        // --- WALL EYES ---
+        if (renderEyes && (rooms[i].hasSeekEyes || rooms[i].isSeekChase)) {
             srand(i * 12345); 
-            int wallEyeCount = rooms[i].hasSeekEyes ? rooms[i].seekEyeCount : 15; // Reduced from 50 to 15
+            int wallEyeCount = rooms[i].hasSeekEyes ? rooms[i].seekEyeCount : 15; 
             for (int e = 0; e < wallEyeCount; e++) {
                 bool isLeftWall = (rand() % 2 == 0);
                 float eyeZ = z - 0.5f - (rand() % 90) / 10.0f; 
@@ -526,7 +537,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         } else if (rooms[i].isSeekHallway) {
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);  
-        } else if (rooms[i].hasEyes) {
+        } else if (rooms[i].hasEyes && renderEyes) {
             float ex = rooms[i].eyesX;
             float ey = rooms[i].eyesY;
             float ez = rooms[i].eyesZ;
@@ -536,7 +547,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(ex - 0.1f, ey - 0.25f, ez - 0.1f, 0.2f, 0.5f, 0.2f, 0.9f, 0.9f, 0.9f, false, 0, L);
             addBox(ex - 0.26f, ey - 0.05f, ez - 0.05f, 0.02f, 0.1f, 0.1f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f);
             addBox(ex + 0.24f, ey - 0.05f, ez - 0.05f, 0.02f, 0.1f, 0.1f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f);
-            
         } 
 
         addBox(-3, 0, z, 6, 0.01f, -10, 0.2f, 0.1f, 0.05f, false, 0, L); 
@@ -546,65 +556,64 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         
         addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.8f : 0.2f), false);
 
-        for(int s=0; s<3; s++) {
-            float zCenter = z - 2.5f - (s * 2.5f); 
-            int type = rooms[i].slotType[s];
-            if (type == 1) buildCabinet(zCenter, true, L);
-            else if (type == 2) buildCabinet(zCenter, false, L);
-            else if (type == 3) buildBed(zCenter, true, rooms[i].slotItem[s], L);
-            else if (type == 4) buildBed(zCenter, false, rooms[i].slotItem[s], L);
-            else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
-            else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
-        }
+        if (!isTwoAheadNormal) {
+            for(int s=0; s<3; s++) {
+                float zCenter = z - 2.5f - (s * 2.5f); 
+                int type = rooms[i].slotType[s];
+                if (type == 1) buildCabinet(zCenter, true, L);
+                else if (type == 2) buildCabinet(zCenter, false, L);
+                else if (type == 3) buildBed(zCenter, true, rooms[i].slotItem[s], L);
+                else if (type == 4) buildBed(zCenter, false, rooms[i].slotItem[s], L);
+                else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
+                else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
+            }
 
-        // --- DRAW PAINTINGS ---
-        for(int p=0; p<rooms[i].pCount; p++) {
-            float pZ = rooms[i].pZ[p]; 
-            float pH = rooms[i].pH[p];
-            float pW = rooms[i].pW[p];
-            float pY = rooms[i].pY[p];
+            // --- DRAW PAINTINGS ---
+            for(int p=0; p<rooms[i].pCount; p++) {
+                float pZ = rooms[i].pZ[p]; 
+                float pH = rooms[i].pH[p];
+                float pW = rooms[i].pW[p];
+                float pY = rooms[i].pY[p];
 
-            bool isSeekPainting = (rooms[i].hasSeekEyes || rooms[i].isSeekChase);
-            float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p];
-            float canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p];
-            float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
+                bool isSeekPainting = (rooms[i].hasSeekEyes || rooms[i].isSeekChase);
+                float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p];
+                float canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p];
+                float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
 
-            if (rooms[i].pSide[p] == 0) {
-                // Left Wall
-                addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
-                addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
-                
-                if (isSeekPainting) {
-                    srand(i * 100 + p); 
-                    // Dynamic eye count relative to area
-                    float area = pH * pW;
-                    int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                if (rooms[i].pSide[p] == 0) {
+                    addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                    addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
                     
-                    for(int e=0; e<numEyes; e++) {
-                        float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
-                        float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
-                        addBox(-2.88f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
-                        addBox(-2.875f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                    if (isSeekPainting && renderEyes) {
+                        srand(i * 100 + p); 
+                        float area = pH * pW;
+                        int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                        
+                        for(int e=0; e<numEyes; e++) {
+                            float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
+                            float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
+                            addBox(-2.88f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                            addBox(-2.875f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                        }
+                        srand(time(NULL));
                     }
-                    srand(time(NULL));
-                }
-            } else if (rooms[i].pSide[p] == 1) {
-                // Right Wall
-                addBox(2.89f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
-                addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
-                
-                if (isSeekPainting) {
-                    srand(i * 100 + p);
-                    float area = pH * pW;
-                    int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                } else if (rooms[i].pSide[p] == 1) {
+                    addBox(2.89f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                    addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
                     
-                    for(int e=0; e<numEyes; e++) {
-                        float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
-                        float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
-                        addBox(2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
-                        addBox(2.865f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                    if (isSeekPainting && renderEyes) {
+                        srand(i * 100 + p);
+                        float area = pH * pW;
+                        int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                        
+                        for(int e=0; e<numEyes; e++) {
+                            float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f;
+                            float eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
+                            addBox(2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); 
+                            addBox(2.865f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
+                        }
+                        srand(time(NULL));
                     }
-                    srand(time(NULL));
                 }
             }
         }
@@ -637,7 +646,9 @@ void generateRooms() {
 
         if (i >= seekStartRoom - 5 && i < seekStartRoom) {
             rooms[i].hasSeekEyes = true;
-            rooms[i].seekEyeCount = (i - (seekStartRoom - 5) + 1) * 2; 
+            // Exponential scaling for a massive eye buildup
+            int step = (i - (seekStartRoom - 5) + 1);
+            rooms[i].seekEyeCount = step * step * 6; 
         }
         
         if (i >= seekStartRoom && i <= seekStartRoom + 2) {
@@ -795,12 +806,11 @@ int main() {
     ndspWaveBuf sndSeekRise = {0}; 
     ndspWaveBuf sndSeekChase = {0}; 
     ndspWaveBuf sndSeekEscaped = {0}; 
-    ndspWaveBuf sndDeath = {0}; // --- NEW DEATH SOUND ---
+    ndspWaveBuf sndDeath = {0}; 
 
     if (audio_ok) {
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         
-        // Expanded to 9 channels (0-8) to support standard looping sounds + dedicated death track
         for(int i=0; i<=8; i++) { 
             ndspChnSetInterp(i, NDSP_INTERP_LINEAR);
             ndspChnSetRate(i, 44100);
@@ -875,10 +885,9 @@ int main() {
         if (isDead) {
             if (!deathSoundPlayed) {
                 if (audio_ok) {
-                    // Instantly cut ambient / chase loops
-                    ndspChnWaveBufClear(3); // Rush
-                    ndspChnWaveBufClear(5); // Eyes Garble
-                    ndspChnWaveBufClear(7); // Seek
+                    ndspChnWaveBufClear(3); // Cut Rush
+                    ndspChnWaveBufClear(5); // Cut Eyes Garble
+                    ndspChnWaveBufClear(7); // Cut Seek
                     
                     bool waitForAttackAudio = false;
                     if (sndAttack.status == NDSP_WBUF_PLAYING || sndAttack.status == NDSP_WBUF_QUEUED) waitForAttackAudio = true;
@@ -1521,9 +1530,11 @@ int main() {
             }
 
             // --- OPTIMIZED ROOM CHECK SYNC ---
-            int startRoom = currentChunk - 1; int endRoom = currentChunk + 1;
-            if (currentChunk >= seekStartRoom && currentChunk <= seekStartRoom + 9) {
-                startRoom = currentChunk;
+            int startRoom = currentChunk - 1; 
+            int endRoom = currentChunk + 2;
+            if (currentChunk >= seekStartRoom && currentChunk <= seekStartRoom + 2) {
+                startRoom = seekStartRoom;
+                endRoom = seekStartRoom + 3;
             }
             if (startRoom < 0) startRoom = 0; if (endRoom > TOTAL_ROOMS - 1) endRoom = TOTAL_ROOMS - 1;
 
@@ -1536,7 +1547,10 @@ int main() {
                 float wallZ = -10.0f - (i * 10.0f);
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
-                if (rooms[i].isLocked) shouldBeOpen = false; 
+                
+                // --- JAMMED DOORS WILL NEVER AUTO-OPEN ---
+                if (rooms[i].isLocked || rooms[i].isJammed) shouldBeOpen = false; 
+                
                 if (doorOpen[i] != shouldBeOpen) {
                     if (shouldBeOpen && audio_ok && sndDoor.data_vaddr) {
                         ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor);
