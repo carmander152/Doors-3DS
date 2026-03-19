@@ -69,11 +69,11 @@ int seekStartRoom = 0;
 
 // --- ELEVATOR VARIABLES ---
 bool inElevator = true;
-int elevatorTimer = 1593; // 26.544 seconds at 60fps
+int elevatorTimer = 1593; 
 bool elevatorDoorsOpen = false;
-bool elevatorClosing = false; // Tracks if doors are sliding shut
-float elevatorDoorOffset = 0.0f; // Tracks the sliding doors
-bool elevatorJamFinished = false; // Tracks hardware audio completion
+bool elevatorClosing = false; 
+float elevatorDoorOffset = 0.0f; 
+bool elevatorJamFinished = false; 
 
 int messageTimer = 0;
 char uiMessage[50] = "";
@@ -222,7 +222,6 @@ void buildCabinet(float zCenter, bool isLeft, float L = 1.0f) {
     addBox(frontX, 0, zCenter - 0.4f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false, 0, L); 
     addBox(frontX, 0, zCenter + 0.05f, 0.1f, 1.5f, 0.35f, 0.3f, 0.18f, 0.1f, false, 0, L); 
 
-    // --- GOLD DOOR HANDLES ---
     float handleX = isLeft ? frontX + 0.1f : frontX - 0.03f;
     float hR = 0.9f, hG = 0.75f, hB = 0.1f; 
     addBox(handleX, 0.6f, zCenter - 0.15f, 0.03f, 0.15f, 0.04f, hR, hG, hB, false, 0, L); 
@@ -349,11 +348,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             sH = 1.1f; 
         }
         
-        // Body (Black)
         addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, sH, 0.6f, 0.05f, 0.05f, 0.05f, false); 
-        // White Sclera 
         addBox(-0.15f, sY + 0.8f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
-        // Black Pupil
         addBox(-0.05f, sY + 0.8f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); 
 
         if (seekState == 1) {
@@ -364,53 +360,38 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
     if (currentChunk < 2) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         
-        // --- UPGRADED ELEVATOR BOX ---
-        // Floor & Ceiling (Floor collision is FALSE so player can walk on it freely)
         addBox(-2.0f, 0.0f, 5.0f, 4.0f, 0.01f, 4.0f, 0.2f, 0.2f, 0.2f, false); 
         addBox(-2.0f, 2.0f, 5.0f, 4.0f, 0.1f, 4.0f, 0.8f, 0.8f, 0.8f, false); 
         
-        // Walls
-        addBox(-2.0f, 0.0f, 9.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); // Back Wall (behind player)
-        addBox(-2.0f, 0.0f, 5.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  // Left Wall
-        addBox(1.9f, 0.0f, 5.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);   // Right Wall
+        addBox(-2.0f, 0.0f, 9.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); 
+        addBox(-2.0f, 0.0f, 5.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);  
+        addBox(1.9f, 0.0f, 5.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);   
         
-        // Elevator Button Panel (Moved down)
         addBox(1.8f, 0.6f, 6.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); 
         addBox(1.75f, 0.7f, 6.55f, 0.05f, 0.1f, 0.1f, 0.0f, 0.8f, 0.0f, false, 0, 1.5f); 
 
-        // Sliding Doors (Moved back slightly to z=5.05 so they slide into the wall smoothly)
         addBox(-2.0f - elevatorDoorOffset, 0.0f, 5.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); 
         addBox(0.0f + elevatorDoorOffset, 0.0f, 5.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  
 
-        // Black Center Line (Visible line between doors. Disappears when doors open wide enough)
         if (elevatorDoorOffset < 0.05f) {
-            // Z=5.04 ensures it's directly in front of the z=5.05 doors to prevent clipping
             addBox(-0.02f, 0.0f, 5.04f, 0.04f, 2.0f, 0.12f, 0.0f, 0.0f, 0.0f, false);
         }
 
-        // --- INVISIBLE WALL (Blocks player when doors start closing) ---
         if (elevatorClosing) {
             collisions.push_back({-2.0f, 0.0f, 4.8f, 2.0f, 2.0f, 5.1f, 0});
         }
 
-        // --- LOBBY STRUCTURE ---
-        // Lobby Floor
         addBox(-6, 0, 5.0f, 12, 0.01f, -15.0f, 0.22f, 0.15f, 0.1f, false); 
-        // Lobby Ceiling
         addBox(-6, 1.8f, 5.0f, 12, 0.01f, -15.0f, 0.1f, 0.1f, 0.1f, false); 
         
-        // Lobby Outer Walls
         addBox(-6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
         addBox(6, 0, 5.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  
         addBox(-6.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
         addBox(3.0f, 0, -10.0f, 3.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true);  
 
-        // --- SPLIT LOBBY BACK WALL ---
-        // The wall is split to leave a 4-unit gap (from x=-2 to x=2) for the elevator!
-        addBox(-6.0f, 0.0f, 4.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); // Left section
-        addBox(2.0f, 0.0f, 4.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  // Right section
+        addBox(-6.0f, 0.0f, 4.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
+        addBox(2.0f, 0.0f, 4.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  
 
-        // Lobby Objects
         addBox(-6.0f, 0.0f, -7.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
@@ -426,11 +407,9 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         }
     }
 
-    // --- OPTIMIZED RENDERING CHUNKS ---
     int startRoom = playerCurrentRoom - 1;
     int endRoom = playerCurrentRoom + 2; 
     
-    // Force entire Seek Hallway to stay rendered while you're anywhere inside it
     if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) {
         startRoom = seekStartRoom;
         endRoom = seekStartRoom + 3;
@@ -445,10 +424,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         
         float wallL = (i > 0) ? rooms[i-1].lightLevel : 1.0f;
         
-        // Skip heavily detailing +2 unless in chase setup
         bool isTwoAheadNormal = (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale && i == playerCurrentRoom + 2);
 
-        // --- 1. SEPARATE WALL TINT ---
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
         } else {
@@ -483,7 +460,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             }
         }
 
-        // --- 2. ROOM INTERIOR TINT ---
         if (seekState == 1) {
             globalTintR = 1.0f; globalTintG = 0.2f; globalTintB = 0.2f;
         } else if (rooms[i].hasEyes) { 
@@ -492,7 +468,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         }
 
-        // --- OPTIMIZED EYE RENDERING: Only render eyes in current and current+1 ---
         bool renderEyes = true;
         if (rooms[i].isSeekChase || rooms[i].hasSeekEyes) {
             if (i < playerCurrentRoom || i > playerCurrentRoom + 1) {
@@ -500,7 +475,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             }
         }
 
-        // --- WALL EYES ---
         if (renderEyes && (rooms[i].hasSeekEyes || rooms[i].isSeekChase)) {
             srand(i * 12345); 
             int wallEyeCount = rooms[i].hasSeekEyes ? rooms[i].seekEyeCount : 15; 
@@ -542,7 +516,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(-2.95f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
             addBox(2.85f, 0.4f, z - 8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L);
 
-            // --- THE GAUNTLET ---
             addBox(-3.0f, 0.0f, z - 2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L); 
             addBox(-0.1f, 0.5f, z - 2.1f, 0.6f, 0.6f, 0.6f, 1.0f, 0.0f, 0.0f, false, 0, 1.5f); 
             rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = z - 2.0f; rooms[i].pSide[0] = 1; 
@@ -604,14 +577,13 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
             }
 
-            // --- DRAW PAINTINGS ---
             for(int p=0; p<rooms[i].pCount; p++) {
                 float pZ = rooms[i].pZ[p]; 
                 float pH = rooms[i].pH[p];
                 float pW = rooms[i].pW[p];
                 float pY = rooms[i].pY[p];
 
-                bool isSeekPainting = rooms[i].hasSeekEyes; // Chase rooms no longer spawn paintings to save performance
+                bool isSeekPainting = rooms[i].hasSeekEyes; 
                 float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p];
                 float canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p];
                 float canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
@@ -908,11 +880,9 @@ int main() {
     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    // Starting location moved inside the elevator facing the doors
     float camX = 0.0f, camZ = 7.5f, camYaw = 0.0f, camPitch = 0.0f; 
     const char symbols[] = "@!$#&*%?";
     
-    // --- Touch Control Variables ---
     static float startTouchX = 0, startTouchY = 0;
     static bool wasTouching = false;
 
@@ -921,20 +891,18 @@ int main() {
         u32 kDown = hidKeysDown();
         u32 kHeld = hidKeysHeld(); 
         
-        // EXIT GAME BUTTON
         if (kDown & KEY_SELECT) break;
         
         bool needsVBOUpdate = false; 
         static bool deathSoundPlayed = false;
 
-        // --- DEATH SOUND MANAGER ---
         if (isDead) {
             if (!deathSoundPlayed) {
                 if (audio_ok) {
-                    ndspChnWaveBufClear(3); // Cut Rush
-                    ndspChnWaveBufClear(5); // Cut Eyes Garble
-                    ndspChnWaveBufClear(7); // Cut Seek
-                    ndspChnWaveBufClear(9); // Cut Elevator audio
+                    ndspChnWaveBufClear(3); 
+                    ndspChnWaveBufClear(5); 
+                    ndspChnWaveBufClear(7); 
+                    ndspChnWaveBufClear(9); 
                     
                     bool waitForAttackAudio = false;
                     if (sndAttack.status == NDSP_WBUF_PLAYING || sndAttack.status == NDSP_WBUF_QUEUED) waitForAttackAudio = true;
@@ -965,7 +933,6 @@ int main() {
                 rushCooldown = 0; 
                 messageTimer = 0;
                 
-                // Reset to Elevator state
                 inElevator = true; elevatorTimer = 1593; elevatorDoorsOpen = false; elevatorClosing = false; elevatorDoorOffset = 0.0f; elevatorJamFinished = false;
                 camX = 0.0f; camZ = 7.5f; camYaw = 0.0f; camPitch = 0.0f;
                 
@@ -1020,7 +987,6 @@ int main() {
         if (rushCooldown > 0) rushCooldown--; 
         if (eyesSoundCooldown > 0) eyesSoundCooldown--;
 
-        // --- ELEVATOR TIMER & AUDIO LOGIC ---
         if (inElevator && !elevatorDoorsOpen) {
             if (elevatorTimer == 1593 && audio_ok && sndElevatorJam.data_vaddr) {
                 ndspChnWaveBufClear(9);
@@ -1033,12 +999,10 @@ int main() {
             bool timeToOpen = false;
             
             if (audio_ok && sndElevatorJam.data_vaddr) {
-                // Check if audio has finished playing (give it a few frames to actually start first)
                 if (elevatorTimer < 1590 && sndElevatorJam.status == NDSP_WBUF_DONE && !elevatorJamFinished) {
                     timeToOpen = true;
                 }
             } else if (elevatorTimer <= 0 && !elevatorJamFinished) {
-                // Fallback purely on frames if audio is entirely missing or broken
                 timeToOpen = true;
             }
 
@@ -1056,21 +1020,19 @@ int main() {
             }
         }
         
-        // --- SLIDING DOOR ANIMATION ---
         if (elevatorDoorsOpen && !elevatorClosing && elevatorDoorOffset < 2.0f) {
-            elevatorDoorOffset += 0.03f; // Sliding open
+            elevatorDoorOffset += 0.03f; 
             needsVBOUpdate = true; 
         }
 
-        // TRIGGER CLOSING
         if (elevatorDoorsOpen && !elevatorClosing && camZ < 2.0f) {
             inElevator = false;
             elevatorClosing = true;
-            needsVBOUpdate = true; // Sets the invisible wall
+            needsVBOUpdate = true; 
         }
 
         if (elevatorClosing && elevatorDoorOffset > 0.0f) {
-            elevatorDoorOffset -= 0.04f; // Sliding shut
+            elevatorDoorOffset -= 0.04f; 
             if (elevatorDoorOffset <= 0.0f) {
                 elevatorDoorOffset = 0.0f;
             }
@@ -1085,7 +1047,7 @@ int main() {
             printf("                              \n");
             printf("                              \n\n\n");
             printf("    [PRESS START TO RESTART]  \n");
-            printf("\x1b[0J"); // Clear ghosting
+            printf("\x1b[0J"); 
         } else {
             if (screechActive) {
                 printf("  >> SCREECH ATTACK!! <<      \n");
@@ -1093,7 +1055,7 @@ int main() {
                 printf("     (PSST!)                  \n");
                 printf("    LOOK AROUND QUICKLY!      \n");
                 printf("                              \n");
-                printf("\x1b[0J"); // Clear ghosting
+                printf("\x1b[0J"); 
             } else {
                 printf("        PLAYER STATUS         \n");
                 printf("==============================\n\n");
@@ -1138,6 +1100,12 @@ int main() {
                 printf(" Health       : %d / 100   \x1b[K\n", playerHealth);
                 printf(" Golden Key   : %s         \x1b[K\n", hasKey ? "EQUIPPED" : "None    ");
                 
+                // --- NEW CONTROLS DISPLAY ---
+                printf("\n        --- CONTROLS ---      \x1b[K\n");
+                printf(" [A] Interact  [B] Crouch    \x1b[K\n");
+                printf(" [X] Hide/Open [CPAD] Move   \x1b[K\n");
+                printf(" [TOUCH/CSTICK] Look Around  \x1b[K\n");
+                
                 if (messageTimer > 0) printf("\n ** %s ** \x1b[K\n", uiMessage);
                 else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \x1b[K\n");
                 else printf("\n                                    \x1b[K\n");
@@ -1147,10 +1115,9 @@ int main() {
                     printf("\x1b[31m Sound chip could not turn on.\x1b[0m\x1b[K\n");
                 } else {
                     printf("                                    \x1b[K\n");
-                    printf("                                    \x1b[K\n");
                 }
                 
-                printf("\x1b[0J"); // Instantly cleans any UI ghosting below this line!
+                printf("\x1b[0J"); 
             }
         }
 
@@ -1180,7 +1147,6 @@ int main() {
                 seekTimer++;
                 needsVBOUpdate = true; 
 
-                // --- CUTSCENE SPRINT BLAST OFF ---
                 if (seekTimer >= 180 && seekTimer < 230) {
                     if (seekSpeed < 0.12f) seekSpeed += 0.005f; 
                     seekZ -= seekSpeed; 
@@ -1201,7 +1167,6 @@ int main() {
                 }
             } else if (seekState == 2) {
                 
-                // --- DYNAMIC CHASE SPEED ---
                 float firstDoorZ = -10.0f - ((seekStartRoom + 2) * 10.0f); 
                 
                 if (seekZ > firstDoorZ) {
@@ -1240,18 +1205,14 @@ int main() {
                     }
                 }
                 
-                // --- SEEK FINALE & SAFE DOOR LOGIC ---
                 if (seekActive) {
                     float finishLineZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 10.0f; 
                     int safeRoom = seekStartRoom + 9;
                     
-                    // ADDED A 1.5 UNIT BUFFER SO THE PLAYER IS FULLY INSIDE THE ROOM BEFORE THE DOOR SLAMS
                     bool playerSafe = (camZ < finishLineZ - 1.5f);
                     
-                    // Trigger if player safely crosses the finish line OR if Seek catches up to the door
                     if (playerSafe || seekZ < finishLineZ + 3.0f) {
                         
-                        // Slam the door if it isn't slammed already
                         if (!rooms[safeRoom].isJammed) {
                             doorOpen[safeRoom] = false; 
                             rooms[safeRoom].isLocked = false; 
@@ -1265,7 +1226,7 @@ int main() {
                                     ndspChnWaveBufAdd(1, &sndDoor);
                                 }
                                 
-                                ndspChnWaveBufClear(7); // Instantly stops the chase music
+                                ndspChnWaveBufClear(7); 
                                 if (sndSeekEscaped.data_vaddr) {
                                     sndSeekEscaped.status = NDSP_WBUF_FREE;
                                     ndspChnWaveBufAdd(7, &sndSeekEscaped);
@@ -1532,17 +1493,16 @@ int main() {
             }
 
             if ((kDown & KEY_A) && hideState == NOT_HIDING) {
-                bool interacted = false; // Prevents overlapping messages
+                bool interacted = false; 
 
-                // --- ELEVATOR BUTTON CHECK ---
                 if (inElevator && !elevatorDoorsOpen) {
                     if (camX > 0.0f && camZ > 5.0f && camZ < 8.0f) { 
-                        elevatorJamFinished = true; // Mark as finished so auto-open doesn't trigger again
+                        elevatorJamFinished = true; 
                         elevatorDoorsOpen = true;
                         interacted = true;
                         needsVBOUpdate = true;
                         if (audio_ok) {
-                            ndspChnWaveBufClear(9); // Cuts off the grinding sound if it's still playing
+                            ndspChnWaveBufClear(9); 
                             if (sndElevatorJamEnd.data_vaddr) {
                                 sndElevatorJamEnd.status = NDSP_WBUF_FREE;
                                 ndspChnWaveBufAdd(9, &sndElevatorJamEnd);
@@ -1673,7 +1633,6 @@ int main() {
                 currentChunk = newChunk; needsVBOUpdate = true; 
             }
 
-            // --- OPTIMIZED ROOM CHECK SYNC & LOCKING ---
             int startRoom = currentChunk - 1; 
             int endRoom = currentChunk + 2;
             if (currentChunk >= seekStartRoom && currentChunk <= seekStartRoom + 2) {
@@ -1690,8 +1649,6 @@ int main() {
 
                 float wallZ = -10.0f - (i * 10.0f);
                 float targetX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                
-                // --- REMOVED ANTI-BACKTRACKING LOCK SO DOORS DON'T JAM ---
                 
                 bool shouldBeOpen = (abs(camZ - wallZ) < 1.5f && abs(camX - targetX) < 1.5f);
                 
@@ -1711,21 +1668,17 @@ int main() {
                 GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
             }
 
-            float curH = -0.9f; float playerH = 1.1f; 
-            if (isCrouching) { curH = -0.4f; playerH = 0.5f; }
-            if (hideState == IN_CABINET) curH = -0.7f;
-            else if (hideState == UNDER_BED) curH = -0.15f; 
+            float playerH = 1.1f; 
+            if (isCrouching) playerH = 0.5f; 
 
             circlePosition cStick, cPad;
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             touchPosition touch; hidTouchRead(&touch);
             
             if (hideState == NOT_HIDING && seekState != 1) {
-                // --- CAMERA CONTROLS (C-Stick) ---
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 
-                // --- CAMERA CONTROLS (Virtual Touch Joystick) ---
                 if (kHeld & KEY_TOUCH) {
                     if (!wasTouching) {
                         startTouchX = touch.px;
@@ -1734,22 +1687,17 @@ int main() {
                     } else {
                         float dx = (float)touch.px - startTouchX;
                         float dy = (float)touch.py - startTouchY;
-                        
-                        // Small deadzone so your thumb doesn't accidentally cause drift
                         if (abs(dx) < 10.0f) dx = 0.0f;
                         if (abs(dy) < 10.0f) dy = 0.0f;
-
-                        // Calculate sensitivity
                         camYaw -= (dx / 160.0f) * 0.06f; 
-                        camPitch -= (dy / 120.0f) * 0.06f; // Y-Axis inverted natively 
+                        camPitch -= (dy / 120.0f) * 0.06f; 
                     }
                 } else {
-                    wasTouching = false; // Reset the center when you let go
+                    wasTouching = false; 
                 }
                 
                 if (camPitch > 1.57f) camPitch = 1.57f; if (camPitch < -1.57f) camPitch = -1.57f;
                 
-                // Movement Controls
                 if (abs(cPad.dy) > 15 || abs(cPad.dx) > 15) {
                     float s = isCrouching ? 0.16f : 0.28f; 
                     if (seekState == 2) {
@@ -1775,7 +1723,6 @@ int main() {
             flashRedFrames--;
         } else if (!isDead) C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
 
-        // --- CAMERA OVERRIDE ---
         float drawCamX = camX, drawCamZ = camZ, drawCamYaw = camYaw, drawCamPitch = camPitch;
         static float lockedCutsceneCamZ = 0.0f;
 
