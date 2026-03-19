@@ -69,9 +69,9 @@ int seekStartRoom = 0;
 
 // --- ELEVATOR VARIABLES ---
 bool inElevator = true;
-int elevatorTimer = 1800; // 30 seconds at 60fps
+int elevatorTimer = 1593; // 26.544 seconds at 60fps
 bool elevatorDoorsOpen = false;
-bool elevatorClosing = false; // NEW: Tracks if doors are sliding shut
+bool elevatorClosing = false; // Tracks if doors are sliding shut
 float elevatorDoorOffset = 0.0f; // Tracks the sliding doors
 
 int messageTimer = 0;
@@ -966,7 +966,7 @@ int main() {
                 messageTimer = 0;
                 
                 // Reset to Elevator state
-                inElevator = true; elevatorTimer = 1800; elevatorDoorsOpen = false; elevatorClosing = false; elevatorDoorOffset = 0.0f;
+                inElevator = true; elevatorTimer = 1593; elevatorDoorsOpen = false; elevatorClosing = false; elevatorDoorOffset = 0.0f;
                 camX = 0.0f; camZ = 7.5f; camYaw = 0.0f; camPitch = 0.0f;
                 
                 currentChunk = 0;
@@ -1022,7 +1022,7 @@ int main() {
 
         // --- ELEVATOR TIMER LOGIC ---
         if (inElevator && !elevatorDoorsOpen) {
-            if (elevatorTimer == 1800 && audio_ok && sndElevatorJam.data_vaddr) {
+            if (elevatorTimer == 1593 && audio_ok && sndElevatorJam.data_vaddr) {
                 ndspChnWaveBufClear(9);
                 sndElevatorJam.status = NDSP_WBUF_FREE;
                 ndspChnWaveBufAdd(9, &sndElevatorJam);
