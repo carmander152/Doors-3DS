@@ -81,6 +81,7 @@ bool isCrouching = false;
 bool isDead = false; 
 HideState hideState = NOT_HIDING; 
 int seekStartRoom = 0; 
+int playerCoins = 0; // <-- Economy Tracking
 
 // --- ELEVATOR VARIABLES ---
 bool inElevator = true;
@@ -216,6 +217,7 @@ bool checkCollision(float x, float y, float z, float h) {
     if (isDead) return true; 
     float r = 0.2f; 
     for(auto& b : collisions) {
+        if (b.type == 4) continue; // Allows the player to walk into the "Behind Door" zones physically
         if(x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) {
             if(y + h > b.minY && y < b.maxY) return true; 
         }
@@ -261,9 +263,14 @@ void buildBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, float of
     addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true, 0, L); 
     addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false, 0, L); 
     
-    if (itemType == 1) { 
-        float itemX = (isLeft ? -2.2f : 2.1f) + offsetX;
-        addBox(itemX, 0.52f, zCenter, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false, 0, L);
+    if (itemType == 1) { // 3-Part Golden Key
+        float ix = (isLeft ? -2.2f : 2.1f) + offsetX;
+        addBox(ix, 0.52f, zCenter, 0.08f, 0.01f, 0.02f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+        addBox(ix + 0.06f, 0.52f, zCenter - 0.01f, 0.03f, 0.01f, 0.04f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+        addBox(ix + 0.01f, 0.52f, zCenter + 0.02f, 0.02f, 0.01f, 0.03f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+    } else if (itemType == 3) { // Flat Coin
+        float ix = (isLeft ? -2.2f : 2.1f) + offsetX;
+        addBox(ix + 0.02f, 0.52f, zCenter - 0.01f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
     collisions.push_back({x, 0.0f, zCenter - 1.25f, x + 1.4f, 0.6f, zCenter + 1.25f, 2});
 }
@@ -285,8 +292,17 @@ void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L
     addBox(handleX, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false, 0, L);
 
     if (isOpen) {
-        if (itemType == 1) addBox(itemX, 0.46f, zCenter - 0.05f, 0.1f, 0.05f, 0.1f, 1.0f, 0.84f, 0.0f, false, 0, L);
-        else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false, 0, L);
+        if (itemType == 1) { 
+            addBox(itemX, 0.46f, zCenter - 0.05f, 0.08f, 0.01f, 0.02f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+            addBox(itemX + 0.06f, 0.46f, zCenter - 0.06f, 0.03f, 0.01f, 0.04f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+            addBox(itemX + 0.01f, 0.46f, zCenter - 0.03f, 0.02f, 0.01f, 0.03f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+        }
+        else if (itemType == 2) { 
+            addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false, 0, L);
+        }
+        else if (itemType == 3) { 
+            addBox(itemX + 0.02f, 0.46f, zCenter - 0.05f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
+        }
     }
 }
 
@@ -577,43 +593,39 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         // --- LEFT WALL AND SIDE ROOM ---
         if (rooms[i].hasLeftRoom) {
             float doorZ = z + rooms[i].leftDoorOffset;
-            float beforeLen = abs(doorZ + 1.0f - z); 
-            float afterLen = abs((z - 10.0f) - (doorZ - 1.0f));
+            float beforeLen = abs(doorZ - z); 
+            float afterLen = abs((z - 10.0f) - (doorZ - 1.2f));
             
             if (beforeLen > 0.05f) addBox(-3.0f, 0, z, 0.1f, 1.8f, -beforeLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-            if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.0f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-            addBox(-3.0f, 1.4f, doorZ + 1.0f, 0.1f, 0.4f, -2.0f, 0.25f, 0.2f, 0.15f, false, 0, L); // Doorway Header
+            if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            addBox(-3.0f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); // Header
             
-            addBox(-2.95f, 0, doorZ + 1.0f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-            addBox(-2.95f, 0, doorZ - 0.9f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-            addBox(-2.95f, 1.35f, doorZ + 1.0f, 0.05f, 0.05f, -2.0f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(-2.95f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(-2.95f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(-2.95f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
 
             if (rooms[i].leftDoorOpen) {
-                // Swung inward (Hiding spot active)
-                addBox(-4.8f, 0, doorZ - 1.0f, 1.8f, 1.4f, -0.1f, 0.12f, 0.06f, 0.03f, true, 0, L); 
-                collisions.push_back({-4.8f, 0.0f, doorZ - 2.5f, -3.0f, 1.8f, doorZ - 1.0f, 4});
+                // Swung inward (Type 0 physical door, Type 4 purely for hiding detection)
+                addBox(-4.2f, 0, doorZ - 1.15f, 1.2f, 1.4f, -0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); 
+                collisions.push_back({-4.2f, 0.0f, doorZ - 2.5f, -3.0f, 1.8f, doorZ - 1.15f, 4});
             } else {
-                // Closed (Recessed slightly into the wall)
-                addBox(-3.0f, 0, doorZ + 0.9f, 0.05f, 1.4f, -1.8f, 0.12f, 0.06f, 0.03f, true, 0, L); 
-                addBox(-2.95f, 0.7f, doorZ + 0.8f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); // Doorknob
+                addBox(-3.0f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); 
+                addBox(-2.95f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); 
             }
             
             float srZ = doorZ + 2.5f; 
-            addBox(-9.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); // Floor
-            addBox(-9.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); // Ceil
-            addBox(-9.0f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); // Back
-            addBox(-9.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); // Side 1
-            addBox(-9.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); // Side 2
+            addBox(-9.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); 
+            addBox(-9.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
+            addBox(-9.0f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            addBox(-9.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            addBox(-9.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
 
             for(int s=0; s<2; s++) {
                 int type = rooms[i].leftRoomSlotType[s];
                 float fZ = srZ - 1.0f - (s * 3.0f);
                 if (type == 1) buildCabinet(fZ, true, L, -6.0f);
-                else if (type == 2) buildCabinet(fZ, false, L, -6.0f);
                 else if (type == 3) buildBed(fZ, true, rooms[i].leftRoomSlotItem[s], L, -6.0f);
-                else if (type == 4) buildBed(fZ, false, rooms[i].leftRoomSlotItem[s], L, -6.0f);
                 else if (type == 5) buildDresser(fZ, true, rooms[i].leftRoomDrawerOpen[s], rooms[i].leftRoomSlotItem[s], L, -6.0f);
-                else if (type == 6) buildDresser(fZ, false, rooms[i].leftRoomDrawerOpen[s], rooms[i].leftRoomSlotItem[s], L, -6.0f);
             }
         } else {
             addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
@@ -622,23 +634,24 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         // --- RIGHT WALL AND SIDE ROOM ---
         if (rooms[i].hasRightRoom) {
             float doorZ = z + rooms[i].rightDoorOffset;
-            float beforeLen = abs(doorZ + 1.0f - z); 
-            float afterLen = abs((z - 10.0f) - (doorZ - 1.0f));
+            float beforeLen = abs(doorZ - z); 
+            float afterLen = abs((z - 10.0f) - (doorZ - 1.2f));
             
             if (beforeLen > 0.05f) addBox(2.9f, 0, z, 0.1f, 1.8f, -beforeLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-            if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.0f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-            addBox(2.9f, 1.4f, doorZ + 1.0f, 0.1f, 0.4f, -2.0f, 0.25f, 0.2f, 0.15f, false, 0, L); 
+            if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            addBox(2.9f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
             
-            addBox(2.9f, 0, doorZ + 1.0f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-            addBox(2.9f, 0, doorZ - 0.9f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-            addBox(2.9f, 1.35f, doorZ + 1.0f, 0.05f, 0.05f, -2.0f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(2.9f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(2.9f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(2.9f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
 
             if (rooms[i].rightDoorOpen) {
-                addBox(3.0f, 0, doorZ - 1.0f, 1.8f, 1.4f, -0.1f, 0.12f, 0.06f, 0.03f, true, 0, L); 
-                collisions.push_back({3.0f, 0.0f, doorZ - 2.5f, 4.8f, 1.8f, doorZ - 1.0f, 4});
+                // Swung inward 
+                addBox(3.0f, 0, doorZ - 1.15f, 1.2f, 1.4f, -0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); 
+                collisions.push_back({3.0f, 0.0f, doorZ - 2.5f, 4.2f, 1.8f, doorZ - 1.15f, 4});
             } else {
-                addBox(2.95f, 0, doorZ + 0.9f, 0.05f, 1.4f, -1.8f, 0.12f, 0.06f, 0.03f, true, 0, L); 
-                addBox(2.9f, 0.7f, doorZ - 0.7f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); 
+                addBox(2.95f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); 
+                addBox(2.9f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); 
             }
             
             float srZ = doorZ + 2.5f; 
@@ -651,11 +664,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             for(int s=0; s<2; s++) {
                 int type = rooms[i].rightRoomSlotType[s];
                 float fZ = srZ - 1.0f - (s * 3.0f);
-                if (type == 1) buildCabinet(fZ, true, L, 6.0f);
-                else if (type == 2) buildCabinet(fZ, false, L, 6.0f);
-                else if (type == 3) buildBed(fZ, true, rooms[i].rightRoomSlotItem[s], L, 6.0f);
+                if (type == 2) buildCabinet(fZ, false, L, 6.0f);
                 else if (type == 4) buildBed(fZ, false, rooms[i].rightRoomSlotItem[s], L, 6.0f);
-                else if (type == 5) buildDresser(fZ, true, rooms[i].rightRoomDrawerOpen[s], rooms[i].rightRoomSlotItem[s], L, 6.0f);
                 else if (type == 6) buildDresser(fZ, false, rooms[i].rightRoomDrawerOpen[s], rooms[i].rightRoomSlotItem[s], L, 6.0f);
             }
         } else {
@@ -799,7 +809,6 @@ void generateRooms() {
 
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
             
-            // Generate Side Rooms
             rooms[i].hasLeftRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
             rooms[i].hasRightRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
             rooms[i].leftDoorOpen = false;
@@ -809,16 +818,20 @@ void generateRooms() {
                 rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
                 for(int s=0; s<2; s++) {
                     int r = rand() % 100;
-                    if (r < 20) rooms[i].leftRoomSlotType[s] = 1; else if (r < 40) rooms[i].leftRoomSlotType[s] = 2; else if (r < 60) rooms[i].leftRoomSlotType[s] = 3; else if (r < 80) rooms[i].leftRoomSlotType[s] = 5; else rooms[i].leftRoomSlotType[s] = 0;
-                    rooms[i].leftRoomSlotItem[s] = 0; rooms[i].leftRoomDrawerOpen[s] = false;
+                    if (r < 20) rooms[i].leftRoomSlotType[s] = 1; else if (r < 40) rooms[i].leftRoomSlotType[s] = 3; else if (r < 60) rooms[i].leftRoomSlotType[s] = 5; else rooms[i].leftRoomSlotType[s] = 0;
+                    
+                    rooms[i].leftRoomDrawerOpen[s] = false;
+                    if (rand() % 100 < 30) rooms[i].leftRoomSlotItem[s] = 3; else rooms[i].leftRoomSlotItem[s] = 0; 
                 }
             }
             if (rooms[i].hasRightRoom) {
                 rooms[i].rightDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
                 for(int s=0; s<2; s++) {
                     int r = rand() % 100;
-                    if (r < 20) rooms[i].rightRoomSlotType[s] = 1; else if (r < 40) rooms[i].rightRoomSlotType[s] = 2; else if (r < 60) rooms[i].rightRoomSlotType[s] = 4; else if (r < 80) rooms[i].rightRoomSlotType[s] = 6; else rooms[i].rightRoomSlotType[s] = 0;
-                    rooms[i].rightRoomSlotItem[s] = 0; rooms[i].rightRoomDrawerOpen[s] = false;
+                    if (r < 20) rooms[i].rightRoomSlotType[s] = 2; else if (r < 40) rooms[i].rightRoomSlotType[s] = 4; else if (r < 60) rooms[i].rightRoomSlotType[s] = 6; else rooms[i].rightRoomSlotType[s] = 0;
+                    
+                    rooms[i].rightRoomDrawerOpen[s] = false;
+                    if (rand() % 100 < 30) rooms[i].rightRoomSlotItem[s] = 3; else rooms[i].rightRoomSlotItem[s] = 0;
                 }
             }
 
@@ -837,10 +850,12 @@ void generateRooms() {
                 else if (r < 75) {
                     rooms[i].slotType[s] = 5; 
                     if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
+                    else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
                 }
                 else if (r < 90) {
                     rooms[i].slotType[s] = 6; 
                     if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
+                    else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
                 }
                 else rooms[i].slotType[s] = 0;             
             }
@@ -878,7 +893,6 @@ void generateRooms() {
                     rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
                     rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
                     
-                    // --- PREVENT PAINTINGS FROM COVERING DOORS ---
                     if (rooms[i].pSide[p] == 0 && rooms[i].hasLeftRoom) {
                         if (abs(rooms[i].pZ[p] - abs(rooms[i].leftDoorOffset)) < 1.8f) overlap = true;
                     }
@@ -914,7 +928,6 @@ void generateRooms() {
     rooms[0].isJammed = false; 
     rooms[0].hasEyes = false;
     
-    // Force center library doors
     rooms[48].doorPos = 1; 
     rooms[49].doorPos = 1; 
     
@@ -925,10 +938,9 @@ void generateRooms() {
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && !isSeekChaseEvent && !prevIsSeekChaseEvent && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
             
-            struct SlotLoc { int type; int index; }; // type: 0=main, 1=left, 2=right
+            struct SlotLoc { int type; int index; }; 
             std::vector<SlotLoc> validSlots;
             
-            // Only add slots > 2 (Beds and Dressers). Types 1 and 2 are hiding cabinets!
             for(int s=0; s<3; s++) if (rooms[i-1].slotType[s] > 2) validSlots.push_back({0, s});
             if (rooms[i-1].hasLeftRoom) {
                 for(int s=0; s<2; s++) if (rooms[i-1].leftRoomSlotType[s] > 2) validSlots.push_back({1, s});
@@ -943,7 +955,7 @@ void generateRooms() {
                 else if (chosen.type == 1) rooms[i-1].leftRoomSlotItem[chosen.index] = 1;
                 else if (chosen.type == 2) rooms[i-1].rightRoomSlotItem[chosen.index] = 1;
             } else {
-                rooms[i-1].slotType[1] = 5; rooms[i-1].slotItem[1] = 1; // Failsafe
+                rooms[i-1].slotType[1] = 5; rooms[i-1].slotItem[1] = 1; 
             }
         }
     }
@@ -1087,6 +1099,7 @@ int main() {
                 isDead = false; hasKey = false; lobbyKeyPickedUp = false; 
                 isCrouching = false; hideState = NOT_HIDING;
                 playerHealth = 100; screechActive = false; flashRedFrames = 0;
+                playerCoins = 0;
                 screechCooldown = 1800; rushActive = false; rushState = 0;
                 rushCooldown = 0; 
                 messageTimer = 0;
@@ -1257,14 +1270,16 @@ int main() {
 
                 printf(" Health       : %d / 100   \x1b[K\n", playerHealth);
                 printf(" Golden Key   : %s         \x1b[K\n", hasKey ? "EQUIPPED" : "None    ");
+                printf(" Coins        : %04d       \x1b[K\n", playerCoins);
                 
                 printf("\n        --- CONTROLS ---      \x1b[K\n");
                 printf(" [A] Interact  [B] Crouch    \x1b[K\n");
-                printf(" [X] Hide/Open [CPAD] Move   \x1b[K\n");
+                printf(" [X] Hide(Cab/Bed) [CPAD] Move \x1b[K\n");
                 printf(" [TOUCH/CSTICK] Look Around  \x1b[K\n");
                 
                 if (messageTimer > 0) printf("\n ** %s ** \x1b[K\n", uiMessage);
                 else if (rushActive && rushState == 1) printf("\n ** The lights are flickering... ** \x1b[K\n");
+                else if (hideState == BEHIND_DOOR) printf("\n ** Hiding behind door... ** \x1b[K\n");
                 else printf("\n                                    \x1b[K\n");
 
                 if (!audio_ok) {
@@ -1589,7 +1604,6 @@ int main() {
                         }
                     }
                     
-                    // Kill logic restricted to main hallway
                     if (abs(rushZ - camZ) < 3.0f && abs(camX) < 3.0f && hideState == NOT_HIDING) {
                         playerHealth = 0; isDead = true; flashRedFrames = 50;
                     }
@@ -1611,45 +1625,51 @@ int main() {
                 }
             }
 
-            // --- HIDE IN CABINETS, BEDS, AND BEHIND DOORS ---
+            // --- AUTO-OPEN SIDE DOORS BY PROXIMITY ---
+            if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
+                if (rooms[playerCurrentRoom].hasLeftRoom && !rooms[playerCurrentRoom].leftDoorOpen) {
+                    float doorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset;
+                    if (abs(camZ - (doorZ - 0.6f)) < 2.0f && camX < -1.5f) { 
+                        rooms[playerCurrentRoom].leftDoorOpen = true; needsVBOUpdate = true;
+                        if (audio_ok && sndDoor.data_vaddr) { ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor); }
+                    }
+                }
+                if (rooms[playerCurrentRoom].hasRightRoom && !rooms[playerCurrentRoom].rightDoorOpen) {
+                    float doorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset;
+                    if (abs(camZ - (doorZ - 0.6f)) < 2.0f && camX > 1.5f) { 
+                        rooms[playerCurrentRoom].rightDoorOpen = true; needsVBOUpdate = true;
+                        if (audio_ok && sndDoor.data_vaddr) { ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor); }
+                    }
+                }
+            }
+
+            // --- HIDE IN CABINETS AND BEDS ---
             if (kDown & KEY_X && hideState == NOT_HIDING) {
                 float reach = 0.5f; 
                 for(auto& b : collisions) {
-                    if ((b.type == 1 || b.type == 2 || b.type == 4) && camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
+                    if ((b.type == 1 || b.type == 2) && camX + reach > b.minX && camX - reach < b.maxX && camZ + reach > b.minZ && camZ - reach < b.maxZ) {
                         float relCenterZ = (b.minZ + b.maxZ) / 2.0f;
                         
-                        if (b.type == 1 || b.type == 2) {
-                            float cabCenterRelX = ((b.minX + b.maxX) / 2.0f);
-                            float targetOffsetX = 0.0f;
-                            if (cabCenterRelX < -4.0f) targetOffsetX = -6.0f; else if (cabCenterRelX > 4.0f) targetOffsetX = 6.0f;
-                            
-                            if (b.type == 1) { 
-                                hideState = IN_CABINET; camZ = relCenterZ; camPitch = 0.0f; 
-                                if ((cabCenterRelX - targetOffsetX) < 0) { camX = -2.5f + targetOffsetX; camYaw = -1.57f; } else { camX = 2.5f + targetOffsetX; camYaw = 1.57f; } 
-                            } else { 
-                                hideState = UNDER_BED; camZ = relCenterZ; camPitch = 0.0f; 
-                                if ((cabCenterRelX - targetOffsetX) < 0) { camX = -2.2f + targetOffsetX; camYaw = -1.57f; } else { camX = 2.2f + targetOffsetX; camYaw = 1.57f; } 
-                            }
-                        } else if (b.type == 4) {
-                            hideState = BEHIND_DOOR; camPitch = 0.0f;
-                            if (b.minX < 0) { // Left room
-                                camX = -3.4f; camZ = b.maxZ - 0.4f; camYaw = -2.0f; 
-                            } else { // Right room
-                                camX = 3.4f; camZ = b.maxZ - 0.4f; camYaw = 2.0f; 
-                            }
+                        float cabCenterRelX = ((b.minX + b.maxX) / 2.0f);
+                        float targetOffsetX = 0.0f;
+                        if (cabCenterRelX < -4.0f) targetOffsetX = -6.0f; else if (cabCenterRelX > 4.0f) targetOffsetX = 6.0f;
+                        
+                        if (b.type == 1) { 
+                            hideState = IN_CABINET; camZ = relCenterZ; camPitch = 0.0f; 
+                            if ((cabCenterRelX - targetOffsetX) < 0) { camX = -2.5f + targetOffsetX; camYaw = -1.57f; } else { camX = 2.5f + targetOffsetX; camYaw = 1.57f; } 
+                        } else { 
+                            hideState = UNDER_BED; camZ = relCenterZ; camPitch = 0.0f; 
+                            if ((cabCenterRelX - targetOffsetX) < 0) { camX = -2.2f + targetOffsetX; camYaw = -1.57f; } else { camX = 2.2f + targetOffsetX; camYaw = 1.57f; } 
                         }
                         
                         isCrouching = false; needsVBOUpdate = true; break; 
                     }
                 }
             } else if (kDown & KEY_X) {
-                if (hideState == BEHIND_DOOR) {
-                    camX = (camX < 0) ? -4.0f : 4.0f; // Push into room slightly
-                    camZ -= 0.5f; 
-                } else {
+                if (hideState == IN_CABINET || hideState == UNDER_BED) {
                     camX = (camX < -4.0f) ? -6.0f : ((camX > 4.0f) ? 6.0f : 0.0f); 
+                    hideState = NOT_HIDING; camYaw = 0.0f; needsVBOUpdate = true; 
                 }
-                hideState = NOT_HIDING; camYaw = 0.0f; needsVBOUpdate = true; 
             }
 
             // --- DRAWER & KEY INTERACTION ---
@@ -1661,9 +1681,11 @@ int main() {
                             if ((type == 5 || type == 6) && isOpen) {
                                 if (item == 1) { hasKey = true; item = 0; needsVBOUpdate = true; sprintf(uiMessage, "Grabbed the Golden Key!"); messageTimer = 90; return true; }
                                 else if (item == 2) { playerHealth += 10; if (playerHealth > 100) playerHealth = 100; item = 0; needsVBOUpdate = true; sprintf(uiMessage, "Used a Bandaid! (+10 HP)"); messageTimer = 90; return true; }
+                                else if (item == 3) { playerCoins += (rand() % 15) + 5; item = 0; needsVBOUpdate = true; sprintf(uiMessage, "Looted some Coins!"); messageTimer = 90; return true; }
                                 else { sprintf(uiMessage, "Drawer is empty..."); messageTimer = 60; return true; }
-                            } else if ((type == 3 || type == 4) && item == 1) {
-                                hasKey = true; item = 0; needsVBOUpdate = true; sprintf(uiMessage, "Grabbed Key off the bed!"); messageTimer = 90; return true; 
+                            } else if ((type == 3 || type == 4)) {
+                                if (item == 1) { hasKey = true; item = 0; needsVBOUpdate = true; sprintf(uiMessage, "Grabbed Key off the bed!"); messageTimer = 90; return true; }
+                                else if (item == 3) { playerCoins += (rand() % 15) + 5; item = 0; needsVBOUpdate = true; sprintf(uiMessage, "Looted Coins off the bed!"); messageTimer = 90; return true; }
                             }
                         }
                     }
@@ -1696,24 +1718,6 @@ int main() {
                     }
                     if (!interacted && rooms[playerCurrentRoom].hasRightRoom) {
                         for(int s=0; s<2; s++) if (checkInteract(rooms[playerCurrentRoom].rightRoomSlotType[s], (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset + 1.5f - (s * 3.0f), 6.0f + ((rooms[playerCurrentRoom].rightRoomSlotType[s] % 2 != 0) ? -2.4f : 2.4f), rooms[playerCurrentRoom].rightRoomDrawerOpen[s], rooms[playerCurrentRoom].rightRoomSlotItem[s])) { interacted = true; break; }
-                    }
-                }
-
-                // Open Side Room Doors
-                if (!interacted && kDown & KEY_A && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
-                    if (rooms[playerCurrentRoom].hasLeftRoom && !rooms[playerCurrentRoom].leftDoorOpen) {
-                        float doorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset;
-                        if (abs(camZ - doorZ) < 2.0f && camX < -1.5f) {
-                            rooms[playerCurrentRoom].leftDoorOpen = true; needsVBOUpdate = true; interacted = true;
-                            if (audio_ok && sndDoor.data_vaddr) { ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor); }
-                        }
-                    }
-                    if (!interacted && rooms[playerCurrentRoom].hasRightRoom && !rooms[playerCurrentRoom].rightDoorOpen) {
-                        float doorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset;
-                        if (abs(camZ - doorZ) < 2.0f && camX > 1.5f) {
-                            rooms[playerCurrentRoom].rightDoorOpen = true; needsVBOUpdate = true; interacted = true;
-                            if (audio_ok && sndDoor.data_vaddr) { ndspChnWaveBufClear(1); sndDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sndDoor); }
-                        }
                     }
                 }
 
@@ -1881,6 +1885,21 @@ int main() {
                     
                     if(!checkCollision(nextX, 0.0f, camZ, playerH)) camX = nextX;
                     if(!checkCollision(camX, 0.0f, nextZ, playerH)) camZ = nextZ;
+                }
+            }
+
+            // --- AUTO HIDE BEHIND DOORS ---
+            if (hideState == NOT_HIDING || hideState == BEHIND_DOOR) {
+                bool inDoorZone = false;
+                for(auto& b : collisions) {
+                    if (b.type == 4 && camX > b.minX && camX < b.maxX && camZ > b.minZ && camZ < b.maxZ) {
+                        inDoorZone = true; break;
+                    }
+                }
+                if (inDoorZone && hideState == NOT_HIDING) {
+                    hideState = BEHIND_DOOR;
+                } else if (!inDoorZone && hideState == BEHIND_DOOR) {
+                    hideState = NOT_HIDING;
                 }
             }
         }
