@@ -223,7 +223,6 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
-// --- UPDATED FURNITURE BUILDERS (Supports Side Room Offsets) ---
 void buildCabinet(float zCenter, bool isLeft, float L = 1.0f, float offsetX = 0.0f) {
     float backX = (isLeft ? -2.95f : 2.85f) + offsetX; 
     float topX = (isLeft ? -2.95f : 2.15f) + offsetX;  
@@ -585,14 +584,18 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.0f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(-3.0f, 1.4f, doorZ + 1.0f, 0.1f, 0.4f, -2.0f, 0.25f, 0.2f, 0.15f, false, 0, L); // Doorway Header
             
+            addBox(-2.95f, 0, doorZ + 1.0f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(-2.95f, 0, doorZ - 0.9f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(-2.95f, 1.35f, doorZ + 1.0f, 0.05f, 0.05f, -2.0f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+
             if (rooms[i].leftDoorOpen) {
                 // Swung inward (Hiding spot active)
-                addBox(-4.8f, 0, doorZ - 1.0f, 1.8f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
+                addBox(-4.8f, 0, doorZ - 1.0f, 1.8f, 1.4f, -0.1f, 0.12f, 0.06f, 0.03f, true, 0, L); 
                 collisions.push_back({-4.8f, 0.0f, doorZ - 2.5f, -3.0f, 1.8f, doorZ - 1.0f, 4});
             } else {
-                // Closed (Blocking the doorway)
-                addBox(-3.0f, 0, doorZ + 1.0f, 0.1f, 1.4f, -2.0f, 0.15f, 0.08f, 0.05f, true, 0, L); 
-                addBox(-2.9f, 0.7f, doorZ + 0.8f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); // Doorknob
+                // Closed (Recessed slightly into the wall)
+                addBox(-3.0f, 0, doorZ + 0.9f, 0.05f, 1.4f, -1.8f, 0.12f, 0.06f, 0.03f, true, 0, L); 
+                addBox(-2.95f, 0.7f, doorZ + 0.8f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); // Doorknob
             }
             
             float srZ = doorZ + 2.5f; 
@@ -626,14 +629,16 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.0f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(2.9f, 1.4f, doorZ + 1.0f, 0.1f, 0.4f, -2.0f, 0.25f, 0.2f, 0.15f, false, 0, L); 
             
+            addBox(2.9f, 0, doorZ + 1.0f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(2.9f, 0, doorZ - 0.9f, 0.05f, 1.4f, -0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            addBox(2.9f, 1.35f, doorZ + 1.0f, 0.05f, 0.05f, -2.0f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+
             if (rooms[i].rightDoorOpen) {
-                // Swung inward (Hiding spot active)
-                addBox(3.0f, 0, doorZ - 1.0f, 1.8f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
+                addBox(3.0f, 0, doorZ - 1.0f, 1.8f, 1.4f, -0.1f, 0.12f, 0.06f, 0.03f, true, 0, L); 
                 collisions.push_back({3.0f, 0.0f, doorZ - 2.5f, 4.8f, 1.8f, doorZ - 1.0f, 4});
             } else {
-                // Closed (Blocking the doorway)
-                addBox(2.9f, 0, doorZ + 1.0f, 0.1f, 1.4f, -2.0f, 0.15f, 0.08f, 0.05f, true, 0, L); 
-                addBox(2.85f, 0.7f, doorZ - 0.7f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); // Doorknob
+                addBox(2.95f, 0, doorZ + 0.9f, 0.05f, 1.4f, -1.8f, 0.12f, 0.06f, 0.03f, true, 0, L); 
+                addBox(2.9f, 0.7f, doorZ - 0.7f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); 
             }
             
             float srZ = doorZ + 2.5f; 
@@ -795,13 +800,13 @@ void generateRooms() {
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
             
             // Generate Side Rooms
-            rooms[i].hasLeftRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 2 && rand() % 100 < 25);
-            rooms[i].hasRightRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 2 && rand() % 100 < 25);
+            rooms[i].hasLeftRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
+            rooms[i].hasRightRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
             rooms[i].leftDoorOpen = false;
             rooms[i].rightDoorOpen = false;
 
             if (rooms[i].hasLeftRoom) {
-                rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; // Door randomly spawns between -3.0 and -7.0
+                rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
                 for(int s=0; s<2; s++) {
                     int r = rand() % 100;
                     if (r < 20) rooms[i].leftRoomSlotType[s] = 1; else if (r < 40) rooms[i].leftRoomSlotType[s] = 2; else if (r < 60) rooms[i].leftRoomSlotType[s] = 3; else if (r < 80) rooms[i].leftRoomSlotType[s] = 5; else rooms[i].leftRoomSlotType[s] = 0;
@@ -821,7 +826,6 @@ void generateRooms() {
             for(int s=0; s<3; s++) {
                 float slotZRel = -2.5f - (s * 2.5f);
                 
-                // Clear the main room slot if a side door is overlapping it
                 if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 2.0f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; continue; }
                 if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 2.0f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
 
@@ -874,6 +878,14 @@ void generateRooms() {
                     rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; 
                     rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
                     
+                    // --- PREVENT PAINTINGS FROM COVERING DOORS ---
+                    if (rooms[i].pSide[p] == 0 && rooms[i].hasLeftRoom) {
+                        if (abs(rooms[i].pZ[p] - abs(rooms[i].leftDoorOffset)) < 1.8f) overlap = true;
+                    }
+                    if (rooms[i].pSide[p] == 1 && rooms[i].hasRightRoom) {
+                        if (abs(rooms[i].pZ[p] - abs(rooms[i].rightDoorOffset)) < 1.8f) overlap = true;
+                    }
+                    
                     for(int op=0; op<p; op++) {
                         if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
                             float zDist = abs(rooms[i].pZ[p] - rooms[i].pZ[op]);
@@ -913,16 +925,16 @@ void generateRooms() {
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && !isSeekChaseEvent && !prevIsSeekChaseEvent && (rand() % 3 == 0)) {
             rooms[i].isLocked = true;
             
-            // Randomly pick ANY valid furniture slot to hide the key
             struct SlotLoc { int type; int index; }; // type: 0=main, 1=left, 2=right
             std::vector<SlotLoc> validSlots;
             
-            for(int s=0; s<3; s++) if (rooms[i-1].slotType[s] != 0) validSlots.push_back({0, s});
+            // Only add slots > 2 (Beds and Dressers). Types 1 and 2 are hiding cabinets!
+            for(int s=0; s<3; s++) if (rooms[i-1].slotType[s] > 2) validSlots.push_back({0, s});
             if (rooms[i-1].hasLeftRoom) {
-                for(int s=0; s<2; s++) if (rooms[i-1].leftRoomSlotType[s] != 0) validSlots.push_back({1, s});
+                for(int s=0; s<2; s++) if (rooms[i-1].leftRoomSlotType[s] > 2) validSlots.push_back({1, s});
             }
             if (rooms[i-1].hasRightRoom) {
-                for(int s=0; s<2; s++) if (rooms[i-1].rightRoomSlotType[s] != 0) validSlots.push_back({2, s});
+                for(int s=0; s<2; s++) if (rooms[i-1].rightRoomSlotType[s] > 2) validSlots.push_back({2, s});
             }
 
             if (!validSlots.empty()) {
@@ -1577,7 +1589,7 @@ int main() {
                         }
                     }
                     
-                    // Kill logic updated to only kill in the main hallway (abs(camX) < 3.0f)
+                    // Kill logic restricted to main hallway
                     if (abs(rushZ - camZ) < 3.0f && abs(camX) < 3.0f && hideState == NOT_HIDING) {
                         playerHealth = 0; isDead = true; flashRedFrames = 50;
                     }
