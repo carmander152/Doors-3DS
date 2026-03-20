@@ -81,7 +81,7 @@ bool isCrouching = false;
 bool isDead = false; 
 HideState hideState = NOT_HIDING; 
 int seekStartRoom = 0; 
-int playerCoins = 0; // <-- Economy Tracking
+int playerCoins = 0; 
 
 // --- ELEVATOR VARIABLES ---
 bool inElevator = true;
@@ -132,7 +132,7 @@ int eyesSoundCooldown = 0;
 // --- ROOM DISPLAY HELPERS ---
 int getDisplayRoom(int idx) {
     if (idx < 0) return 0;
-    return idx + 1; // Fixed 1:1 mapping
+    return idx + 1; 
 }
 
 int getNextDoorIndex(int currentIdx) {
@@ -217,7 +217,7 @@ bool checkCollision(float x, float y, float z, float h) {
     if (isDead) return true; 
     float r = 0.2f; 
     for(auto& b : collisions) {
-        if (b.type == 4) continue; // Allows the player to walk into the "Behind Door" zones physically
+        if (b.type == 4) continue; 
         if(x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) {
             if(y + h > b.minY && y < b.maxY) return true; 
         }
@@ -263,12 +263,12 @@ void buildBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, float of
     addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true, 0, L); 
     addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false, 0, L); 
     
-    if (itemType == 1) { // 3-Part Golden Key
+    if (itemType == 1) { 
         float ix = (isLeft ? -2.2f : 2.1f) + offsetX;
         addBox(ix, 0.52f, zCenter, 0.08f, 0.01f, 0.02f, 0.8f, 0.7f, 0.1f, false, 0, L); 
         addBox(ix + 0.06f, 0.52f, zCenter - 0.01f, 0.03f, 0.01f, 0.04f, 0.8f, 0.7f, 0.1f, false, 0, L); 
         addBox(ix + 0.01f, 0.52f, zCenter + 0.02f, 0.02f, 0.01f, 0.03f, 0.8f, 0.7f, 0.1f, false, 0, L); 
-    } else if (itemType == 3) { // Flat Coin
+    } else if (itemType == 3) { 
         float ix = (isLeft ? -2.2f : 2.1f) + offsetX;
         addBox(ix + 0.02f, 0.52f, zCenter - 0.01f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
@@ -605,7 +605,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(-2.95f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
 
             if (rooms[i].leftDoorOpen) {
-                // Swung inward (Type 0 physical door, Type 4 purely for hiding detection)
+                // Swung inward
                 addBox(-4.2f, 0, doorZ - 1.15f, 1.2f, 1.4f, -0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); 
                 collisions.push_back({-4.2f, 0.0f, doorZ - 2.5f, -3.0f, 1.8f, doorZ - 1.15f, 4});
             } else {
@@ -619,6 +619,21 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(-9.0f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(-9.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(-9.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
+
+            // Side Room Painting Left
+            srand(i * 123);
+            if (rand() % 2 == 0) { 
+                float pY = 0.6f + (rand() % 50) / 100.0f;
+                float pZ = srZ - 1.5f - (rand() % 20) / 10.0f;
+                float pW = 0.5f + (rand() % 40) / 100.0f;
+                float pH = 0.5f + (rand() % 40) / 100.0f;
+                float pR = 0.15f + (rand() % 35) / 100.0f; 
+                float pG = 0.15f + (rand() % 35) / 100.0f; 
+                float pB = 0.15f + (rand() % 35) / 100.0f;
+                addBox(-8.95f, pY - 0.05f, pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                addBox(-8.9f, pY, pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+            }
+            srand(time(NULL));
 
             for(int s=0; s<2; s++) {
                 int type = rooms[i].leftRoomSlotType[s];
@@ -661,6 +676,21 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             addBox(3.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(3.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
 
+            // Side Room Painting Right
+            srand(i * 321);
+            if (rand() % 2 == 0) { 
+                float pY = 0.6f + (rand() % 50) / 100.0f;
+                float pZ = srZ - 1.5f - (rand() % 20) / 10.0f;
+                float pW = 0.5f + (rand() % 40) / 100.0f;
+                float pH = 0.5f + (rand() % 40) / 100.0f;
+                float pR = 0.15f + (rand() % 35) / 100.0f; 
+                float pG = 0.15f + (rand() % 35) / 100.0f; 
+                float pB = 0.15f + (rand() % 35) / 100.0f;
+                addBox(8.89f, pY - 0.05f, pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); 
+                addBox(8.83f, pY, pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+            }
+            srand(time(NULL));
+
             for(int s=0; s<2; s++) {
                 int type = rooms[i].rightRoomSlotType[s];
                 float fZ = srZ - 1.0f - (s * 3.0f);
@@ -680,8 +710,6 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 int type = rooms[i].slotType[s];
                 if (type == 1) buildCabinet(zCenter, true, L);
                 else if (type == 2) buildCabinet(zCenter, false, L);
-                else if (type == 3) buildBed(zCenter, true, rooms[i].slotItem[s], L);
-                else if (type == 4) buildBed(zCenter, false, rooms[i].slotItem[s], L);
                 else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
                 else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
             }
@@ -816,9 +844,13 @@ void generateRooms() {
 
             if (rooms[i].hasLeftRoom) {
                 rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
+                bool leftBedSpawned = false;
                 for(int s=0; s<2; s++) {
                     int r = rand() % 100;
-                    if (r < 20) rooms[i].leftRoomSlotType[s] = 1; else if (r < 40) rooms[i].leftRoomSlotType[s] = 3; else if (r < 60) rooms[i].leftRoomSlotType[s] = 5; else rooms[i].leftRoomSlotType[s] = 0;
+                    if (r < 30) rooms[i].leftRoomSlotType[s] = 1; 
+                    else if (r < 60 && !leftBedSpawned) { rooms[i].leftRoomSlotType[s] = 3; leftBedSpawned = true; } 
+                    else if (r < 85) rooms[i].leftRoomSlotType[s] = 5; 
+                    else rooms[i].leftRoomSlotType[s] = 0;
                     
                     rooms[i].leftRoomDrawerOpen[s] = false;
                     if (rand() % 100 < 30) rooms[i].leftRoomSlotItem[s] = 3; else rooms[i].leftRoomSlotItem[s] = 0; 
@@ -826,9 +858,13 @@ void generateRooms() {
             }
             if (rooms[i].hasRightRoom) {
                 rooms[i].rightDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
+                bool rightBedSpawned = false;
                 for(int s=0; s<2; s++) {
                     int r = rand() % 100;
-                    if (r < 20) rooms[i].rightRoomSlotType[s] = 2; else if (r < 40) rooms[i].rightRoomSlotType[s] = 4; else if (r < 60) rooms[i].rightRoomSlotType[s] = 6; else rooms[i].rightRoomSlotType[s] = 0;
+                    if (r < 30) rooms[i].rightRoomSlotType[s] = 2; 
+                    else if (r < 60 && !rightBedSpawned) { rooms[i].rightRoomSlotType[s] = 4; rightBedSpawned = true; } 
+                    else if (r < 85) rooms[i].rightRoomSlotType[s] = 6; 
+                    else rooms[i].rightRoomSlotType[s] = 0;
                     
                     rooms[i].rightRoomDrawerOpen[s] = false;
                     if (rand() % 100 < 30) rooms[i].rightRoomSlotItem[s] = 3; else rooms[i].rightRoomSlotItem[s] = 0;
@@ -843,35 +879,18 @@ void generateRooms() {
                 if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 2.0f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
 
                 int r = rand() % 100;
-                if (r < 15) rooms[i].slotType[s] = 1;      
-                else if (r < 30) rooms[i].slotType[s] = 2; 
-                else if (r < 45) rooms[i].slotType[s] = 3; 
-                else if (r < 60) rooms[i].slotType[s] = 4; 
+                if (r < 25) rooms[i].slotType[s] = 1;      
+                else if (r < 50) rooms[i].slotType[s] = 2; 
                 else if (r < 75) {
                     rooms[i].slotType[s] = 5; 
                     if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
                     else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
                 }
-                else if (r < 90) {
+                else {
                     rooms[i].slotType[s] = 6; 
                     if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; }
                     else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
-                }
-                else rooms[i].slotType[s] = 0;             
-            }
-
-            int inDoor = rooms[i].doorPos;
-            int outDoor = (i < TOTAL_ROOMS - 1) ? rooms[i+1].doorPos : 1;
-            
-            for(int s=0; s<3; s++) {
-                if (rooms[i].slotType[s] == 3) { 
-                    if (s == 0 && inDoor == 0) rooms[i].slotType[s] = 5; 
-                    if (s == 2 && outDoor == 0) rooms[i].slotType[s] = 5; 
-                }
-                if (rooms[i].slotType[s] == 4) { 
-                    if (s == 0 && inDoor == 2) rooms[i].slotType[s] = 6; 
-                    if (s == 2 && outDoor == 2) rooms[i].slotType[s] = 6;
-                }
+                }          
             }
         } else {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
@@ -1850,7 +1869,8 @@ int main() {
             irrstCstickRead(&cStick); hidCircleRead(&cPad);
             touchPosition touch; hidTouchRead(&touch);
             
-            if (hideState == NOT_HIDING && seekState != 1) {
+            // FIX: Allow Camera & Move controls while BEHIND_DOOR
+            if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
                 if (abs(cStick.dx) > 10) camYaw -= cStick.dx / 1560.0f * 0.8f;
                 if (abs(cStick.dy) > 10) camPitch += cStick.dy / 1560.0f * 0.8f;
                 
