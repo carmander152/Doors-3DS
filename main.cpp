@@ -31,8 +31,6 @@ struct RoomSetup {
     int doorPos; int pCount;      
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10];
     int pSide[10];   
-    
-    bool isAngledCabinetRoom;
 
     bool hasLeftRoom; bool leftDoorOpen; float leftDoorOffset;
     int leftRoomLayout; int leftRoomSlotType[2]; int leftRoomSlotItem[2]; bool leftRoomDrawerOpen[2];
@@ -121,50 +119,6 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
-void addRotatedPart(float cx, float cy, float cz, float angle, float localX, float localY, float localZ, float w, float h, float d, float r, float g, float b, float L = 1.0f) {
-    r *= L * globalTintR; g *= L * globalTintG; b *= L * globalTintB;
-    if (r > 1.0f) r = 1.0f; if (g > 1.0f) g = 1.0f; if (b > 1.0f) b = 1.0f;
-    float cosA = cosf(angle), sinA = sinf(angle);
-    float partCx = cx + localX * cosA - localZ * sinA;
-    float partCz = cz + localX * sinA + localZ * cosA;
-    float partCy = cy + localY;
-    float hw = w / 2.0f, hd = d / 2.0f;
-    float px[4] = {-hw, hw, hw, -hw};
-    float pz[4] = {-hd, -hd, hd, hd};
-    float rx[4], rz[4];
-    for(int i=0; i<4; i++) {
-        rx[i] = partCx + px[i]*cosA - pz[i]*sinA;
-        rz[i] = partCz + px[i]*sinA + pz[i]*cosA;
-    }
-    float y1 = partCy, y2 = partCy + h;
-    auto pushFace = [&](int i1, int i2, int i3, int i4) {
-        world_mesh.push_back({{rx[i1], y1, rz[i1], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[i2], y1, rz[i2], 1}, {r,g,b,1}});
-        world_mesh.push_back({{rx[i2], y2, rz[i2], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[i1], y1, rz[i1], 1}, {r,g,b,1}});
-        world_mesh.push_back({{rx[i2], y2, rz[i2], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[i1], y2, rz[i1], 1}, {r,g,b,1}});
-    };
-    pushFace(0, 1, 1, 0); pushFace(1, 2, 2, 1); pushFace(2, 3, 3, 2); pushFace(3, 0, 0, 3); 
-    world_mesh.push_back({{rx[0], y2, rz[0], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[1], y2, rz[1], 1}, {r,g,b,1}});
-    world_mesh.push_back({{rx[2], y2, rz[2], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[0], y2, rz[0], 1}, {r,g,b,1}});
-    world_mesh.push_back({{rx[2], y2, rz[2], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[3], y2, rz[3], 1}, {r,g,b,1}});
-    world_mesh.push_back({{rx[0], y1, rz[0], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[2], y1, rz[2], 1}, {r,g,b,1}});
-    world_mesh.push_back({{rx[1], y1, rz[1], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[0], y1, rz[0], 1}, {r,g,b,1}});
-    world_mesh.push_back({{rx[3], y1, rz[3], 1}, {r,g,b,1}}); world_mesh.push_back({{rx[2], y1, rz[2], 1}, {r,g,b,1}});
-}
-
-void buildAngledCabinet(float cx, float cz, float angle, int colType, float L = 1.0f) {
-    float cR = 0.3f, cG = 0.18f, cB = 0.1f;
-    addRotatedPart(cx, 0, cz, angle, -0.35f, 0.0f, 0.0f, 0.1f, 1.5f, 1.0f, cR, cG, cB, L); 
-    addRotatedPart(cx, 0, cz, angle, 0.0f, 1.4f, 0.0f, 0.8f, 0.1f, 1.0f, cR, cG, cB, L); 
-    addRotatedPart(cx, 0, cz, angle, 0.0f, 0.0f, 0.0f, 0.8f, 0.1f, 1.0f, cR, cG, cB, L); 
-    addRotatedPart(cx, 0, cz, angle, 0.0f, 0.0f, -0.45f, 0.8f, 1.5f, 0.1f, cR, cG, cB, L); 
-    addRotatedPart(cx, 0, cz, angle, 0.0f, 0.0f, 0.45f, 0.8f, 1.5f, 0.1f, cR, cG, cB, L); 
-    if (hideState != IN_CABINET) addRotatedPart(cx, 0, cz, angle, 0.1f, 0.1f, 0.0f, 0.6f, 1.3f, 0.8f, 0.0f, 0.0f, 0.0f, L);
-    float hR = 0.9f, hG = 0.75f, hB = 0.1f;
-    addRotatedPart(cx, 0, cz, angle, 0.42f, 0.6f, -0.15f, 0.03f, 0.15f, 0.04f, hR, hG, hB, L);
-    addRotatedPart(cx, 0, cz, angle, 0.42f, 0.6f, 0.15f, 0.03f, 0.15f, 0.04f, hR, hG, hB, L);
-    collisions.push_back({cx - 0.7f, 0.0f, cz - 0.7f, cx + 0.7f, 1.5f, cz + 0.7f, colType});
-}
-
 void buildCabinet(float zCenter, bool isLeft, float L = 1.0f, float offsetX = 0.0f, int itemType = 0) {
     float backX = (isLeft ? -2.95f : 2.85f) + offsetX, topX = (isLeft ? -2.95f : 2.15f) + offsetX, frontX = (isLeft ? -2.25f : 2.15f) + offsetX; 
     addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false, 0, L); 
@@ -193,10 +147,10 @@ void buildBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, float of
     addBox(x, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, L); addBox(x + 1.3f, 0.0f, zCenter - 1.15f, 0.1f, 0.4f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, L);
     addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true, 0, L); addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false, 0, L); 
     if (itemType == 1) { 
-        float ix = (isLeft ? -2.2f : 2.1f) + offsetX;
-        addBox(ix, 0.52f, zCenter, 0.08f, 0.01f, 0.02f, 0.8f, 0.7f, 0.1f, false, 0, L); 
-        addBox(ix + 0.06f, 0.52f, zCenter - 0.01f, 0.03f, 0.01f, 0.04f, 0.8f, 0.7f, 0.1f, false, 0, L); 
-        addBox(ix + 0.01f, 0.52f, zCenter + 0.02f, 0.02f, 0.01f, 0.03f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+        float ix = (isLeft ? -2.2f : 2.1f) + offsetX; float kR=0.9f, kG=0.75f, kB=0.1f;
+        addBox(ix, 0.52f, zCenter - 0.1f, 0.2f, 0.05f, 0.05f, kR,kG,kB, false, 0, L); 
+        addBox(ix + 0.15f, 0.52f, zCenter - 0.15f, 0.1f, 0.05f, 0.15f, kR,kG,kB, false, 0, L); 
+        addBox(ix + 0.05f, 0.52f, zCenter - 0.05f, 0.05f, 0.05f, 0.08f, kR,kG,kB, false, 0, L); 
     } else if (itemType == 3) { 
         addBox((isLeft ? -2.2f : 2.1f) + offsetX + 0.02f, 0.52f, zCenter - 0.01f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
@@ -211,7 +165,12 @@ void buildRotatedBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, f
     addBox(x + (isLeft ? bedL - 0.1f : 0.0f), 0.0f, zCenter + 0.6f, 0.1f, 0.4f, 0.1f, 0.2f, 0.1f, 0.05f, true, 0, L);
     addBox(x + (isLeft ? 0.1f : 0.0f), 0.2f, zCenter + 0.6f, bedL - 0.1f, 0.2f, 0.1f, 0.4f, 0.1f, 0.1f, true, 0, L);
     addBox(isLeft ? x + 0.1f : x + bedL - 0.6f, 0.5f, zCenter - 0.4f, 0.5f, 0.08f, 0.8f, 0.9f, 0.9f, 0.9f, false, 0, L);
-    if (itemType == 1) addBox(isLeft ? x + 0.5f : x + bedL - 0.6f, 0.52f, zCenter, 0.08f, 0.01f, 0.02f, 0.8f, 0.7f, 0.1f, false, 0, L); 
+    if (itemType == 1) {
+        float ix = isLeft ? x + 0.5f : x + bedL - 0.6f; float kR=0.9f, kG=0.75f, kB=0.1f;
+        addBox(ix, 0.52f, zCenter - 0.1f, 0.2f, 0.05f, 0.05f, kR,kG,kB, false, 0, L); 
+        addBox(ix + 0.15f, 0.52f, zCenter - 0.15f, 0.1f, 0.05f, 0.15f, kR,kG,kB, false, 0, L); 
+        addBox(ix + 0.05f, 0.52f, zCenter - 0.05f, 0.05f, 0.05f, 0.08f, kR,kG,kB, false, 0, L); 
+    }
     else if (itemType == 3) addBox(isLeft ? x + 1.0f : x + bedL - 1.1f, 0.52f, zCenter, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     collisions.push_back({x, 0.0f, zCenter - 0.7f, x + bedL, 0.6f, zCenter + 0.7f, 2});
 }
@@ -227,7 +186,7 @@ void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L
     addBox(trayX, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false, 0, L);
     addBox(handleX, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false, 0, L);
     if (isOpen) {
-        if (itemType == 1) { addBox(itemX, 0.46f, zCenter - 0.05f, 0.08f, 0.01f, 0.02f, 0.8f, 0.7f, 0.1f, false, 0, L); addBox(itemX + 0.06f, 0.46f, zCenter - 0.06f, 0.03f, 0.01f, 0.04f, 0.8f, 0.7f, 0.1f, false, 0, L); addBox(itemX + 0.01f, 0.46f, zCenter - 0.03f, 0.02f, 0.01f, 0.03f, 0.8f, 0.7f, 0.1f, false, 0, L); }
+        if (itemType == 1) { float kR=0.9f, kG=0.75f, kB=0.1f; addBox(itemX, 0.46f, zCenter - 0.1f, 0.2f, 0.05f, 0.05f, kR,kG,kB, false, 0, L); addBox(itemX + 0.15f, 0.46f, zCenter - 0.15f, 0.1f, 0.05f, 0.15f, kR,kG,kB, false, 0, L); addBox(itemX + 0.05f, 0.46f, zCenter - 0.05f, 0.05f, 0.05f, 0.08f, kR,kG,kB, false, 0, L); }
         else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false, 0, L);
         else if (itemType == 3) addBox(itemX + 0.02f, 0.46f, zCenter - 0.05f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
@@ -239,6 +198,12 @@ void buildChest(float x, float z, bool isOpen, float L = 1.0f) {
     addBox(x + 0.37f, 0.0f, z - 0.32f, 0.05f, 0.4f, 0.05f, 0.8f, 0.7f, 0.1f, false, 0, L);
     if (!isOpen) { addBox(x - 0.4f, 0.4f, z - 0.3f, 0.8f, 0.2f, 0.6f, 0.35f, 0.18f, 0.08f, true, 0, L); addBox(x - 0.05f, 0.3f, z + 0.3f, 0.1f, 0.15f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); }
     else { addBox(x - 0.4f, 0.4f, z - 0.4f, 0.8f, 0.6f, 0.1f, 0.35f, 0.18f, 0.08f, true, 0, L); addBox(x - 0.2f, 0.35f, z - 0.1f, 0.4f, 0.05f, 0.2f, 1.0f, 0.85f, 0.0f, false, 0, L); }
+}
+
+void buildLamp(float x, float z, float L = 1.0f) {
+    addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L);
+    addBox(x-0.05f, 0.51f, z-0.05f, 0.1f, 0.2f, 0.1f, 0.2f, 0.3f, 0.4f, false, 0, L);
+    addBox(x-0.2f, 0.71f, z-0.2f, 0.4f, 0.25f, 0.4f, 0.9f, 0.9f, 0.8f, false, 0, L);
 }
 
 void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bool centerOpen, bool rightDoor, bool rightOpen, int roomIndex, float L = 1.0f) {
@@ -253,13 +218,13 @@ void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bo
     auto drawDoor = [&](float dx, bool isOpen) {
         if (!isOpen) {
             addBox(dx, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
-            addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); // Gold Plaque Restored
-            addBox(dx+1.05f, 0.7f, z+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L); // Distinct Silver Handle
+            addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); 
+            addBox(dx+1.05f, 0.7f, z+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L); 
             if(rooms[roomIndex].isLocked) addBox(dx+0.9f, 0.6f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); 
         } else {
             addBox(dx, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true, 0, L); 
-            addBox(dx+0.1f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false, 0, L); // Open Plaque
-            addBox(dx+0.1f, 0.7f, z-1.05f, 0.03f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); // Open Handle
+            addBox(dx+0.1f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false, 0, L); 
+            addBox(dx+0.1f, 0.7f, z-1.05f, 0.03f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); 
         }
     };
     if(leftDoor) drawDoor(-2.6f, leftOpen); if(centerDoor) drawDoor(-0.6f, centerOpen); if(rightDoor) drawDoor(1.4f, rightOpen);
@@ -380,105 +345,97 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
         addBox(-3, 0, z, 6, 0.01f, -10, 0.2f, 0.1f, 0.05f, false, 0, L); addBox(-3, 1.8f, z, 6, 0.01f, -10, 0.15f, 0.15f, 0.15f, false, 0, L); 
 
-        if (rooms[i].isAngledCabinetRoom) {
-            addBox(-3.0f, 0, z, 0.1f, 1.8f, -10.0f, 0.25f, 0.2f, 0.15f, true, 0, L);
-            addBox(2.9f, 0, z, 0.1f, 1.8f, -10.0f, 0.25f, 0.2f, 0.15f, true, 0, L);
-            buildAngledCabinet(-2.2f, z - 2.5f, -0.785f, 1, L);
-            buildAngledCabinet(2.2f, z - 5.0f, 0.785f, 2, L);
-            buildAngledCabinet(-2.2f, z - 7.5f, -0.785f, 3, L);
-        } else {
-            if (rooms[i].hasLeftRoom) {
-                float doorZ = z + rooms[i].leftDoorOffset, beforeLen = abs(doorZ - z), afterLen = abs((z - 10.0f) - (doorZ - 1.2f));
-                if (beforeLen > 0.05f) addBox(-3.0f, 0, z, 0.1f, 1.8f, -beforeLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-                if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-                addBox(-3.0f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
-                addBox(-2.95f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-                if (rooms[i].leftDoorOpen) { addBox(-4.1f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-4.0f, 0.7f, doorZ - 1.10f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({-4.1f, 0.0f, doorZ - 1.15f, -3.0f, 1.8f, doorZ - 1.10f, 4}); } 
-                else { addBox(-3.0f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-2.95f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); } 
-                
-                float srZ = doorZ + 2.5f; 
-                addBox(-9.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); addBox(-9.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
-                addBox(-9.0f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(-9.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(-9.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
+        if (rooms[i].hasLeftRoom) {
+            float doorZ = z + rooms[i].leftDoorOffset, beforeLen = abs(doorZ - z), afterLen = abs((z - 10.0f) - (doorZ - 1.2f));
+            if (beforeLen > 0.05f) addBox(-3.0f, 0, z, 0.1f, 1.8f, -beforeLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            addBox(-3.0f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
+            addBox(-2.95f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            if (rooms[i].leftDoorOpen) { addBox(-4.1f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-4.0f, 0.7f, doorZ - 0.2f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({-4.1f, 0.0f, doorZ - 1.15f, -3.0f, 1.8f, doorZ - 1.10f, 4}); } 
+            else { addBox(-3.0f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-2.95f, 0.7f, doorZ - 0.15f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); } 
+            
+            float srZ = doorZ + 2.5f; 
+            addBox(-9.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); addBox(-9.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
+            addBox(-9.0f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(-9.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(-9.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
 
-                srand(i * 123);
-                if (rand() % 2 == 0) { 
-                    float pY = 0.6f + (rand() % 50) / 100.0f, pZ = srZ - 1.5f - (rand() % 20) / 10.0f, pW = 0.5f + (rand() % 40) / 100.0f, pH = 0.5f + (rand() % 40) / 100.0f;
-                    float pR = 0.15f + (rand() % 35) / 100.0f, pG = 0.15f + (rand() % 35) / 100.0f, pB = 0.15f + (rand() % 35) / 100.0f;
-                    addBox(-8.95f, pY - 0.05f, pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(-8.9f, pY, pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
-                } srand(time(NULL));
+            srand(i * 123);
+            if (rand() % 2 == 0) { 
+                float pY = 0.6f + (rand() % 50) / 100.0f, pZ = srZ - 1.5f - (rand() % 20) / 10.0f, pW = 0.5f + (rand() % 40) / 100.0f, pH = 0.5f + (rand() % 40) / 100.0f;
+                float pR = 0.15f + (rand() % 35) / 100.0f, pG = 0.15f + (rand() % 35) / 100.0f, pB = 0.15f + (rand() % 35) / 100.0f;
+                addBox(-8.95f, pY - 0.05f, pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(-8.9f, pY, pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+            } srand(time(NULL));
 
-                int layout = rooms[i].leftRoomLayout;
-                if (layout == 1) buildChest(-6.0f, srZ - 2.5f, rooms[i].leftRoomDrawerOpen[0], L);
-                else if (layout == 2) { buildBed(srZ - 2.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 2.5f, false, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f); } 
-                else if (layout == 3) { buildRotatedBed(srZ - 1.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 3.5f, true, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f); } 
-                else {
-                    for(int s=0; s<2; s++) {
-                        int type = rooms[i].leftRoomSlotType[s]; float fZ = srZ - 1.5f - (s * 3.0f);
-                        if (type == 1) buildCabinet(fZ, true, L, -6.0f); else if (type == 3) buildBed(fZ, true, rooms[i].leftRoomSlotItem[s], L, -6.0f); else if (type == 5) buildDresser(fZ, true, rooms[i].leftRoomDrawerOpen[s], rooms[i].leftRoomSlotItem[s], L, -6.0f);
+            int layout = rooms[i].leftRoomLayout;
+            if (layout == 1) buildChest(-6.0f, srZ - 2.5f, rooms[i].leftRoomDrawerOpen[0], L);
+            else if (layout == 2) { buildBed(srZ - 2.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 2.5f, false, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f); buildLamp(-8.4f, srZ - 2.5f, L); } 
+            else if (layout == 3) { buildRotatedBed(srZ - 1.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 3.5f, true, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f); buildLamp(-8.4f, srZ - 3.5f, L); } 
+            else {
+                for(int s=0; s<2; s++) {
+                    int type = rooms[i].leftRoomSlotType[s]; float fZ = srZ - 1.5f - (s * 3.0f);
+                    if (type == 1) buildCabinet(fZ, true, L, -6.0f); else if (type == 3) buildBed(fZ, true, rooms[i].leftRoomSlotItem[s], L, -6.0f); else if (type == 5) buildDresser(fZ, true, rooms[i].leftRoomDrawerOpen[s], rooms[i].leftRoomSlotItem[s], L, -6.0f);
+                }
+            }
+        } else addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
+
+        if (rooms[i].hasRightRoom) {
+            float doorZ = z + rooms[i].rightDoorOffset, beforeLen = abs(doorZ - z), afterLen = abs((z - 10.0f) - (doorZ - 1.2f));
+            if (beforeLen > 0.05f) addBox(2.9f, 0, z, 0.1f, 1.8f, -beforeLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
+            addBox(2.9f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
+            addBox(2.9f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+            if (rooms[i].rightDoorOpen) { addBox(3.0f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(3.9f, 0.7f, doorZ - 0.2f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({3.0f, 0.0f, doorZ - 1.15f, 4.1f, 1.8f, doorZ - 1.10f, 4}); } 
+            else { addBox(2.95f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(2.9f, 0.7f, doorZ - 0.15f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); }
+            
+            float srZ = doorZ + 2.5f; 
+            addBox(3.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); addBox(3.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
+            addBox(8.9f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(3.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(3.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
+
+            srand(i * 321);
+            if (rand() % 2 == 0) { 
+                float pY = 0.6f + (rand() % 50) / 100.0f, pZ = srZ - 1.5f - (rand() % 20) / 10.0f, pW = 0.5f + (rand() % 40) / 100.0f, pH = 0.5f + (rand() % 40) / 100.0f;
+                float pR = 0.15f + (rand() % 35) / 100.0f, pG = 0.15f + (rand() % 35) / 100.0f, pB = 0.15f + (rand() % 35) / 100.0f;
+                addBox(8.89f, pY - 0.05f, pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(8.83f, pY, pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+            } srand(time(NULL));
+
+            int layout = rooms[i].rightRoomLayout;
+            if (layout == 1) buildChest(6.0f, srZ - 2.5f, rooms[i].rightRoomDrawerOpen[0], L);
+            else if (layout == 2) { buildBed(srZ - 2.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 2.5f, true, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f); buildLamp(8.4f, srZ - 2.5f, L); } 
+            else if (layout == 3) { buildRotatedBed(srZ - 1.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 3.5f, false, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f); buildLamp(8.4f, srZ - 3.5f, L); } 
+            else {
+                for(int s=0; s<2; s++) {
+                    int type = rooms[i].rightRoomSlotType[s]; float fZ = srZ - 1.5f - (s * 3.0f);
+                    if (type == 2) buildCabinet(fZ, false, L, 6.0f); else if (type == 4) buildBed(fZ, false, rooms[i].rightRoomSlotItem[s], L, 6.0f); else if (type == 6) buildDresser(fZ, false, rooms[i].rightRoomDrawerOpen[s], rooms[i].rightRoomSlotItem[s], L, 6.0f);
+                }
+            }
+        } else addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
+
+        addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.8f : 0.2f), false);
+
+        if (!isTwoAheadNormal) {
+            for(int s=0; s<3; s++) {
+                float zCenter = z - 2.5f - (s * 2.5f); int type = rooms[i].slotType[s];
+                if (type == 1) buildCabinet(zCenter, true, L); else if (type == 2) buildCabinet(zCenter, false, L);
+                else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L); else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
+            }
+
+            for(int p=0; p<rooms[i].pCount; p++) {
+                float pZ = rooms[i].pZ[p], pH = rooms[i].pH[p], pW = rooms[i].pW[p], pY = rooms[i].pY[p];
+                bool isSeekPainting = rooms[i].hasSeekEyes; 
+                float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p], canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p], canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
+
+                if (rooms[i].pSide[p] == 0) {
+                    addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
+                    if (isSeekPainting && renderEyes) {
+                        srand(i * 100 + p); float area = pH * pW; int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                        for(int e=0; e<numEyes; e++) { float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f, eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
+                            addBox(-2.88f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); addBox(-2.875f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); } srand(time(NULL));
                     }
-                }
-            } else addBox(-3, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
-
-            if (rooms[i].hasRightRoom) {
-                float doorZ = z + rooms[i].rightDoorOffset, beforeLen = abs(doorZ - z), afterLen = abs((z - 10.0f) - (doorZ - 1.2f));
-                if (beforeLen > 0.05f) addBox(2.9f, 0, z, 0.1f, 1.8f, -beforeLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-                if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
-                addBox(2.9f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
-                addBox(2.9f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-                if (rooms[i].rightDoorOpen) { addBox(3.0f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(3.9f, 0.7f, doorZ - 1.10f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({3.0f, 0.0f, doorZ - 1.15f, 4.1f, 1.8f, doorZ - 1.10f, 4}); } 
-                else { addBox(2.95f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(2.9f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); }
-                
-                float srZ = doorZ + 2.5f; 
-                addBox(3.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); addBox(3.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
-                addBox(8.9f, 0, srZ, 0.1f, 1.8f, -5.0f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(3.0f, 0, srZ, 6.0f, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); addBox(3.0f, 0, srZ - 5.0f, 6.0f, 1.8f, -0.1f, 0.25f, 0.2f, 0.15f, true, 0, L); 
-
-                srand(i * 321);
-                if (rand() % 2 == 0) { 
-                    float pY = 0.6f + (rand() % 50) / 100.0f, pZ = srZ - 1.5f - (rand() % 20) / 10.0f, pW = 0.5f + (rand() % 40) / 100.0f, pH = 0.5f + (rand() % 40) / 100.0f;
-                    float pR = 0.15f + (rand() % 35) / 100.0f, pG = 0.15f + (rand() % 35) / 100.0f, pB = 0.15f + (rand() % 35) / 100.0f;
-                    addBox(8.89f, pY - 0.05f, pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(8.83f, pY, pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
-                } srand(time(NULL));
-
-                int layout = rooms[i].rightRoomLayout;
-                if (layout == 1) buildChest(6.0f, srZ - 2.5f, rooms[i].rightRoomDrawerOpen[0], L);
-                else if (layout == 2) { buildBed(srZ - 2.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 2.5f, true, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f); } 
-                else if (layout == 3) { buildRotatedBed(srZ - 1.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 3.5f, false, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f); } 
-                else {
-                    for(int s=0; s<2; s++) {
-                        int type = rooms[i].rightRoomSlotType[s]; float fZ = srZ - 1.5f - (s * 3.0f);
-                        if (type == 2) buildCabinet(fZ, false, L, 6.0f); else if (type == 4) buildBed(fZ, false, rooms[i].rightRoomSlotItem[s], L, 6.0f); else if (type == 6) buildDresser(fZ, false, rooms[i].rightRoomDrawerOpen[s], rooms[i].rightRoomSlotItem[s], L, 6.0f);
-                    }
-                }
-            } else addBox(2.9f, 0, z, 0.1f, 1.8f, -10, 0.25f, 0.2f, 0.15f, true, 0, L); 
-
-            addBox(-0.4f, 1.78f, z - 5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.8f : 0.2f), false);
-
-            if (!isTwoAheadNormal) {
-                for(int s=0; s<3; s++) {
-                    float zCenter = z - 2.5f - (s * 2.5f); int type = rooms[i].slotType[s];
-                    if (type == 1) buildCabinet(zCenter, true, L); else if (type == 2) buildCabinet(zCenter, false, L);
-                    else if (type == 5) buildDresser(zCenter, true, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L); else if (type == 6) buildDresser(zCenter, false, rooms[i].drawerOpen[s], rooms[i].slotItem[s], L);
-                }
-
-                for(int p=0; p<rooms[i].pCount; p++) {
-                    float pZ = rooms[i].pZ[p], pH = rooms[i].pH[p], pW = rooms[i].pW[p], pY = rooms[i].pY[p];
-                    bool isSeekPainting = rooms[i].hasSeekEyes; 
-                    float canvasR = isSeekPainting ? 0.02f : rooms[i].pR[p], canvasG = isSeekPainting ? 0.02f : rooms[i].pG[p], canvasB = isSeekPainting ? 0.02f : rooms[i].pB[p];
-
-                    if (rooms[i].pSide[p] == 0) {
-                        addBox(-2.95f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(-2.95f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
-                        if (isSeekPainting && renderEyes) {
-                            srand(i * 100 + p); float area = pH * pW; int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
-                            for(int e=0; e<numEyes; e++) { float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f, eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
-                                addBox(-2.88f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); addBox(-2.875f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); } srand(time(NULL));
-                        }
-                    } else if (rooms[i].pSide[p] == 1) {
-                        addBox(2.89f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
-                        if (isSeekPainting && renderEyes) {
-                            srand(i * 100 + p); float area = pH * pW; int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
-                            for(int e=0; e<numEyes; e++) { float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f, eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
-                                addBox(2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); addBox(2.865f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); } srand(time(NULL));
-                        }
+                } else if (rooms[i].pSide[p] == 1) {
+                    addBox(2.89f, pY - 0.05f, z - pZ + 0.05f, 0.06f, pH + 0.1f, -pW - 0.1f, 0.1f, 0.05f, 0.02f, false, 0, L); addBox(2.88f, pY, z - pZ, 0.07f, pH, -pW, canvasR, canvasG, canvasB, false, 0, L); 
+                    if (isSeekPainting && renderEyes) {
+                        srand(i * 100 + p); float area = pH * pW; int numEyes = 2 + (int)(area * 30.0f) + (rand() % 4); 
+                        for(int e=0; e<numEyes; e++) { float eY = pY + 0.02f + (rand() % (int)((pH - 0.04f) * 100)) / 100.0f, eZ = z - pZ - 0.02f - (rand() % (int)((pW - 0.04f) * 100)) / 100.0f;
+                            addBox(2.87f, eY, eZ, 0.01f, 0.04f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, L); addBox(2.865f, eY + 0.01f, eZ - 0.01f, 0.01f, 0.02f, 0.04f, 0.0f, 0.0f, 0.0f, false, 0, 1.5f); } srand(time(NULL));
                     }
                 }
             }
@@ -492,7 +449,7 @@ void generateRooms() {
     for(int i=0; i<TOTAL_ROOMS; i++) {
         rooms[i].doorPos = rand() % 3; rooms[i].isLocked = false; rooms[i].isJammed = false; rooms[i].hasSeekEyes = false;
         rooms[i].isSeekHallway = false; rooms[i].isSeekChase = false; rooms[i].isSeekFinale = false; rooms[i].seekEyeCount = 0;
-        rooms[i].isAngledCabinetRoom = false;
+        
         bool isSeekEvent = (i >= seekStartRoom - 5 && i <= seekStartRoom + 9); 
         
         if (i > 0 && rand() % 100 < 8 && !isSeekEvent) rooms[i].lightLevel = 0.3f; else rooms[i].lightLevel = 1.0f; 
@@ -514,66 +471,59 @@ void generateRooms() {
         if (rooms[i].hasEyes) { rooms[i].eyesX = 0.0f; rooms[i].eyesY = 0.9f; rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; }
 
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
-            rooms[i].isAngledCabinetRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 3 && rand() % 100 < 6); 
-            
-            if (rooms[i].isAngledCabinetRoom) {
-                rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
-                rooms[i].hasLeftRoom = false; rooms[i].hasRightRoom = false;
-            } else {
-                rooms[i].hasLeftRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
-                rooms[i].hasRightRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
-                rooms[i].leftDoorOpen = false; rooms[i].rightDoorOpen = false;
+            rooms[i].hasLeftRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
+            rooms[i].hasRightRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 0 && rand() % 100 < 45);
+            rooms[i].leftDoorOpen = false; rooms[i].rightDoorOpen = false;
 
-                if (rooms[i].hasLeftRoom) {
-                    rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; int roll = rand() % 100;
-                    if (roll < 20) rooms[i].leftRoomLayout = 1; else if (roll < 50) rooms[i].leftRoomLayout = 2; else if (roll < 80) rooms[i].leftRoomLayout = 3; else rooms[i].leftRoomLayout = 0;
-                    rooms[i].leftRoomDrawerOpen[0] = false; rooms[i].leftRoomDrawerOpen[1] = false;
-                    if (rooms[i].leftRoomLayout == 1) rooms[i].leftRoomSlotItem[0] = 0;
-                    else {
-                        for(int s=0; s<2; s++) {
-                            rooms[i].leftRoomSlotItem[s] = (rand() % 100 < 30) ? 3 : 0; int r2 = rand() % 100;
-                            if (r2 < 30) rooms[i].leftRoomSlotType[s] = 1; else if (r2 < 60) rooms[i].leftRoomSlotType[s] = 3; else if (r2 < 85) rooms[i].leftRoomSlotType[s] = 5; else rooms[i].leftRoomSlotType[s] = 0;
-                        }
+            if (rooms[i].hasLeftRoom) {
+                rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; int roll = rand() % 100;
+                if (roll < 5) rooms[i].leftRoomLayout = 1; else if (roll < 45) rooms[i].leftRoomLayout = 2; else if (roll < 85) rooms[i].leftRoomLayout = 3; else rooms[i].leftRoomLayout = 0;
+                rooms[i].leftRoomDrawerOpen[0] = false; rooms[i].leftRoomDrawerOpen[1] = false;
+                if (rooms[i].leftRoomLayout == 1) rooms[i].leftRoomSlotItem[0] = 0;
+                else {
+                    for(int s=0; s<2; s++) {
+                        rooms[i].leftRoomSlotItem[s] = (rand() % 100 < 30) ? 3 : 0; int r2 = rand() % 100;
+                        if (r2 < 30) rooms[i].leftRoomSlotType[s] = 1; else if (r2 < 60) rooms[i].leftRoomSlotType[s] = 3; else if (r2 < 85) rooms[i].leftRoomSlotType[s] = 5; else rooms[i].leftRoomSlotType[s] = 0;
                     }
                 }
-                if (rooms[i].hasRightRoom) {
-                    rooms[i].rightDoorOffset = -3.0f - (rand() % 40) / 10.0f; int roll = rand() % 100;
-                    if (roll < 20) rooms[i].rightRoomLayout = 1; else if (roll < 50) rooms[i].rightRoomLayout = 2; else if (roll < 80) rooms[i].rightRoomLayout = 3; else rooms[i].rightRoomLayout = 0;
-                    rooms[i].rightRoomDrawerOpen[0] = false; rooms[i].rightRoomDrawerOpen[1] = false;
-                    if (rooms[i].rightRoomLayout == 1) rooms[i].rightRoomSlotItem[0] = 0;
-                    else {
-                        for(int s=0; s<2; s++) {
-                            rooms[i].rightRoomSlotItem[s] = (rand() % 100 < 30) ? 3 : 0; int r2 = rand() % 100;
-                            if (r2 < 30) rooms[i].rightRoomSlotType[s] = 2; else if (r2 < 60) rooms[i].rightRoomSlotType[s] = 4; else if (r2 < 85) rooms[i].rightRoomSlotType[s] = 6; else rooms[i].rightRoomSlotType[s] = 0;
-                        }
+            }
+            if (rooms[i].hasRightRoom) {
+                rooms[i].rightDoorOffset = -3.0f - (rand() % 40) / 10.0f; int roll = rand() % 100;
+                if (roll < 5) rooms[i].rightRoomLayout = 1; else if (roll < 45) rooms[i].rightRoomLayout = 2; else if (roll < 85) rooms[i].rightRoomLayout = 3; else rooms[i].rightRoomLayout = 0;
+                rooms[i].rightRoomDrawerOpen[0] = false; rooms[i].rightRoomDrawerOpen[1] = false;
+                if (rooms[i].rightRoomLayout == 1) rooms[i].rightRoomSlotItem[0] = 0;
+                else {
+                    for(int s=0; s<2; s++) {
+                        rooms[i].rightRoomSlotItem[s] = (rand() % 100 < 30) ? 3 : 0; int r2 = rand() % 100;
+                        if (r2 < 30) rooms[i].rightRoomSlotType[s] = 2; else if (r2 < 60) rooms[i].rightRoomSlotType[s] = 4; else if (r2 < 85) rooms[i].rightRoomSlotType[s] = 6; else rooms[i].rightRoomSlotType[s] = 0;
                     }
                 }
+            }
 
-                bool bandaidSpawned = false;
-                for(int s=0; s<3; s++) {
-                    float slotZRel = -2.5f - (s * 2.5f);
-                    
-                    if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 3.0f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; continue; }
-                    if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 3.0f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
+            bool bandaidSpawned = false;
+            for(int s=0; s<3; s++) {
+                float slotZRel = -2.5f - (s * 2.5f);
+                
+                if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 1.8f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; continue; }
+                if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 1.8f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
 
-                    int r = rand() % 100;
-                    if (r < 25) rooms[i].slotType[s] = 1;     
-                    else if (r < 50) rooms[i].slotType[s] = 2; 
-                    else if (r < 75) {
-                        rooms[i].slotType[s] = 5; 
-                        if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
-                    } else {
-                        rooms[i].slotType[s] = 6; 
-                        if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
-                    }          
-                }
+                int r = rand() % 100;
+                if (r < 25) rooms[i].slotType[s] = 1;     
+                else if (r < 50) rooms[i].slotType[s] = 2; 
+                else if (r < 75) {
+                    rooms[i].slotType[s] = 5; 
+                    if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
+                } else {
+                    rooms[i].slotType[s] = 6; 
+                    if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
+                }          
             }
         } else {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
             rooms[i].hasLeftRoom = false; rooms[i].hasRightRoom = false;
         }
 
-        if (rooms[i].isSeekHallway || rooms[i].isSeekFinale || rooms[i].isSeekChase || rooms[i].isAngledCabinetRoom) {
+        if (rooms[i].isSeekHallway || rooms[i].isSeekFinale || rooms[i].isSeekChase) {
             rooms[i].pCount = 0; 
         } else if (!isSeekEvent || rooms[i].hasSeekEyes) {
             rooms[i].pCount = rand() % 5 + 3; 
@@ -583,8 +533,8 @@ void generateRooms() {
                     overlap = false; rooms[i].pSide[p] = rand() % 2; rooms[i].pZ[p] = 1.0f + (rand() % 70) / 10.0f; 
                     rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
                     
-                    if (rooms[i].pSide[p] == 0 && rooms[i].hasLeftRoom && abs(rooms[i].pZ[p] - abs(rooms[i].leftDoorOffset)) < 2.4f) overlap = true;
-                    if (rooms[i].pSide[p] == 1 && rooms[i].hasRightRoom && abs(rooms[i].pZ[p] - abs(rooms[i].rightDoorOffset)) < 2.4f) overlap = true;
+                    if (rooms[i].pSide[p] == 0 && rooms[i].hasLeftRoom && abs(rooms[i].pZ[p] - abs(rooms[i].leftDoorOffset)) < 2.8f) overlap = true;
+                    if (rooms[i].pSide[p] == 1 && rooms[i].hasRightRoom && abs(rooms[i].pZ[p] - abs(rooms[i].rightDoorOffset)) < 2.8f) overlap = true;
                     
                     for(int op=0; op<p; op++) {
                         if (rooms[i].pSide[p] == rooms[i].pSide[op]) {
@@ -752,9 +702,11 @@ int main() {
                     printf(" [HOLD R + Y] Tp to Seek    \x1b[K\n\n"); 
                 } else if (isGlitching) {
                     char g1[4], g2[4]; for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; } g1[3]='\0'; g2[3]='\0';
-                    printf(" Current Room : %s         \x1b[K\n", g1); printf(" Next Door    : %s         \x1b[K\n\n", g2);
+                    printf(" Current Room : %s         \x1b[K\n", g1); printf(" Next Door    : %s         \x1b[K\n");
+                    printf("                            \x1b[K\n\n"); 
                 } else {
-                    printf(" Current Room : %03d         \x1b[K\n", dispCurrent); printf(" Next Door    : %03d         \x1b[K\n\n", dispNext);
+                    printf(" Current Room : %03d         \x1b[K\n", dispCurrent); printf(" Next Door    : %03d         \x1b[K\n");
+                    printf("                            \x1b[K\n\n"); 
                 }
 
                 if (nextDoorIdx >= 0 && nextDoorIdx < TOTAL_ROOMS) {
@@ -961,8 +913,8 @@ int main() {
 
                 auto checkChest = [&](float cX, float cZ, bool& isOpen) {
                     if (!isOpen && abs(camZ - cZ) < 2.0f && abs(camX - cX) < 2.0f) {
-                        isOpen = true; needsVBOUpdate = true; int coins = (rand() % 2) + 4; playerCoins += coins;
-                        sprintf(uiMessage, "Opened Chest! (+%d Coins)", coins); messageTimer = 90; return true;
+                        isOpen = true; needsVBOUpdate = true; playerCoins += 20;
+                        sprintf(uiMessage, "Opened Chest!"); messageTimer = 90; return true;
                     } return false;
                 };
 
