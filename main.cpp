@@ -154,9 +154,9 @@ void buildBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, float of
     addBox(skirtX, 0.2f, zCenter + 1.25f, 0.1f, 0.2f, -2.5f, 0.4f, 0.1f, 0.1f, true, 0, L); addBox(pillowX, 0.5f, zCenter + 1.0f, 0.5f, 0.08f, -0.6f, 0.9f, 0.9f, 0.9f, false, 0, L); 
     if (itemType == 1) { 
         float ix = (isLeft ? -2.2f : 2.1f) + offsetX; float kR=0.9f, kG=0.75f, kB=0.1f;
-        addBox(ix, 0.52f, zCenter - 0.1f, 0.2f, 0.05f, 0.05f, kR,kG,kB, false, 0, L); 
-        addBox(ix + 0.15f, 0.52f, zCenter - 0.15f, 0.1f, 0.05f, 0.15f, kR,kG,kB, false, 0, L); 
-        addBox(ix + 0.05f, 0.52f, zCenter - 0.05f, 0.05f, 0.05f, 0.08f, kR,kG,kB, false, 0, L); 
+        addBox(ix, 0.52f, zCenter - 0.1f, 0.14f, 0.035f, 0.035f, kR,kG,kB, false, 0, L);
+        addBox(ix + 0.1f, 0.52f, zCenter - 0.13f, 0.07f, 0.035f, 0.1f, kR,kG,kB, false, 0, L);
+        addBox(ix + 0.03f, 0.52f, zCenter - 0.065f, 0.035f, 0.035f, 0.05f, kR,kG,kB, false, 0, L);
     } else if (itemType == 3) { 
         addBox((isLeft ? -2.2f : 2.1f) + offsetX + 0.02f, 0.52f, zCenter - 0.01f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
@@ -173,9 +173,9 @@ void buildRotatedBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, f
     addBox(isLeft ? x + 0.1f : x + bedL - 0.6f, 0.5f, zCenter - 0.4f, 0.5f, 0.08f, 0.8f, 0.9f, 0.9f, 0.9f, false, 0, L);
     if (itemType == 1) {
         float ix = isLeft ? x + 0.5f : x + bedL - 0.6f; float kR=0.9f, kG=0.75f, kB=0.1f;
-        addBox(ix, 0.52f, zCenter - 0.1f, 0.2f, 0.05f, 0.05f, kR,kG,kB, false, 0, L); 
-        addBox(ix + 0.15f, 0.52f, zCenter - 0.15f, 0.1f, 0.05f, 0.15f, kR,kG,kB, false, 0, L); 
-        addBox(ix + 0.05f, 0.52f, zCenter - 0.05f, 0.05f, 0.05f, 0.08f, kR,kG,kB, false, 0, L); 
+        addBox(ix, 0.52f, zCenter - 0.1f, 0.14f, 0.035f, 0.035f, kR,kG,kB, false, 0, L);
+        addBox(ix + 0.1f, 0.52f, zCenter - 0.13f, 0.07f, 0.035f, 0.1f, kR,kG,kB, false, 0, L);
+        addBox(ix + 0.03f, 0.52f, zCenter - 0.065f, 0.035f, 0.035f, 0.05f, kR,kG,kB, false, 0, L);
     }
     else if (itemType == 3) addBox(isLeft ? x + 1.0f : x + bedL - 1.1f, 0.52f, zCenter, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     collisions.push_back({x, 0.0f, zCenter - 0.7f, x + bedL, 0.6f, zCenter + 0.7f, 2});
@@ -192,7 +192,11 @@ void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L
     addBox(trayX, 0.3f, zCenter - 0.35f, 0.5f, 0.15f, 0.7f, 0.25f, 0.12f, 0.08f, false, 0, L);
     addBox(handleX, 0.35f, zCenter - 0.1f, 0.05f, 0.05f, 0.2f, 0.8f, 0.8f, 0.8f, false, 0, L);
     if (isOpen) {
-        if (itemType == 1) { float kR=0.9f, kG=0.75f, kB=0.1f; addBox(itemX, 0.46f, zCenter - 0.1f, 0.2f, 0.05f, 0.05f, kR,kG,kB, false, 0, L); addBox(itemX + 0.15f, 0.46f, zCenter - 0.15f, 0.1f, 0.05f, 0.15f, kR,kG,kB, false, 0, L); addBox(itemX + 0.05f, 0.46f, zCenter - 0.05f, 0.05f, 0.05f, 0.08f, kR,kG,kB, false, 0, L); }
+        if (itemType == 1) { float kR=0.9f, kG=0.75f, kB=0.1f; 
+            addBox(itemX, 0.46f, zCenter - 0.1f, 0.14f, 0.035f, 0.035f, kR,kG,kB, false, 0, L);
+            addBox(itemX + 0.1f, 0.46f, zCenter - 0.13f, 0.07f, 0.035f, 0.1f, kR,kG,kB, false, 0, L);
+            addBox(itemX + 0.03f, 0.46f, zCenter - 0.065f, 0.035f, 0.035f, 0.05f, kR,kG,kB, false, 0, L);
+        }
         else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false, 0, L);
         else if (itemType == 3) addBox(itemX + 0.02f, 0.46f, zCenter - 0.05f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
@@ -286,7 +290,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
         addBox(-2.5f, 0.1f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); addBox(-2.5f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); addBox(-2.5f, 0.6f, -8.6f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
-        if(!lobbyKeyPickedUp) { addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); addBox(-4.7f, 0.7f, -9.85f, 0.05f, 0.15f, 0.05f, 1.0f, 0.84f, 0.0f, false); }
+        if(!lobbyKeyPickedUp) { addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); addBox(-4.72f, 0.75f, -9.86f, 0.035f, 0.1f, 0.035f, 1.0f, 0.84f, 0.0f, false); }
     }
 
     int startRoom = playerCurrentRoom - 1, endRoom = playerCurrentRoom + 2; 
@@ -356,7 +360,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(-3.0f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
             addBox(-2.95f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-            if (rooms[i].leftDoorOpen) { addBox(-4.1f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-4.0f, 0.7f, doorZ - 0.2f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({-4.1f, 0.0f, doorZ - 1.15f, -3.0f, 1.8f, doorZ - 1.10f, 4}); } 
+            if (rooms[i].leftDoorOpen) { addBox(-4.1f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-4.0f, 0.7f, doorZ - 1.2f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({-4.1f, 0.0f, doorZ - 1.15f, -3.0f, 1.8f, doorZ - 1.10f, 4}); } 
             else { addBox(-3.0f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-2.95f, 0.7f, doorZ - 0.15f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); } 
             
             float srZ = doorZ + 2.5f; 
@@ -388,7 +392,7 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
             if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
             addBox(2.9f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
             addBox(2.9f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-            if (rooms[i].rightDoorOpen) { addBox(3.0f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(3.9f, 0.7f, doorZ - 0.2f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({3.0f, 0.0f, doorZ - 1.15f, 4.1f, 1.8f, doorZ - 1.10f, 4}); } 
+            if (rooms[i].rightDoorOpen) { addBox(3.0f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(3.9f, 0.7f, doorZ - 1.2f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({3.0f, 0.0f, doorZ - 1.15f, 4.1f, 1.8f, doorZ - 1.10f, 4}); } 
             else { addBox(2.95f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(2.9f, 0.7f, doorZ - 0.15f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); }
             
             float srZ = doorZ + 2.5f; 
