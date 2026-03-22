@@ -119,6 +119,12 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
+void buildLamp(float x, float z, float L = 1.0f) {
+    addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L);
+    addBox(x-0.05f, 0.51f, z-0.05f, 0.1f, 0.2f, 0.1f, 0.2f, 0.3f, 0.4f, false, 0, L);
+    addBox(x-0.2f, 0.71f, z-0.2f, 0.4f, 0.25f, 0.4f, 0.9f, 0.9f, 0.8f, false, 0, L);
+}
+
 void buildCabinet(float zCenter, bool isLeft, float L = 1.0f, float offsetX = 0.0f, int itemType = 0) {
     float backX = (isLeft ? -2.95f : 2.85f) + offsetX, topX = (isLeft ? -2.95f : 2.15f) + offsetX, frontX = (isLeft ? -2.25f : 2.15f) + offsetX; 
     addBox(backX, 0, zCenter - 0.5f, 0.1f, 1.5f, 1.0f, 0.3f, 0.18f, 0.1f, false, 0, L); 
@@ -175,7 +181,7 @@ void buildRotatedBed(float zCenter, bool isLeft, int itemType, float L = 1.0f, f
     collisions.push_back({x, 0.0f, zCenter - 0.7f, x + bedL, 0.6f, zCenter + 0.7f, 2});
 }
 
-void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L = 1.0f, float offsetX = 0.0f) {
+void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L = 1.0f, float offsetX = 0.0f, bool hasLamp = false) {
     float frameX = (isLeft ? -2.95f : 2.45f) + offsetX, openOffset = isOpen ? (isLeft ? 0.35f : -0.35f) : 0.0f;
     float trayX = (isLeft ? (-2.9f + openOffset) : (2.4f + openOffset)) + offsetX, handleX = (isLeft ? (-2.4f + openOffset) : (2.35f + openOffset)) + offsetX, itemX = (isLeft ? (-2.6f + openOffset) : (2.5f + openOffset)) + offsetX;
     addBox(frameX + 0.05f, 0.0f, zCenter - 0.35f, 0.05f, 0.2f, 0.05f, 0.2f, 0.1f, 0.05f, false, 0, L);
@@ -190,6 +196,11 @@ void buildDresser(float zCenter, bool isLeft, bool isOpen, int itemType, float L
         else if (itemType == 2) addBox(itemX, 0.46f, zCenter - 0.05f, 0.15f, 0.02f, 0.08f, 0.8f, 0.6f, 0.4f, false, 0, L);
         else if (itemType == 3) addBox(itemX + 0.02f, 0.46f, zCenter - 0.05f, 0.04f, 0.005f, 0.04f, 1.0f, 0.85f, 0.0f, false, 0, L);
     }
+    
+    if (hasLamp) {
+        float lampX = (isLeft ? -2.7f : 2.7f) + offsetX;
+        buildLamp(lampX, zCenter, L);
+    }
 }
 
 void buildChest(float x, float z, bool isOpen, float L = 1.0f) {
@@ -198,12 +209,6 @@ void buildChest(float x, float z, bool isOpen, float L = 1.0f) {
     addBox(x + 0.37f, 0.0f, z - 0.32f, 0.05f, 0.4f, 0.05f, 0.8f, 0.7f, 0.1f, false, 0, L);
     if (!isOpen) { addBox(x - 0.4f, 0.4f, z - 0.3f, 0.8f, 0.2f, 0.6f, 0.35f, 0.18f, 0.08f, true, 0, L); addBox(x - 0.05f, 0.3f, z + 0.3f, 0.1f, 0.15f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); }
     else { addBox(x - 0.4f, 0.4f, z - 0.4f, 0.8f, 0.6f, 0.1f, 0.35f, 0.18f, 0.08f, true, 0, L); addBox(x - 0.2f, 0.35f, z - 0.1f, 0.4f, 0.05f, 0.2f, 1.0f, 0.85f, 0.0f, false, 0, L); }
-}
-
-void buildLamp(float x, float z, float L = 1.0f) {
-    addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L);
-    addBox(x-0.05f, 0.51f, z-0.05f, 0.1f, 0.2f, 0.1f, 0.2f, 0.3f, 0.4f, false, 0, L);
-    addBox(x-0.2f, 0.71f, z-0.2f, 0.4f, 0.25f, 0.4f, 0.9f, 0.9f, 0.8f, false, 0, L);
 }
 
 void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bool centerOpen, bool rightDoor, bool rightOpen, int roomIndex, float L = 1.0f) {
@@ -367,8 +372,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
             int layout = rooms[i].leftRoomLayout;
             if (layout == 1) buildChest(-6.0f, srZ - 2.5f, rooms[i].leftRoomDrawerOpen[0], L);
-            else if (layout == 2) { buildBed(srZ - 2.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 2.5f, false, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f); buildLamp(-8.4f, srZ - 2.5f, L); } 
-            else if (layout == 3) { buildRotatedBed(srZ - 1.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 3.5f, true, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f); buildLamp(-8.4f, srZ - 3.5f, L); } 
+            else if (layout == 2) { buildBed(srZ - 2.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 2.5f, false, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f, true); } 
+            else if (layout == 3) { buildRotatedBed(srZ - 1.5f, true, rooms[i].leftRoomSlotItem[0], L, -6.0f); buildDresser(srZ - 3.5f, true, rooms[i].leftRoomDrawerOpen[1], rooms[i].leftRoomSlotItem[1], L, -6.0f, true); } 
             else {
                 for(int s=0; s<2; s++) {
                     int type = rooms[i].leftRoomSlotType[s]; float fZ = srZ - 1.5f - (s * 3.0f);
@@ -399,8 +404,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
 
             int layout = rooms[i].rightRoomLayout;
             if (layout == 1) buildChest(6.0f, srZ - 2.5f, rooms[i].rightRoomDrawerOpen[0], L);
-            else if (layout == 2) { buildBed(srZ - 2.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 2.5f, true, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f); buildLamp(8.4f, srZ - 2.5f, L); } 
-            else if (layout == 3) { buildRotatedBed(srZ - 1.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 3.5f, false, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f); buildLamp(8.4f, srZ - 3.5f, L); } 
+            else if (layout == 2) { buildBed(srZ - 2.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 2.5f, true, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f, true); } 
+            else if (layout == 3) { buildRotatedBed(srZ - 1.5f, false, rooms[i].rightRoomSlotItem[0], L, 6.0f); buildDresser(srZ - 3.5f, false, rooms[i].rightRoomDrawerOpen[1], rooms[i].rightRoomSlotItem[1], L, 6.0f, true); } 
             else {
                 for(int s=0; s<2; s++) {
                     int type = rooms[i].rightRoomSlotType[s]; float fZ = srZ - 1.5f - (s * 3.0f);
@@ -504,9 +509,6 @@ void generateRooms() {
             for(int s=0; s<3; s++) {
                 float slotZRel = -2.5f - (s * 2.5f);
                 
-                if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 1.8f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; continue; }
-                if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 1.8f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
-
                 int r = rand() % 100;
                 if (r < 25) rooms[i].slotType[s] = 1;     
                 else if (r < 50) rooms[i].slotType[s] = 2; 
@@ -517,6 +519,9 @@ void generateRooms() {
                     rooms[i].slotType[s] = 6; 
                     if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; 
                 }          
+
+                if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 2.6f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; rooms[i].slotItem[s] = 0; }
+                if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 2.6f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; rooms[i].slotItem[s] = 0; }
             }
         } else {
             rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
