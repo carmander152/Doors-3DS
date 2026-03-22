@@ -551,7 +551,9 @@ void generateRooms() {
                         }
                     } tries++;
                 } while (overlap && tries < 10);
-                rooms[i].pR[p] = 0.15f + (rand() % 35) / 100.0f; rooms[i].pG[p] = 0.15f + (rand() % 35) / 100.0f; rooms[i].pB[p] = 0.15f + (rand() % 35) / 100.0f; 
+                
+                if (overlap) { rooms[i].pCount--; p--; } 
+                else { rooms[i].pR[p] = 0.15f + (rand() % 35) / 100.0f; rooms[i].pG[p] = 0.15f + (rand() % 35) / 100.0f; rooms[i].pB[p] = 0.15f + (rand() % 35) / 100.0f; }
             }
         } else rooms[i].pCount = 0; 
     }
@@ -693,6 +695,9 @@ int main() {
         if (elevatorDoorsOpen && !elevatorClosing && camZ < 2.0f) { inElevator = false; elevatorClosing = true; needsVBOUpdate = true; }
         if (elevatorClosing && elevatorDoorOffset > 0.0f) { elevatorDoorOffset -= 0.04f; if (elevatorDoorOffset <= 0.0f) elevatorDoorOffset = 0.0f; needsVBOUpdate = true; }
 
+        static bool prevScreechActive = false;
+        if (screechActive != prevScreechActive) { consoleClear(); prevScreechActive = screechActive; }
+
         printf("\x1b[1;1H"); printf("==============================\n");
         if (isDead) {
             printf("         YOU DIED!            \n"); printf("==============================\n\n");
@@ -711,10 +716,10 @@ int main() {
                     printf(" [HOLD R + Y] Tp to Seek    \x1b[K\n\n"); 
                 } else if (isGlitching) {
                     char g1[4], g2[4]; for(int i=0; i<3; i++) { g1[i]=symbols[rand()%8]; g2[i]=symbols[rand()%8]; } g1[3]='\0'; g2[3]='\0';
-                    printf(" Current Room : %s         \x1b[K\n", g1); printf(" Next Door    : %s         \x1b[K\n");
+                    printf(" Current Room : %s         \x1b[K\n", g1); printf(" Next Door    : %s         \x1b[K\n", g2);
                     printf("                            \x1b[K\n\n"); 
                 } else {
-                    printf(" Current Room : %03d         \x1b[K\n", dispCurrent); printf(" Next Door    : %03d         \x1b[K\n");
+                    printf(" Current Room : %03d         \x1b[K\n", dispCurrent); printf(" Next Door    : %03d         \x1b[K\n", dispNext);
                     printf("                            \x1b[K\n\n"); 
                 }
 
