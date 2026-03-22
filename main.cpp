@@ -121,6 +121,39 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
+bool checkLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2) {
+    for(auto& b : collisions) {
+        if (b.type == 4) continue; // Ignore door interaction zones
+        
+        float tmin = 0.0f, tmax = 1.0f;
+        
+        // Check X axis
+        float dx = x2 - x1;
+        if (fabsf(dx) > 0.0001f) {
+            float tx1 = (b.minX - x1) / dx, tx2 = (b.maxX - x1) / dx;
+            tmin = fmaxf(tmin, fminf(tx1, tx2)); tmax = fminf(tmax, fmaxf(tx1, tx2));
+        } else if (x1 <= b.minX || x1 >= b.maxX) continue;
+        
+        // Check Y axis
+        float dy = y2 - y1;
+        if (fabsf(dy) > 0.0001f) {
+            float ty1 = (b.minY - y1) / dy, ty2 = (b.maxY - y1) / dy;
+            tmin = fmaxf(tmin, fminf(ty1, ty2)); tmax = fminf(tmax, fmaxf(ty1, ty2));
+        } else if (y1 <= b.minY || y1 >= b.maxY) continue;
+        
+        // Check Z axis
+        float dz = z2 - z1;
+        if (fabsf(dz) > 0.0001f) {
+            float tz1 = (b.minZ - z1) / dz, tz2 = (b.maxZ - z1) / dz;
+            tmin = fmaxf(tmin, fminf(tz1, tz2)); tmax = fminf(tmax, fmaxf(tz1, tz2));
+        } else if (z1 <= b.minZ || z1 >= b.maxZ) continue;
+        
+        // If the line segment intersects the box, LOS is blocked
+        if (tmin <= tmax && tmax > 0.0f && tmin < 1.0f) return false; 
+    }
+    return true; // Clear line of sight
+}
+
 void buildLamp(float x, float z, float L = 1.0f) {
     addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L);
     addBox(x-0.05f, 0.51f, z-0.05f, 0.1f, 0.2f, 0.1f, 0.2f, 0.3f, 0.4f, false, 0, L);
@@ -825,7 +858,8 @@ int main() {
                 float vx = ex - camX, vy = ey - camYOffset, vz = ez - camZ, dist = sqrt(vx*vx + vy*vy + vz*vz); if (dist > 0) { vx /= dist; vy /= dist; vz /= dist; }
                 float fx = -sinf(camYaw) * cosf(camPitch), fy = sinf(camPitch), fz = -cosf(camYaw) * cosf(camPitch), dotProduct = (fx * vx) + (fy * vy) + (fz * vz);
 
-                if (dotProduct > 0.85f) { 
+                // Check dot product AND Line of Sight!
+                if (dotProduct > 0.85f && checkLineOfSight(camX, camYOffset, camZ, ex, ey, ez)) { 
                     if (eyesGraceTimer <= 0) {
                         if (!isLookingAtEyes) {
                             isLookingAtEyes = true; eyesDamageTimer = 5; eyesDamageAccumulator = 4; 
