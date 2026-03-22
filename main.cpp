@@ -253,11 +253,13 @@ void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bo
     auto drawDoor = [&](float dx, bool isOpen) {
         if (!isOpen) {
             addBox(dx, 0.0f, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
-            addBox(dx+1.0f, 0.7f, z+0.02f, 0.15f, 0.05f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); // Opposite Handle
+            addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); // Gold Plaque Restored
+            addBox(dx+1.05f, 0.7f, z+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L); // Distinct Silver Handle
             if(rooms[roomIndex].isLocked) addBox(dx+0.9f, 0.6f, z+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); 
         } else {
             addBox(dx, 0.0f, z, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, true, 0, L); 
-            addBox(dx+0.1f, 0.7f, z-1.0f, 0.02f, 0.05f, 0.15f, 0.8f, 0.7f, 0.2f, false, 0, L); 
+            addBox(dx+0.1f, 1.1f, z-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false, 0, L); // Open Plaque
+            addBox(dx+0.1f, 0.7f, z-1.05f, 0.03f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); // Open Handle
         }
     };
     if(leftDoor) drawDoor(-2.6f, leftOpen); if(centerDoor) drawDoor(-0.6f, centerOpen); if(rightDoor) drawDoor(1.4f, rightOpen);
@@ -391,8 +393,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 if (afterLen > 0.05f) addBox(-3.0f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
                 addBox(-3.0f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
                 addBox(-2.95f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(-2.95f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-                if (rooms[i].leftDoorOpen) { addBox(-4.15f, 0, doorZ - 1.2f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); collisions.push_back({-4.15f, 0.0f, doorZ - 1.25f, -3.0f, 1.8f, doorZ - 1.15f, 4}); } 
-                else { addBox(-3.0f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-2.95f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); } // Opposite handle
+                if (rooms[i].leftDoorOpen) { addBox(-4.1f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-4.0f, 0.7f, doorZ - 1.10f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({-4.1f, 0.0f, doorZ - 1.15f, -3.0f, 1.8f, doorZ - 1.10f, 4}); } 
+                else { addBox(-3.0f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(-2.95f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); } 
                 
                 float srZ = doorZ + 2.5f; 
                 addBox(-9.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); addBox(-9.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
@@ -423,8 +425,8 @@ void buildWorld(int currentChunk, int playerCurrentRoom) {
                 if (afterLen > 0.05f) addBox(2.9f, 0, doorZ - 1.2f, 0.1f, 1.8f, -afterLen, 0.25f, 0.2f, 0.15f, true, 0, L); 
                 addBox(2.9f, 1.4f, doorZ, 0.1f, 0.4f, -1.2f, 0.25f, 0.2f, 0.15f, false, 0, L); 
                 addBox(2.9f, 0, doorZ, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 0, doorZ - 1.15f, 0.05f, 1.4f, -0.05f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(2.9f, 1.35f, doorZ, 0.05f, 0.05f, -1.2f, 0.15f, 0.1f, 0.05f, false, 0, L); 
-                if (rooms[i].rightDoorOpen) { addBox(3.05f, 0, doorZ - 1.2f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); collisions.push_back({3.0f, 0.0f, doorZ - 1.25f, 4.15f, 1.8f, doorZ - 1.15f, 4}); } 
-                else { addBox(2.95f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(2.9f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); } // Opposite Handle
+                if (rooms[i].rightDoorOpen) { addBox(3.0f, 0, doorZ - 1.15f, 1.1f, 1.4f, 0.05f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(3.9f, 0.7f, doorZ - 1.10f, 0.1f, 0.05f, 0.05f, 0.8f, 0.7f, 0.2f, false, 0, L); collisions.push_back({3.0f, 0.0f, doorZ - 1.15f, 4.1f, 1.8f, doorZ - 1.10f, 4}); } 
+                else { addBox(2.95f, 0, doorZ - 0.05f, 0.05f, 1.4f, -1.1f, 0.12f, 0.06f, 0.03f, true, 0, L); addBox(2.9f, 0.7f, doorZ - 1.0f, 0.05f, 0.1f, -0.1f, 0.8f, 0.7f, 0.2f, false, 0, L); }
                 
                 float srZ = doorZ + 2.5f; 
                 addBox(3.0f, 0, srZ, 6.0f, 0.01f, -5.0f, 0.18f, 0.1f, 0.05f, false, 0, L); addBox(3.0f, 1.8f, srZ, 6.0f, 0.01f, -5.0f, 0.12f, 0.12f, 0.12f, false, 0, L); 
@@ -512,7 +514,7 @@ void generateRooms() {
         if (rooms[i].hasEyes) { rooms[i].eyesX = 0.0f; rooms[i].eyesY = 0.9f; rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f; }
 
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
-            rooms[i].isAngledCabinetRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 3 && rand() % 100 < 6); // 6% rarity
+            rooms[i].isAngledCabinetRoom = (!isSeekEvent && !rooms[i].isDupeRoom && i > 3 && rand() % 100 < 6); 
             
             if (rooms[i].isAngledCabinetRoom) {
                 rooms[i].slotType[0] = 0; rooms[i].slotType[1] = 0; rooms[i].slotType[2] = 0;
@@ -550,11 +552,12 @@ void generateRooms() {
                 bool bandaidSpawned = false;
                 for(int s=0; s<3; s++) {
                     float slotZRel = -2.5f - (s * 2.5f);
-                    if (rooms[i].hasLeftRoom && abs((rooms[i].leftDoorOffset - 0.6f) - slotZRel) < 2.2f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; continue; }
-                    if (rooms[i].hasRightRoom && abs((rooms[i].rightDoorOffset - 0.6f) - slotZRel) < 2.2f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
+                    
+                    if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 3.0f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; continue; }
+                    if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 3.0f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; continue; }
 
                     int r = rand() % 100;
-                    if (r < 25) rooms[i].slotType[s] = 1;      // No Beds! Only cabinets and dressers
+                    if (r < 25) rooms[i].slotType[s] = 1;     
                     else if (r < 50) rooms[i].slotType[s] = 2; 
                     else if (r < 75) {
                         rooms[i].slotType[s] = 5; 
@@ -579,7 +582,7 @@ void generateRooms() {
                 do {
                     overlap = false; rooms[i].pSide[p] = rand() % 2; rooms[i].pZ[p] = 1.0f + (rand() % 70) / 10.0f; 
                     rooms[i].pY[p] = 0.5f + (rand() % 70) / 100.0f; rooms[i].pW[p] = 0.3f + (rand() % 60) / 100.0f; rooms[i].pH[p] = 0.3f + (rand() % 60) / 100.0f; 
-                    // Expanding Painting Clearance Zone to 2.4f!
+                    
                     if (rooms[i].pSide[p] == 0 && rooms[i].hasLeftRoom && abs(rooms[i].pZ[p] - abs(rooms[i].leftDoorOffset)) < 2.4f) overlap = true;
                     if (rooms[i].pSide[p] == 1 && rooms[i].hasRightRoom && abs(rooms[i].pZ[p] - abs(rooms[i].rightDoorOffset)) < 2.4f) overlap = true;
                     
