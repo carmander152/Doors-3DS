@@ -8,6 +8,14 @@
 #include <time.h>
 #include "vshader_shbin.h"
 
+// --- MULTIPLAYER HEADERS ---
+#include <malloc.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #define DISPLAY_TRANSFER_FLAGS \
     (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | \
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
@@ -19,6 +27,17 @@
 typedef struct { float pos[4]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
+
+// --- MULTIPLAYER DATA STRUCT ---
+typedef struct {
+    int playerID; // Unique ID to prevent echoing ourselves!
+    float x, z, yaw;
+    int health;
+    bool isCrouching, isDead;
+} PlayerDataPacket;
+
+// Start them far away out of bounds so you don't see a ghost at 0,0
+PlayerDataPacket remotePlayer = {0, 999.0f, 999.0f, 0.0f, 100, false, false}; 
 
 std::vector<vertex> world_mesh;
 std::vector<BBox> collisions;
@@ -253,6 +272,41 @@ void addWallWithDoors(float z, bool leftDoor, bool leftOpen, bool centerDoor, bo
 void buildWorld(int currentChunk, int playerCurrentRoom) {
     world_mesh.clear(); collisions.clear();
     
+    // --- DRAW REMOTE PLAYER (ROBLOX NOOB) ---
+    if (remotePlayer.health > 0 && !remotePlayer.isDead) {
+        float rX = remotePlayer.x;
+        float rZ = remotePlayer.z;
+        float rYaw = remotePlayer.yaw;
+        bool crouch = remotePlayer.isCrouching;
+
+        // Shrink the leg height if they are crouching
+        float legH = crouch ? 0.2f : 0.45f;
+        float torsoH = 0.45f;
+        float headS = 0.3f; 
+        float rY = 0.0f; // Feet on ground
+
+        // Legs (Green)
+        addBox(rX - 0.2f, rY, rZ - 0.1f, 0.4f, legH, 0.2f, 0.1f, 0.8f, 0.1f, false);
+
+        // Torso (Blue)
+        addBox(rX - 0.2f, rY + legH, rZ - 0.1f, 0.4f, torsoH, 0.2f, 0.1f, 0.1f, 0.9f, false);
+
+        // Left Arm (Yellow)
+        addBox(rX - 0.35f, rY + legH + 0.05f, rZ - 0.1f, 0.15f, torsoH - 0.05f, 0.2f, 0.9f, 0.9f, 0.1f, false);
+        
+        // Right Arm (Yellow)
+        addBox(rX + 0.2f, rY + legH + 0.05f, rZ - 0.1f, 0.15f, torsoH - 0.05f, 0.2f, 0.9f, 0.9f, 0.1f, false);
+
+        // Head (Yellow)
+        float headY = rY + legH + torsoH;
+        addBox(rX - 0.15f, headY, rZ - 0.15f, 0.3f, headS, 0.3f, 0.9f, 0.9f, 0.1f, false);
+
+        // Face Visor (Black) so you know which way they are looking!
+        float faceX = rX - (sinf(rYaw) * 0.16f);
+        float faceZ = rZ - (cosf(rYaw) * 0.16f);
+        addBox(faceX - 0.1f, headY + 0.1f, faceZ - 0.1f, 0.2f, 0.1f, 0.2f, 0.05f, 0.05f, 0.05f, false);
+    }
+
     if (screechActive) {
         addBox(screechX - 0.2f, screechY, screechZ - 0.2f, 0.4f, 0.4f, 0.4f, 0.05f, 0.05f, 0.05f, false);
         addBox(screechX - 0.22f, screechY + 0.1f, screechZ - 0.22f, 0.44f, 0.05f, 0.44f, 0.9f, 0.9f, 0.9f, false);
@@ -547,7 +601,7 @@ void generateRooms() {
                 float slotZRel = -2.5f - (s * 2.5f); int r = rand() % 100;
                 if (r < 25) rooms[i].slotType[s] = 1; else if (r < 50) rooms[i].slotType[s] = 2; 
                 else if (r < 75) { rooms[i].slotType[s] = 5; if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; } 
-                else { rooms[i].slotType[s] = 6; if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; }          
+                else { rooms[i].slotType[s] = 6; if (!bandaidSpawned && rand() % 100 < 15) { rooms[i].slotItem[s] = 2; bandaidSpawned = true; } else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3; }         
 
                 if (rooms[i].hasLeftRoom && abs(rooms[i].leftDoorOffset - slotZRel) < 2.6f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) { rooms[i].slotType[s] = 0; rooms[i].slotItem[s] = 0; }
                 if (rooms[i].hasRightRoom && abs(rooms[i].rightDoorOffset - slotZRel) < 2.6f && (rooms[i].slotType[s] == 2 || rooms[i].slotType[s] == 4 || rooms[i].slotType[s] == 6)) { rooms[i].slotType[s] = 0; rooms[i].slotItem[s] = 0; }
@@ -621,6 +675,9 @@ int main() {
     gfxInitDefault(); gfxSet3D(false); irrstInit(); srand(time(NULL));
     consoleInit(GFX_BOTTOM, NULL);
     romfsInit();
+    
+    // --- GENERATE UNIQUE PLAYER ID ---
+    int myPlayerID = rand(); 
 
     bool audio_ok = R_SUCCEEDED(ndspInit());
     ndspWaveBuf sndPsst = {0}, sndAttack = {0}, sndCaught = {0}, sndDoor = {0}, sndLockedDoor = {0}, sndDupeAttack = {0}; 
@@ -641,6 +698,35 @@ int main() {
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
+
+    // --- MULTIPLAYER UDP BROADCAST SETUP ---
+    u32 *socBuffer = (u32*)memalign(0x1000, 0x100000);
+    int udpSocket = -1;
+    struct sockaddr_in serverAddr, clientAddr;
+
+    if (R_SUCCEEDED(socInit(socBuffer, 0x100000))) {
+        udpSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (udpSocket >= 0) {
+            // Non-blocking flag
+            int flags = fcntl(udpSocket, F_GETFL, 0);
+            fcntl(udpSocket, F_SETFL, flags | O_NONBLOCK); 
+
+            // Enable broadcasting (Megaphone!)
+            int broadcastEnable = 1;
+            setsockopt(udpSocket, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+
+            // Bind to listen to anyone on Port 5000
+            clientAddr.sin_family = AF_INET;
+            clientAddr.sin_port = htons(5000);
+            clientAddr.sin_addr.s_addr = INADDR_ANY;
+            bind(udpSocket, (struct sockaddr*)&clientAddr, sizeof(clientAddr));
+
+            // Send to everyone (255.255.255.255)
+            serverAddr.sin_family = AF_INET;
+            serverAddr.sin_port = htons(5000);
+            serverAddr.sin_addr.s_addr = INADDR_BROADCAST; 
+        }
+    }
 
     generateRooms(); 
 
@@ -1117,6 +1203,34 @@ int main() {
             }
         }
 
+        // --- MULTIPLAYER UDP BROADCAST SYNC ---
+        if (udpSocket >= 0) {
+            // 1. Send our data (Shout it into the void)
+            PlayerDataPacket myData;
+            myData.playerID = myPlayerID; // Our ID
+            myData.x = camX; myData.z = camZ; myData.yaw = camYaw;
+            myData.health = playerHealth; myData.isCrouching = isCrouching; myData.isDead = isDead;
+            
+            sendto(udpSocket, &myData, sizeof(PlayerDataPacket), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+
+            // 2. Receive data from anyone on the network
+            struct sockaddr_in senderAddr;
+            socklen_t senderLen = sizeof(senderAddr);
+            PlayerDataPacket incomingData;
+            
+            int bytesReceived = recvfrom(udpSocket, &incomingData, sizeof(PlayerDataPacket), 0, (struct sockaddr*)&senderAddr, &senderLen);
+            
+            if (bytesReceived == sizeof(PlayerDataPacket)) {
+                // IGNORING OUR OWN ECHO
+                if (incomingData.playerID != myPlayerID) {
+                    if (remotePlayer.x != incomingData.x || remotePlayer.z != incomingData.z || remotePlayer.yaw != incomingData.yaw || remotePlayer.isCrouching != incomingData.isCrouching) {
+                        needsVBOUpdate = true;
+                    }
+                    remotePlayer = incomingData;
+                }
+            }
+        }
+
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
 
         if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); flashRedFrames--; } 
@@ -1138,6 +1252,11 @@ int main() {
         C3D_FrameEnd(0);
     }
     
+    // --- MULTIPLAYER CLEANUP ---
+    if (udpSocket >= 0) close(udpSocket);
+    socExit();
+    if (socBuffer != NULL) free(socBuffer);
+
     if (audio_ok) {
         if (sndPsst.data_vaddr) linearFree((void*)sndPsst.data_vaddr); if (sndAttack.data_vaddr) linearFree((void*)sndAttack.data_vaddr); if (sndCaught.data_vaddr) linearFree((void*)sndCaught.data_vaddr);
         if (sndDoor.data_vaddr) linearFree((void*)sndDoor.data_vaddr); if (sndLockedDoor.data_vaddr) linearFree((void*)sndLockedDoor.data_vaddr); if (sndDupeAttack.data_vaddr) linearFree((void*)sndDupeAttack.data_vaddr);
