@@ -22,6 +22,7 @@ float globalTintR = 1.0f, globalTintG = 1.0f, globalTintB = 1.0f;
 struct RoomSetup {
     int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
     bool drawerOpen[3], isLocked, isJammed, hasLeftRoom, leftDoorOpen, hasRightRoom, rightDoorOpen, isDupeRoom, hasEyes, hasSeekEyes, isSeekHallway, isSeekChase, isSeekFinale;
+    float animMain[3], animLL[3], animLR[3], animRL[3], animRR[3]; 
     float lightLevel, leftDoorOffset, rightDoorOffset, eyesX, eyesY, eyesZ; 
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10]; int pSide[10];   
     int leftRoomSlotTypeL[3], leftRoomSlotItemL[3], leftRoomSlotTypeR[3], leftRoomSlotItemR[3]; bool leftRoomDrawerOpenL[3], leftRoomDrawerOpenR[3];
@@ -93,15 +94,16 @@ void buildBed(float zC, bool isL, int item, float L=1.0f, float offX=0.0f) {
     else if(item==3) addBox((isL?-2.2f:2.1f)+offX+0.02f,0.52f,zC-0.01f,0.04f,0.005f,0.04f,1.0f,0.85f,0.0f,false,0,L);
     collisions.push_back({x,0.0f,zC-1.25f,x+1.4f,0.6f,zC+1.25f,2});
 }
-void buildDresser(float zC, bool isL, bool isOpen, int item, float L=1.0f, float offX=0.0f, bool hasLamp=false) {
-    float frX=(isL?-2.95f:2.45f)+offX, oOff=isOpen?(isL?0.35f:-0.35f):0.0f, trX=(isL?(-2.9f+oOff):(2.4f+oOff))+offX, hX=(isL?(-2.4f+oOff):(2.35f+oOff))+offX, iX=(isL?(-2.6f+oOff):(2.5f+oOff))+offX;
+void buildDresser(float zC, bool isL, float openFactor, int item, float L=1.0f, float offX=0.0f, bool hasLamp=false) {
+    float frX=(isL?-2.95f:2.45f)+offX, oOff=openFactor*(isL?0.35f:-0.35f), trX=(isL?(-2.9f+oOff):(2.4f+oOff))+offX, hX=(isL?(-2.4f+oOff):(2.35f+oOff))+offX, iX=(isL?(-2.6f+oOff):(2.5f+oOff))+offX;
     addBox(frX+0.05f,0,zC-0.35f,0.05f,0.2f,0.05f,0.2f,0.1f,0.05f,false,0,L); addBox(frX+0.05f,0,zC+0.3f,0.05f,0.2f,0.05f,0.2f,0.1f,0.05f,false,0,L);
     addBox(frX+0.4f,0,zC-0.35f,0.05f,0.2f,0.05f,0.2f,0.1f,0.05f,false,0,L); addBox(frX+0.4f,0,zC+0.3f,0.05f,0.2f,0.05f,0.2f,0.1f,0.05f,false,0,L);
     addBox(frX,0.2f,zC-0.4f,0.5f,0.3f,0.8f,0.3f,0.15f,0.1f,true,3,L); addBox(trX,0.3f,zC-0.35f,0.5f,0.15f,0.7f,0.25f,0.12f,0.08f,false,0,L); addBox(hX,0.35f,zC-0.1f,0.05f,0.05f,0.2f,0.8f,0.8f,0.8f,false,0,L);
-    if(isOpen){ if(item==1){ addBox(iX,0.46f,zC-0.1f,0.14f,0.035f,0.035f,0.9f,0.75f,0.1f,false,0,L); addBox(iX+0.1f,0.46f,zC-0.13f,0.07f,0.035f,0.1f,0.9f,0.75f,0.1f,false,0,L); addBox(iX+0.03f,0.46f,zC-0.065f,0.035f,0.035f,0.05f,0.9f,0.75f,0.1f,false,0,L); } else if(item==2) addBox(iX,0.46f,zC-0.05f,0.15f,0.02f,0.08f,0.8f,0.6f,0.4f,false,0,L); else if(item==3) addBox(iX+0.02f,0.46f,zC-0.05f,0.04f,0.005f,0.04f,1.0f,0.85f,0.0f,false,0,L); }
+    if(openFactor > 0.1f){ if(item==1){ addBox(iX,0.46f,zC-0.1f,0.14f,0.035f,0.035f,0.9f,0.75f,0.1f,false,0,L); addBox(iX+0.1f,0.46f,zC-0.13f,0.07f,0.035f,0.1f,0.9f,0.75f,0.1f,false,0,L); addBox(iX+0.03f,0.46f,zC-0.065f,0.035f,0.035f,0.05f,0.9f,0.75f,0.1f,false,0,L); } else if(item==2) addBox(iX,0.46f,zC-0.05f,0.15f,0.02f,0.08f,0.8f,0.6f,0.4f,false,0,L); else if(item==3) addBox(iX+0.02f,0.46f,zC-0.05f,0.04f,0.005f,0.04f,1.0f,0.85f,0.0f,false,0,L); }
     if(hasLamp) buildLamp((isL?-2.7f:2.7f)+offX,zC,L);
 }
-void buildChest(float x, float z, bool isOpen, float L=1.0f) {
+void buildChest(float x, float z, float openFactor, float L=1.0f) {
+    bool isOpen = (openFactor > 0.5f);
     addBox(x-0.4f,0,z-0.3f,0.8f,0.4f,0.6f,0.3f,0.15f,0.05f,true,0,L); addBox(x-0.42f,0,z-0.32f,0.05f,0.4f,0.05f,0.8f,0.7f,0.1f,false,0,L); addBox(x+0.37f,0,z-0.32f,0.05f,0.4f,0.05f,0.8f,0.7f,0.1f,false,0,L);
     if(!isOpen){ addBox(x-0.4f,0.4f,z-0.3f,0.8f,0.2f,0.6f,0.35f,0.18f,0.08f,true,0,L); addBox(x-0.05f,0.3f,z+0.3f,0.1f,0.15f,0.05f,0.8f,0.8f,0.8f,false,0,L); } else{ addBox(x-0.4f,0.4f,z-0.4f,0.8f,0.6f,0.1f,0.35f,0.18f,0.08f,true,0,L); addBox(x-0.2f,0.35f,z-0.1f,0.4f,0.05f,0.2f,1.0f,0.85f,0.0f,false,0,L); }
 }
@@ -154,12 +156,19 @@ void buildWorld(int cChunk, int pRm) {
             if(dO){ addBox(isL?-4.1f:3.0f,0,dZ-1.15f,1.1f,1.4f,0.05f,0.12f,0.06f,0.03f,true,0,L); addBox(isL?-4.0f:3.9f,0.7f,dZ-1.10f,0.1f,0.05f,0.05f,0.8f,0.7f,0.2f,false,0,L); collisions.push_back({isL?-4.1f:3.0f,0.0f,dZ-1.15f,isL?-3.0f:4.1f,1.8f,dZ-1.10f,4}); } else{ addBox(isL?-3.0f:2.95f,0,dZ-0.05f,0.05f,1.4f,-1.1f,0.12f,0.06f,0.03f,true,0,L); addBox(isL?-2.95f:2.9f,0.7f,dZ-0.15f,0.05f,0.1f,-0.1f,0.8f,0.7f,0.2f,false,0,L); } 
             float srZ=dZ+2.5f, sW=isL?-9.0f:3.0f; addBox(sW,0,srZ,6.0f,0.01f,-5.0f,0.18f,0.1f,0.05f,false,0,L); addBox(sW,1.8f,srZ,6.0f,0.01f,-5.0f,0.12f,0.12f,0.12f,false,0,L); addBox(isL?-9.0f:8.9f,0,srZ,0.1f,1.8f,-5.0f,0.25f,0.2f,0.15f,true,0,L); addBox(sW,0,srZ,6.0f,1.8f,0.1f,0.25f,0.2f,0.15f,true,0,L); addBox(sW,0,srZ-5.0f,6.0f,1.8f,-0.1f,0.25f,0.2f,0.15f,true,0,L); 
             srand(i*(isL?123:321)); if(rand()%2==0){ float pY=0.6f+(rand()%50)/100.0f, pZ=srZ-1.5f-(rand()%20)/10.0f, pW=0.5f+(rand()%40)/100.0f, pH=0.5f+(rand()%40)/100.0f, pR=0.15f+(rand()%35)/100.0f, pG=0.15f+(rand()%35)/100.0f, pB=0.15f+(rand()%35)/100.0f; addBox(isL?-8.95f:8.89f,pY-0.05f,pZ+0.05f,0.06f,pH+0.1f,-pW-0.1f,0.1f,0.05f,0.02f,false,0,L); addBox(isL?-8.9f:8.83f,pY,pZ,0.07f,pH,-pW,pR,pG,pB,false,0,L); } srand(time(NULL));
-            for(int s=0;s<3;s++){ float fZ=srZ-0.9f-(s*1.6f); int tL=isL?rooms[i].leftRoomSlotTypeL[s]:rooms[i].rightRoomSlotTypeL[s], iL=isL?rooms[i].leftRoomSlotItemL[s]:rooms[i].rightRoomSlotItemL[s]; bool oL=isL?rooms[i].leftRoomDrawerOpenL[s]:rooms[i].rightRoomDrawerOpenL[s]; if(tL==1)buildCabinet(fZ,true,L,isL?-6.0f:6.0f,iL); else if(tL==3)buildBed(fZ,true,iL,L,isL?-6.0f:6.0f); else if(tL==5)buildDresser(fZ,true,oL,iL,L,isL?-6.0f:6.0f,true); else if(tL==7||tL==8)buildChest(isL?-8.4f:3.6f,fZ,oL,L); int tR=isL?rooms[i].leftRoomSlotTypeR[s]:rooms[i].rightRoomSlotTypeR[s], iR=isL?rooms[i].leftRoomSlotItemR[s]:rooms[i].rightRoomSlotItemR[s]; bool oR=isL?rooms[i].leftRoomDrawerOpenR[s]:rooms[i].rightRoomDrawerOpenR[s]; if(tR==2)buildCabinet(fZ,false,L,isL?-6.0f:6.0f,iR); else if(tR==4)buildBed(fZ,false,iR,L,isL?-6.0f:6.0f); else if(tR==6)buildDresser(fZ,false,oR,iR,L,isL?-6.0f:6.0f,true); else if(tR==7||tR==8)buildChest(isL?-3.6f:8.4f,fZ,oR,L); }
+            for(int s=0;s<3;s++){ float fZ=srZ-0.9f-(s*1.6f); 
+                int tL=isL?rooms[i].leftRoomSlotTypeL[s]:rooms[i].rightRoomSlotTypeL[s], iL=isL?rooms[i].leftRoomSlotItemL[s]:rooms[i].rightRoomSlotItemL[s]; 
+                float oL=isL?rooms[i].animLL[s]:rooms[i].animRL[s];
+                if(tL==1)buildCabinet(fZ,true,L,isL?-6.0f:6.0f,iL); else if(tL==3)buildBed(fZ,true,iL,L,isL?-6.0f:6.0f); else if(tL==5)buildDresser(fZ,true,oL,iL,L,isL?-6.0f:6.0f,true); else if(tL==7||tL==8)buildChest(isL?-8.4f:3.6f,fZ,oL,L); 
+                int tR=isL?rooms[i].leftRoomSlotTypeR[s]:rooms[i].rightRoomSlotTypeR[s], iR=isL?rooms[i].leftRoomSlotItemR[s]:rooms[i].rightRoomSlotItemR[s]; 
+                float oR=isL?rooms[i].animLR[s]:rooms[i].animRR[s];
+                if(tR==2)buildCabinet(fZ,false,L,isL?-6.0f:6.0f,iR); else if(tR==4)buildBed(fZ,false,iR,L,isL?-6.0f:6.0f); else if(tR==6)buildDresser(fZ,false,oR,iR,L,isL?-6.0f:6.0f,true); else if(tR==7||tR==8)buildChest(isL?-3.6f:8.4f,fZ,oR,L); 
+            }
         };
         if(rooms[i].hasLeftRoom) drawSide(true); else addBox(-3,0,z,0.1f,1.8f,-10,0.25f,0.2f,0.15f,true,0,L); if(rooms[i].hasRightRoom) drawSide(false); else addBox(2.9f,0,z,0.1f,1.8f,-10,0.25f,0.2f,0.15f,true,0,L); 
         addBox(-0.4f,1.78f,z-5.4f,0.8f,0.02f,0.8f,(L>0.5f?0.9f:0.2f),(L>0.5f?0.9f:0.2f),(L>0.5f?0.8f:0.2f),false);
         if(!tAN){
-            for(int s=0;s<3;s++){ float zC=z-2.5f-(s*2.5f); int t=rooms[i].slotType[s]; if(t==1)buildCabinet(zC,true,L); else if(t==2)buildCabinet(zC,false,L); else if(t==5)buildDresser(zC,true,rooms[i].drawerOpen[s],rooms[i].slotItem[s],L); else if(t==6)buildDresser(zC,false,rooms[i].drawerOpen[s],rooms[i].slotItem[s],L); }
+            for(int s=0;s<3;s++){ float zC=z-2.5f-(s*2.5f); int t=rooms[i].slotType[s]; if(t==1)buildCabinet(zC,true,L); else if(t==2)buildCabinet(zC,false,L); else if(t==5)buildDresser(zC,true,rooms[i].animMain[s],rooms[i].slotItem[s],L); else if(t==6)buildDresser(zC,false,rooms[i].animMain[s],rooms[i].slotItem[s],L); }
             for(int p=0;p<rooms[i].pCount;p++){ float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p],cR=rooms[i].hasSeekEyes?0.02f:rooms[i].pR[p],cG=rooms[i].hasSeekEyes?0.02f:rooms[i].pG[p],cB=rooms[i].hasSeekEyes?0.02f:rooms[i].pB[p]; float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.95f:2.88f; addBox(wX,pY-0.05f,z-pZ+0.05f,0.06f,pH+0.1f,-pW-0.1f,0.1f,0.05f,0.02f,false,0,L); addBox(cX,pY,z-pZ,0.07f,pH,-pW,cR,cG,cB,false,0,L); if(rooms[i].hasSeekEyes&&rE){ srand(i*100+p); int nE=2+(int)(pH*pW*30.0f)+(rand()%4); for(int e=0;e<nE;e++){ float eY=pY+0.02f+(rand()%(int)((pH-0.04f)*100))/100.0f, eZ=z-pZ-0.02f-(rand()%(int)((pW-0.04f)*100))/100.0f; addBox(rooms[i].pSide[p]==0?-2.88f:2.87f,eY,eZ,0.01f,0.04f,0.06f,0.9f,0.9f,0.9f,false,0,L); addBox(rooms[i].pSide[p]==0?-2.875f:2.865f,eY+0.01f,eZ-0.01f,0.01f,0.02f,0.04f,0,0,0,false,0,1.5f); } srand(time(NULL)); } }
         }
     } globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
@@ -170,11 +179,18 @@ void generateRooms() {
     for(int i=0; i<TOTAL_ROOMS; i++){
         rooms[i].doorPos=rand()%3; rooms[i].isLocked=false; rooms[i].isJammed=false; rooms[i].hasSeekEyes=false; rooms[i].isSeekHallway=false; rooms[i].isSeekChase=false; rooms[i].isSeekFinale=false; rooms[i].seekEyeCount=0;
         bool iSE=(i>=seekStartRoom-5 && i<=seekStartRoom+9), iSCE=(i>=seekStartRoom && i<=seekStartRoom+9); rooms[i].lightLevel=(i>0&&rand()%100<8&&!iSE)?0.3f:1.0f; 
-        for(int s=0;s<3;s++){ rooms[i].drawerOpen[s]=false; rooms[i].slotItem[s]=0; }
+        for(int s=0;s<3;s++){ 
+            rooms[i].drawerOpen[s]=false; rooms[i].slotItem[s]=0; 
+            rooms[i].animMain[s]=0.0f; rooms[i].animLL[s]=0.0f; rooms[i].animLR[s]=0.0f; rooms[i].animRL[s]=0.0f; rooms[i].animRR[s]=0.0f;
+        }
         if(i>=seekStartRoom-5 && i<seekStartRoom){rooms[i].hasSeekEyes=true;rooms[i].seekEyeCount=((i-(seekStartRoom-5)+1)*2)+3;} if(i>=seekStartRoom && i<=seekStartRoom+2){rooms[i].isSeekHallway=true;rooms[i].doorPos=1;} if(i>=seekStartRoom+3 && i<=seekStartRoom+7){rooms[i].isSeekChase=true;rooms[i].doorPos=1;} if(i==seekStartRoom+8){rooms[i].isSeekFinale=true;rooms[i].doorPos=1;}
         rooms[i].isDupeRoom=(!iSCE&&i>1&&(rand()%100<15)); if(rooms[i].isDupeRoom){rooms[i].correctDupePos=rand()%3; int dN=getDisplayRoom(i), f1=dN+(rand()%3+1), f2=dN-(rand()%3+1); if(f2<=0)f2=dN+4; rooms[i].dupeNumbers[0]=f1; rooms[i].dupeNumbers[1]=f2; rooms[i].dupeNumbers[2]=dN+5; rooms[i].dupeNumbers[rooms[i].correctDupePos]=dN;}
         rooms[i].hasEyes=(!iSE&&i>2&&!rooms[i].isDupeRoom&&rand()%100<8); if(rooms[i].hasEyes){rooms[i].eyesX=0.0f;rooms[i].eyesY=0.9f;rooms[i].eyesZ=-10.0f-(i*10.0f)-5.0f;}
-        if(!rooms[i].isSeekChase&&!rooms[i].isSeekHallway&&!rooms[i].isSeekFinale){
+        
+        if(!rooms[i].isSeekChase&&!rooms[i].isSeekHallway&&!rooms[i].isSeekFinale&&!rooms[i].isDupeRoom){
+            rooms[i].hasLeftRoom = (rand()%100 < 30);
+            rooms[i].hasRightRoom = (rand()%100 < 30);
+            
             if(rooms[i].hasLeftRoom){ 
                 rooms[i].leftDoorOffset=-3.0f-(rand()%40)/10.0f; bool cL=false; 
                 for(int s=0;s<3;s++){ 
@@ -233,7 +249,7 @@ int main() {
 
     if(audio_ok){ 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); 
-        for(int i=0;i<=10;i++){ndspChnSetInterp(i,NDSP_INTERP_LINEAR);ndspChnSetRate(i,44100);ndspChnSetFormat(i,NDSP_FORMAT_MONO_PCM16);} 
+        for(int i=0;i<=12;i++){ndspChnSetInterp(i,NDSP_INTERP_LINEAR);ndspChnSetRate(i,44100);ndspChnSetFormat(i,NDSP_FORMAT_MONO_PCM16);} 
         sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); 
         sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); 
         sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); 
@@ -261,17 +277,38 @@ int main() {
         bool needsVBOUpdate=false; static bool deathSoundPlayed=false;
 
         if(isDead){ if(!deathSoundPlayed){ if(audio_ok){ ndspChnWaveBufClear(3); ndspChnWaveBufClear(5); ndspChnWaveBufClear(7); ndspChnWaveBufClear(9); bool wAA=(sAttack.status==NDSP_WBUF_PLAYING||sAttack.status==NDSP_WBUF_QUEUED||sDupeAttack.status==NDSP_WBUF_PLAYING||sDupeAttack.status==NDSP_WBUF_QUEUED); if(!wAA){ ndspChnWaveBufClear(8); if(sDeath.data_vaddr){sDeath.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(8,&sDeath);} deathSoundPlayed=true; } } else deathSoundPlayed=true; } } else deathSoundPlayed=false;
-        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();C3D_TexEnvSrc(env,C3D_Both,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR);buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=10;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
+        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();C3D_TexEnvSrc(env,C3D_Both,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR);buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
         if((kDown&KEY_Y)&&(kHeld&KEY_R)&&playerCurrentRoom==-1&&!isDead){ camZ=-10.0f-((seekStartRoom-1)*10.0f)+5.0f; camX=0.0f; camYaw=0.0f; camPitch=0.0f; needsVBOUpdate=true; sprintf(uiMessage,"Teleported to Seek!"); messageTimer=90; }
         
         playerCurrentRoom=(camZ>=-10.0f)?-1:(int)((-camZ-10.0f)/10.0f); if(playerCurrentRoom<-1)playerCurrentRoom=-1; if(playerCurrentRoom>TOTAL_ROOMS-2)playerCurrentRoom=TOTAL_ROOMS-2;
         bool isGlitch=false; int tDR=-1; for(int k=1;k<TOTAL_ROOMS;k++){if(rooms[k].isDupeRoom&&playerCurrentRoom==(k-1)){isGlitch=true;tDR=k;break;}}
         if(messageTimer>0)messageTimer--; if(screechCooldown>0)screechCooldown--; if(rushCooldown>0)rushCooldown--; if(eyesSoundCooldown>0)eyesSoundCooldown--;
 
-        if(playerCurrentRoom != lastRoomForDarkCheck && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { lastRoomForDarkCheck = playerCurrentRoom; if(rooms[playerCurrentRoom].lightLevel < 0.5f && audio_ok && sDarkRoomEnter.data_vaddr){ ndspChnWaveBufClear(10); sDarkRoomEnter.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(10,&sDarkRoomEnter); } }
+        if(playerCurrentRoom != lastRoomForDarkCheck && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { lastRoomForDarkCheck = playerCurrentRoom; if(rooms[playerCurrentRoom].lightLevel < 0.5f && audio_ok && sDarkRoomEnter.data_vaddr){ float m[12]={0}; m[0]=0.3f; m[1]=0.3f; ndspChnSetMix(11,m); ndspChnWaveBufClear(11); sDarkRoomEnter.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(11,&sDarkRoomEnter); } }
 
         if(inElevator&&!elevatorDoorsOpen){ if(elevatorTimer==1593&&audio_ok&&sElevatorJam.data_vaddr){ndspChnWaveBufClear(9);sElevatorJam.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(9,&sElevatorJam);} if(elevatorTimer>0)elevatorTimer--; bool tTO=false; if(audio_ok&&sElevatorJam.data_vaddr){if(elevatorTimer<1590&&sElevatorJam.status==NDSP_WBUF_DONE&&!elevatorJamFinished)tTO=true;}else if(elevatorTimer<=0&&!elevatorJamFinished)tTO=true; if(tTO){elevatorJamFinished=true;elevatorDoorsOpen=true;needsVBOUpdate=true;if(audio_ok){ndspChnWaveBufClear(9);if(sElevatorJamEnd.data_vaddr){sElevatorJamEnd.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(9,&sElevatorJamEnd);}}} }
         if(elevatorDoorsOpen&&!elevatorClosing&&elevatorDoorOffset<2.0f){elevatorDoorOffset+=0.03f;needsVBOUpdate=true;} if(elevatorDoorsOpen&&!elevatorClosing&&camZ<2.0f){inElevator=false;elevatorClosing=true;needsVBOUpdate=true;} if(elevatorClosing&&elevatorDoorOffset>0.0f){elevatorDoorOffset-=0.04f;if(elevatorDoorOffset<=0.0f)elevatorDoorOffset=0.0f;needsVBOUpdate=true;}
+
+        bool animActive = false;
+        if(playerCurrentRoom>=0 && playerCurrentRoom<TOTAL_ROOMS) {
+            auto stepAnim = [&](bool target, float& val) {
+                if(target && val < 1.0f) { val += 0.08f; if(val>1.0f) val=1.0f; return true; }
+                if(!target && val > 0.0f) { val -= 0.08f; if(val<0.0f) val=0.0f; return true; }
+                return false;
+            };
+            for(int s=0; s<3; s++) {
+                if(stepAnim(rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].animMain[s])) animActive = true;
+                if(rooms[playerCurrentRoom].hasLeftRoom) {
+                    if(stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenL[s], rooms[playerCurrentRoom].animLL[s])) animActive = true;
+                    if(stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenR[s], rooms[playerCurrentRoom].animLR[s])) animActive = true;
+                }
+                if(rooms[playerCurrentRoom].hasRightRoom) {
+                    if(stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].animRL[s])) animActive = true;
+                    if(stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenR[s], rooms[playerCurrentRoom].animRR[s])) animActive = true;
+                }
+            }
+        }
+        if(animActive) needsVBOUpdate = true;
 
         static bool prevScreech=false; if(screechActive!=prevScreech){consoleClear();prevScreech=screechActive;}
         printf("\x1b[1;1H==============================\n");
@@ -347,7 +384,7 @@ int main() {
                 if(!iA){ int nI=getNextDoorIndex(playerCurrentRoom); if(nI>=0&&nI<TOTAL_ROOMS&&rooms[nI].isDupeRoom){ if(fabsf(camZ-(-10.0f-(nI*10.0f)))<1.8f){ bool l=(camX<-1.4f), c=(camX>=-1.4f&&camX<=0.6f), r=(camX>0.6f); int cP=rooms[nI].correctDupePos; if((l&&cP==0)||(c&&cP==1)||(r&&cP==2)){ if(!doorOpen[nI]){if(audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}doorOpen[nI]=true;needsVBOUpdate=true;} }else if(l||c||r){if(audio_ok&&sDupeAttack.data_vaddr){ndspChnWaveBufClear(2);sDupeAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sDupeAttack);}playerHealth-=34;flashRedFrames=25;camZ+=2.0f;if(playerHealth<=0)isDead=true;} } } }
             }
             if((kDown&KEY_B)&&hideState==NOT_HIDING){ if(isCrouching){if(!checkCollision(camX,0,camZ,1.1f))isCrouching=false;} else isCrouching=true; }
-            int nC=(camZ<-10.0f)?(int)((fabsf(camZ)-10.0f)/10.0f)+1:0; if(nC!=currentChunk||needsVBOUpdate){ if(nC!=currentChunk&&playerCurrentRoom>1&&!rushActive&&rushCooldown<=0&&!iSE&&rand()%100<12){rushActive=true;rushState=1;rushTimer=300+(rand()%120);rushStartTimer=(float)rushTimer;if(audio_ok){if(sLightsFlicker.data_vaddr){ndspChnWaveBufClear(10);sLightsFlicker.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sLightsFlicker);}if(sRushScream.data_vaddr){float m[12]={0};ndspChnSetMix(3,m);ndspChnWaveBufClear(3);sRushScream.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(3,&sRushScream);}}} currentChunk=nC;needsVBOUpdate=true; }
+            int nC=(camZ<-10.0f)?(int)((fabsf(camZ)-10.0f)/10.0f)+1:0; if(nC!=currentChunk||needsVBOUpdate){ if(nC!=currentChunk&&playerCurrentRoom>1&&!rushActive&&rushCooldown<=0&&!iSE&&rand()%100<12){rushActive=true;rushState=1;rushTimer=300+(rand()%120);rushStartTimer=(float)rushTimer;if(audio_ok){if(sLightsFlicker.data_vaddr){float m[12]={0};m[0]=2.5f;m[1]=2.5f;ndspChnSetMix(12,m);ndspChnWaveBufClear(12);sLightsFlicker.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(12,&sLightsFlicker);}if(sRushScream.data_vaddr){float m[12]={0};ndspChnSetMix(3,m);ndspChnWaveBufClear(3);sRushScream.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(3,&sRushScream);}}} currentChunk=nC;needsVBOUpdate=true; }
             int st=currentChunk-1, en=currentChunk+2; if(currentChunk>=seekStartRoom&&currentChunk<=seekStartRoom+2){st=seekStartRoom;en=seekStartRoom+3;} if(st<0)st=0; if(en>TOTAL_ROOMS-1)en=TOTAL_ROOMS-1;
             for(int i=st;i<=en;i++){ if(rooms[i].isDupeRoom||i==seekStartRoom+1||i==seekStartRoom+2)continue; bool sBO=(fabsf(camZ-(-10.0f-(i*10.0f)))<1.5f&&fabsf(camX-((rooms[i].doorPos==0)?-2.0f:((rooms[i].doorPos==1)?0.0f:2.0f)))<1.5f); if(rooms[i].isLocked||rooms[i].isJammed)sBO=false; if(doorOpen[i]!=sBO){if(sBO&&audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);doorOpen[i]=sBO;needsVBOUpdate=true;}} }
             if(needsVBOUpdate){buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));}
