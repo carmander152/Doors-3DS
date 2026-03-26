@@ -150,11 +150,13 @@ void buildWorld(int cChunk, int pRm) {
             if (i < pRm && i >= 0 && i+1 < TOTAL_ROOMS && !doorOpen[i+1]) isInteriorVisible = false;
         }
 
+        // --- SCOPE FIX FOR rE ---
+        bool rE=!(rooms[i].isSeekChase||rooms[i].hasSeekEyes)||(i>=pRm && i<=pRm+1);
+
         if(seekState==1){globalTintR=1.0f;globalTintG=0.2f;globalTintB=0.2f;} else if(rooms[i].hasEyes){globalTintR=0.8f;globalTintG=0.3f;globalTintB=1.0f;} else{globalTintR=1.0f;globalTintG=1.0f;globalTintB=1.0f;}
         
         // Only draw Seek Eyes / Entities if visible
         if (isInteriorVisible) {
-            bool rE=!(rooms[i].isSeekChase||rooms[i].hasSeekEyes)||(i>=pRm && i<=pRm+1);
             if(rE && (rooms[i].hasSeekEyes||rooms[i].isSeekChase)){ srand(i*12345); int wC=rooms[i].hasSeekEyes?rooms[i].seekEyeCount:15; for(int e=0;e<wC;e++){ bool iL=(rand()%2==0); float eZ=z-0.5f-(rand()%90)/10.0f, eY=0.2f+(rand()%160)/100.0f; if(iL){ addBox(-2.95f,eY,eZ,0.1f,0.3f,0.4f,0.05f,0.05f,0.05f,false,0,L); addBox(-2.88f,eY+0.05f,eZ+0.05f,0.06f,0.2f,0.3f,0.9f,0.9f,0.9f,false,0,L); addBox(-2.84f,eY+0.1f,eZ+0.12f,0.04f,0.1f,0.16f,0,0,0,false,0,1.5f); } else{ addBox(2.85f,eY,eZ,0.1f,0.3f,0.4f,0.05f,0.05f,0.05f,false,0,L); addBox(2.82f,eY+0.05f,eZ+0.05f,0.06f,0.2f,0.3f,0.9f,0.9f,0.9f,false,0,L); addBox(2.80f,eY+0.1f,eZ+0.12f,0.04f,0.1f,0.16f,0,0,0,false,0,1.5f); } } srand(time(NULL)); }
             if(rooms[i].hasEyes && rE){ float ex=rooms[i].eyesX, ey=rooms[i].eyesY, ez=rooms[i].eyesZ; addBox(ex-0.2f,ey-0.2f,ez-0.2f,0.4f,0.4f,0.4f,0.6f,0.1f,0.8f,false,0,L); addBox(ex-0.25f,ey-0.1f,ez-0.1f,0.5f,0.2f,0.2f,0.9f,0.9f,0.9f,false,0,L); addBox(ex-0.1f,ey-0.25f,ez-0.1f,0.2f,0.5f,0.2f,0.9f,0.9f,0.9f,false,0,L); addBox(ex-0.26f,ey-0.05f,ez-0.05f,0.02f,0.1f,0.1f,0,0,0,false,0,1.5f); addBox(ex+0.24f,ey-0.05f,ez-0.05f,0.02f,0.1f,0.1f,0,0,0,false,0,1.5f); } 
         }
