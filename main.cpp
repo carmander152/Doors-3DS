@@ -175,9 +175,46 @@ void generateRooms() {
         rooms[i].isDupeRoom=(!iSCE&&i>1&&(rand()%100<15)); if(rooms[i].isDupeRoom){rooms[i].correctDupePos=rand()%3; int dN=getDisplayRoom(i), f1=dN+(rand()%3+1), f2=dN-(rand()%3+1); if(f2<=0)f2=dN+4; rooms[i].dupeNumbers[0]=f1; rooms[i].dupeNumbers[1]=f2; rooms[i].dupeNumbers[2]=dN+5; rooms[i].dupeNumbers[rooms[i].correctDupePos]=dN;}
         rooms[i].hasEyes=(!iSE&&i>2&&!rooms[i].isDupeRoom&&rand()%100<8); if(rooms[i].hasEyes){rooms[i].eyesX=0.0f;rooms[i].eyesY=0.9f;rooms[i].eyesZ=-10.0f-(i*10.0f)-5.0f;}
         if(!rooms[i].isSeekChase&&!rooms[i].isSeekHallway&&!rooms[i].isSeekFinale){
-            rooms[i].hasLeftRoom=(!iSE&&!rooms[i].isDupeRoom&&i>0&&rand()%100<45); rooms[i].hasRightRoom=(!iSE&&!rooms[i].isDupeRoom&&i>0&&rand()%100<45); rooms[i].leftDoorOpen=false; rooms[i].rightDoorOpen=false;
-            if(rooms[i].hasLeftRoom){ rooms[i].leftDoorOffset=-3.0f-(rand()%40)/10.0f; for(int s=0;s<3;s++){ rooms[i].leftRoomDrawerOpenL[s]=false; if(rand()%100<45){int r=rand()%100;rooms[i].leftRoomSlotTypeL[s]=(r<25)?1:((r<50)?3:((r<75)?5:7));rooms[i].leftRoomSlotItemL[s]=(rooms[i].leftRoomSlotTypeL[s]>=3&&rooms[i].leftRoomSlotTypeL[s]<=6&&rand()%100<30)?3:0;}else{rooms[i].leftRoomSlotTypeL[s]=0;rooms[i].leftRoomSlotItemL[s]=0;} rooms[i].leftRoomDrawerOpenR[s]=false; if(s==1){rooms[i].leftRoomSlotTypeR[s]=99;rooms[i].leftRoomSlotItemR[s]=0;} else{if(rand()%100<45){int r=rand()%100;rooms[i].leftRoomSlotTypeR[s]=(r<25)?2:((r<50)?4:((r<75)?6:8));rooms[i].leftRoomSlotItemR[s]=(rooms[i].leftRoomSlotTypeR[s]>=3&&rooms[i].leftRoomSlotTypeR[s]<=6&&rand()%100<30)?3:0;}else{rooms[i].leftRoomSlotTypeR[s]=0;rooms[i].leftRoomSlotItemR[s]=0;}} } }
-            if(rooms[i].hasRightRoom){ rooms[i].rightDoorOffset=-3.0f-(rand()%40)/10.0f; for(int s=0;s<3;s++){ rooms[i].rightRoomDrawerOpenL[s]=false; if(s==1){rooms[i].rightRoomSlotTypeL[s]=99;rooms[i].rightRoomSlotItemL[s]=0;} else{if(rand()%100<45){int r=rand()%100;rooms[i].rightRoomSlotTypeL[s]=(r<25)?1:((r<50)?3:((r<75)?5:7));rooms[i].rightRoomSlotItemL[s]=(rooms[i].rightRoomSlotTypeL[s]>=3&&rooms[i].rightRoomSlotTypeL[s]<=6&&rand()%100<30)?3:0;}else{rooms[i].rightRoomSlotTypeL[s]=0;rooms[i].rightRoomSlotItemL[s]=0;}} rooms[i].rightRoomDrawerOpenR[s]=false; if(rand()%100<45){int r=rand()%100;rooms[i].rightRoomSlotTypeR[s]=(r<25)?2:((r<50)?4:((r<75)?6:8));rooms[i].rightRoomSlotItemR[s]=(rooms[i].rightRoomSlotTypeR[s]>=3&&rooms[i].rightRoomSlotTypeR[s]<=6&&rand()%100<30)?3:0;}else{rooms[i].rightRoomSlotTypeR[s]=0;rooms[i].rightRoomSlotItemR[s]=0;} } }
+            if(rooms[i].hasLeftRoom){ 
+                rooms[i].leftDoorOffset=-3.0f-(rand()%40)/10.0f; bool cL=false; 
+                for(int s=0;s<3;s++){ 
+                    rooms[i].leftRoomDrawerOpenL[s]=false; 
+                    if(rand()%100<45){
+                        int r=rand()%100; rooms[i].leftRoomSlotTypeL[s]=(r<25)?1:((r<50)?3:((r<75)?5:7)); 
+                        if(rooms[i].leftRoomSlotTypeL[s]==7){if(cL)rooms[i].leftRoomSlotTypeL[s]=5;else cL=true;}
+                        rooms[i].leftRoomSlotItemL[s]=(rooms[i].leftRoomSlotTypeL[s]>=3&&rooms[i].leftRoomSlotTypeL[s]<=6&&rand()%100<30)?3:0;
+                    }else{rooms[i].leftRoomSlotTypeL[s]=0;rooms[i].leftRoomSlotItemL[s]=0;} 
+                    rooms[i].leftRoomDrawerOpenR[s]=false; 
+                    if(s==1){rooms[i].leftRoomSlotTypeR[s]=99;rooms[i].leftRoomSlotItemR[s]=0;} 
+                    else{
+                        if(rand()%100<45){
+                            int r=rand()%100; rooms[i].leftRoomSlotTypeR[s]=(r<33)?2:((r<66)?6:8);
+                            if(rooms[i].leftRoomSlotTypeR[s]==8){if(cL)rooms[i].leftRoomSlotTypeR[s]=6;else cL=true;}
+                            rooms[i].leftRoomSlotItemR[s]=(rooms[i].leftRoomSlotTypeR[s]>=3&&rooms[i].leftRoomSlotTypeR[s]<=6&&rand()%100<30)?3:0;
+                        }else{rooms[i].leftRoomSlotTypeR[s]=0;rooms[i].leftRoomSlotItemR[s]=0;}
+                    } 
+                } 
+            }
+            if(rooms[i].hasRightRoom){ 
+                rooms[i].rightDoorOffset=-3.0f-(rand()%40)/10.0f; bool cR=false; 
+                for(int s=0;s<3;s++){ 
+                    rooms[i].rightRoomDrawerOpenL[s]=false; 
+                    if(s==1){rooms[i].rightRoomSlotTypeL[s]=99;rooms[i].rightRoomSlotItemL[s]=0;} 
+                    else{
+                        if(rand()%100<45){
+                            int r=rand()%100; rooms[i].rightRoomSlotTypeL[s]=(r<33)?1:((r<66)?5:7);
+                            if(rooms[i].rightRoomSlotTypeL[s]==7){if(cR)rooms[i].rightRoomSlotTypeL[s]=5;else cR=true;}
+                            rooms[i].rightRoomSlotItemL[s]=(rooms[i].rightRoomSlotTypeL[s]>=3&&rooms[i].rightRoomSlotTypeL[s]<=6&&rand()%100<30)?3:0;
+                        }else{rooms[i].rightRoomSlotTypeL[s]=0;rooms[i].rightRoomSlotItemL[s]=0;}
+                    } 
+                    rooms[i].rightRoomDrawerOpenR[s]=false; 
+                    if(rand()%100<45){
+                        int r=rand()%100; rooms[i].rightRoomSlotTypeR[s]=(r<25)?2:((r<50)?4:((r<75)?6:8));
+                        if(rooms[i].rightRoomSlotTypeR[s]==8){if(cR)rooms[i].rightRoomSlotTypeR[s]=6;else cR=true;}
+                        rooms[i].rightRoomSlotItemR[s]=(rooms[i].rightRoomSlotTypeR[s]>=3&&rooms[i].rightRoomSlotTypeR[s]<=6&&rand()%100<30)?3:0;
+                    }else{rooms[i].rightRoomSlotTypeR[s]=0;rooms[i].rightRoomSlotItemR[s]=0;} 
+                } 
+            }
             bool bS=false; for(int s=0;s<3;s++){ float sZR=-2.5f-(s*2.5f); int r=rand()%100; if(r<25)rooms[i].slotType[s]=1; else if(r<50)rooms[i].slotType[s]=2; else if(r<75){rooms[i].slotType[s]=5;if(!bS&&rand()%100<15){rooms[i].slotItem[s]=2;bS=true;}else if(rand()%100<30)rooms[i].slotItem[s]=3;} else{rooms[i].slotType[s]=6;if(!bS&&rand()%100<15){rooms[i].slotItem[s]=2;bS=true;}else if(rand()%100<30)rooms[i].slotItem[s]=3;} if(rooms[i].hasLeftRoom&&fabsf(rooms[i].leftDoorOffset-sZR)<2.6f&&(rooms[i].slotType[s]==1||rooms[i].slotType[s]==3||rooms[i].slotType[s]==5)){rooms[i].slotType[s]=0;rooms[i].slotItem[s]=0;} if(rooms[i].hasRightRoom&&fabsf(rooms[i].rightDoorOffset-sZR)<2.6f&&(rooms[i].slotType[s]==2||rooms[i].slotType[s]==4||rooms[i].slotType[s]==6)){rooms[i].slotType[s]=0;rooms[i].slotItem[s]=0;} }
         } else {rooms[i].slotType[0]=0;rooms[i].slotType[1]=0;rooms[i].slotType[2]=0;rooms[i].hasLeftRoom=false;rooms[i].hasRightRoom=false;}
         if(rooms[i].isSeekHallway||rooms[i].isSeekFinale||rooms[i].isSeekChase){rooms[i].pCount=0;} else if(!iSE||rooms[i].hasSeekEyes){ rooms[i].pCount=rand()%5+3; for(int p=0;p<rooms[i].pCount;p++){ bool oL; int tr=0; do{ oL=false; rooms[i].pSide[p]=rand()%2; rooms[i].pZ[p]=1.0f+(rand()%70)/10.0f; rooms[i].pY[p]=0.5f+(rand()%70)/100.0f; rooms[i].pW[p]=0.3f+(rand()%60)/100.0f; rooms[i].pH[p]=0.3f+(rand()%60)/100.0f; if(rooms[i].pSide[p]==0&&rooms[i].hasLeftRoom&&fabsf(rooms[i].pZ[p]-fabsf(rooms[i].leftDoorOffset))<2.8f)oL=true; if(rooms[i].pSide[p]==1&&rooms[i].hasRightRoom&&fabsf(rooms[i].pZ[p]-fabsf(rooms[i].rightDoorOffset))<2.8f)oL=true; for(int op=0;op<p;op++){if(rooms[i].pSide[p]==rooms[i].pSide[op]){if(fabsf(rooms[i].pZ[p]-rooms[i].pZ[op])<(rooms[i].pW[p]+rooms[i].pW[op])*0.6f && fabsf(rooms[i].pY[p]-rooms[i].pY[op])<(rooms[i].pH[p]+rooms[i].pH[op])*0.6f){oL=true;break;}}} tr++; }while(oL&&tr<10); if(oL){rooms[i].pCount--;p--;} else{rooms[i].pR[p]=0.15f+(rand()%35)/100.0f;rooms[i].pG[p]=0.15f+(rand()%35)/100.0f;rooms[i].pB[p]=0.15f+(rand()%35)/100.0f;} } } else rooms[i].pCount=0; 
@@ -240,8 +277,32 @@ int main() {
             if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, dist=sqrt(vx*vx+vy*vy+vz*vz); if(dist>0){vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=5;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;} eyesDamageTimer++; if(eyesDamageTimer>=6){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=2;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=120;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
 
             bool iSE=(playerCurrentRoom>=seekStartRoom-5&&playerCurrentRoom<=seekStartRoom+9); int sC=(playerCurrentRoom>0&&rooms[playerCurrentRoom].lightLevel<0.5f)?400:12000;
-            if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true;screechTimer=240;float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; screechOffsetX=-sinf(sY)*1.5f;screechOffsetZ=-cosf(sY)*1.5f;screechOffsetY=(rand()%15)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
-            if(screechActive){ screechTimer--; float nSX=camX+screechOffsetX, nSZ=camZ+screechOffsetZ; if(screechX!=nSX||screechZ!=nSZ){screechX=nSX;screechZ=nSZ;screechY=0.8f+screechOffsetY;needsVBOUpdate=true;} float vx=screechX-camX, vy=screechY-(isCrouching?0.4f:0.9f), vz=screechZ-camZ, dist=sqrt(vx*vx+vy*vy+vz*vz); if(dist>0.0f){vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f){screechActive=false;screechCooldown=1800;needsVBOUpdate=true;sprintf(uiMessage,"Dodged Screech!");messageTimer=90;if(audio_ok){ndspChnWaveBufClear(0);if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sCaught);}}} else if(screechTimer<=0){screechActive=false;screechCooldown=1800;needsVBOUpdate=true;playerHealth-=20;flashRedFrames=25;sprintf(uiMessage,"Screech bit you! (-20 HP)");messageTimer=90;if(playerHealth<=0)isDead=true;if(audio_ok){ndspChnWaveBufClear(0);if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sAttack);}}} }
+            if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true;screechTimer=240;float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; screechOffsetX=-sinf(sY)*2.5f; screechOffsetZ=-cosf(sY)*2.5f; screechOffsetY=(rand()%15)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
+            
+            if(screechActive){ 
+                screechTimer--; 
+                float cOX = screechOffsetX, cOZ = screechOffsetZ;
+                float nSX = camX + cOX, nSZ = camZ + cOZ, nSY = 0.8f + screechOffsetY;
+                
+                int att = 0; 
+                while(checkCollision(nSX, nSY, nSZ, 0.4f) && att < 10) { 
+                    cOX *= 0.8f; cOZ *= 0.8f; nSX = camX + cOX; nSZ = camZ + cOZ; att++; 
+                }
+                if(screechX!=nSX || screechZ!=nSZ){screechX=nSX; screechZ=nSZ; screechY=nSY; needsVBOUpdate=true;} 
+                
+                float vx=screechX-camX, vy=screechY-(isCrouching?0.4f:0.9f), vz=screechZ-camZ, dist=sqrt(vx*vx+vy*vy+vz*vz); 
+                if(dist>0.0f){vx/=dist;vy/=dist;vz/=dist;} 
+                float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); 
+                
+                if(dP>0.85f){
+                    screechActive=false; screechCooldown=1800; needsVBOUpdate=true; sprintf(uiMessage,"Dodged Screech!"); messageTimer=90;
+                    if(audio_ok){ndspChnWaveBufClear(0); if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sCaught);}}
+                } else if(screechTimer<=0){
+                    screechActive=false; screechCooldown=1800; needsVBOUpdate=true; playerHealth-=20; flashRedFrames=25; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=90;
+                    if(playerHealth<=0)isDead=true;
+                    if(audio_ok){ndspChnWaveBufClear(0); if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sAttack);}}
+                } 
+            }
 
             if(rushActive){ if(rushState==1){rushTimer--;if(rushTimer%10==0){if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS)rooms[playerCurrentRoom].lightLevel=(rand()%2==0)?0.3f:1.0f;needsVBOUpdate=true;}if(rushTimer<=0){rushState=2;rushZ=camZ+40.0f;rushTargetZ=camZ-60.0f;}} else if(rushState==2){rushZ-=0.8f;needsVBOUpdate=true;if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){rooms[playerCurrentRoom].lightLevel=0.3f;if(playerCurrentRoom+1<TOTAL_ROOMS)rooms[playerCurrentRoom+1].lightLevel=0.3f;}if(fabsf(rushZ-camZ)<3.0f&&fabsf(camX)<3.0f&&hideState==NOT_HIDING){playerHealth=0;isDead=true;flashRedFrames=50;}if(rushZ<rushTargetZ){rushActive=false;rushState=0;needsVBOUpdate=true;rushCooldown=1800;if(audio_ok)ndspChnWaveBufClear(3);}} if(audio_ok&&sRushScream.data_vaddr){float dist=(rushState==1)?40.0f+(rushTimer/rushStartTimer)*110.0f:(fabsf(rushZ-camZ)*(rushZ<camZ?1.5f:1.0f));float vol=1.0f-(dist/150.0f);if(vol<0)vol=0;if(vol>1)vol=1;vol=vol*vol*vol;float mix[12]={0};mix[0]=vol*3.5f;mix[1]=vol*3.5f;ndspChnSetMix(3,mix);} }
 
