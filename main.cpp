@@ -289,7 +289,7 @@ void generateRooms() {
                             int r=rand()%100; rooms[i].rightRoomSlotTypeL[s]=(r<33)?1:((r<66)?5:7);
                             if(rooms[i].rightRoomSlotTypeL[s]==7){if(cR)rooms[i].rightRoomSlotTypeL[s]=5;else cR=true;}
                             rooms[i].rightRoomSlotItemL[s]=(rooms[i].rightRoomSlotTypeL[s]>=3&&rooms[i].rightRoomSlotTypeL[s]<=6&&rand()%100<30)?3:0;
-                        }else{rooms[i].rightRoomSlotTypeL[s]=0;rooms[i].leftRoomSlotItemL[s]=0;}
+                        }else{rooms[i].rightRoomSlotTypeL[s]=0;rooms[i].rightRoomSlotItemL[s]=0;}
                     } 
                     rooms[i].rightRoomDrawerOpenR[s]=false; 
                     if(rand()%100<45){
@@ -347,8 +347,25 @@ int main() {
         if(isDead){ if(!deathSoundPlayed){ if(audio_ok){ ndspChnWaveBufClear(3); ndspChnWaveBufClear(5); ndspChnWaveBufClear(7); ndspChnWaveBufClear(9); ndspChnWaveBufClear(8); if(sDeath.data_vaddr){sDeath.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(8,&sDeath);} deathSoundPlayed=true; } } } else deathSoundPlayed=false;
         if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;figureActive=false;generateRooms();buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
         
+        // --- DEBUG TELEPORTS ---
+        if(!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) {
+            if(kDown & KEY_DDOWN) { // Teleport to Seek
+                camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; 
+                camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; 
+                needsVBOUpdate = true; 
+                sprintf(uiMessage, "Teleported to Seek!"); 
+                messageTimer = 90; 
+            }
+            if(kDown & KEY_DLEFT) { // Teleport to Figure
+                camZ = -10.0f - (48 * 10.0f) + 5.0f; 
+                camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; 
+                needsVBOUpdate = true; 
+                sprintf(uiMessage, "Teleported near Library!"); 
+                messageTimer = 90; 
+            }
+        }
+
         playerCurrentRoom=(camZ>=-10.0f)?-1:(int)((-camZ-10.0f)/10.0f); if(playerCurrentRoom<-1)playerCurrentRoom=-1; if(playerCurrentRoom>TOTAL_ROOMS-2)playerCurrentRoom=TOTAL_ROOMS-2;
-        bool isGlitch=false; int tDR=-1; for(int k=1;k<TOTAL_ROOMS;k++){if(rooms[k].isDupeRoom&&playerCurrentRoom==(k-1)){isGlitch=true;tDR=k;break;}}
         if(messageTimer>0)messageTimer--; if(screechCooldown>0)screechCooldown--; if(rushCooldown>0)rushCooldown--; if(eyesSoundCooldown>0)eyesSoundCooldown--;
 
         if(playerCurrentRoom != lastRoomForDarkCheck && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { lastRoomForDarkCheck = playerCurrentRoom; if(rooms[playerCurrentRoom].lightLevel < 0.5f && audio_ok && sDarkRoomEnter.data_vaddr){ float m[12]={0}; m[0]=0.3f; m[1]=0.3f; ndspChnSetMix(11,m); ndspChnWaveBufClear(11); sDarkRoomEnter.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(11,&sDarkRoomEnter); } }
@@ -369,17 +386,19 @@ int main() {
         }
         if(animActive) needsVBOUpdate = true;
 
-        printf("\x1b[1;1H==============================\n");
-        if(isDead){ printf("           YOU DIED!            \n==============================\n\n\n\n\n    [PRESS START TO RESTART]  \n"); } 
-        else {
-            int dC=getDisplayRoom(playerCurrentRoom), dN=getDisplayRoom(getNextDoorIndex(playerCurrentRoom));
-            printf(" Current Room : %03d\n Next Door    : %03d\n\n Health       : %d / 100\n Golden Key   : %s\n Coins        : %04d\n",dC,dN,playerHealth,hasKey?"YES":"NO",playerCoins);
-            if(messageTimer>0)printf("\n ** %s ** \n",uiMessage);
-        }
-
         if(!isDead){
             if(playerCurrentRoom == 49 && !figureActive) { figureActive = true; figureZ = -10.0f - (49 * 10.0f) - 5.0f; needsVBOUpdate = true; sprintf(uiMessage, "Shh... He can hear you."); messageTimer = 150; }
-            if(seekActive && seekState==2){ seekZ-=seekMaxSpeed; needsVBOUpdate=true; if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;} }
+            
+            // --- SEEK LOGIC (FLAT AUDIO) ---
+            if(seekActive && seekState==2){ 
+                seekZ-=seekMaxSpeed; 
+                needsVBOUpdate=true; 
+                if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;} 
+                if(audio_ok && sSeekChase.data_vaddr) {
+                    float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; // FLAT VOLUME
+                    ndspChnSetMix(7, mix);
+                }
+            }
             
             if(kDown&KEY_X && hideState==NOT_HIDING){ 
                 for(auto& b:collisions){ if((b.type==1||b.type==2)&&camX+0.5f>b.minX&&camX-0.5f<b.maxX&&camZ+0.5f>b.minZ&&camZ-0.5f<b.maxZ){ hideState=(b.type==1?IN_CABINET:UNDER_BED); needsVBOUpdate=true; break; } }
