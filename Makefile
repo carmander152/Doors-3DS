@@ -4,99 +4,67 @@ endif
 
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
-TARGET := Doors_3DS
-OBJS := vshader.shbin.o main.o
-LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
-ROMFS_DIR := romfs
+TARGET   := Plex-3DS
+OBJS     := source/main.o
+
+LIBPATHS := -L$(DEVKITPRO)/libctru/lib -L$(DEVKITPRO)/portlibs/3ds/lib
+INCLUDES := -I$(DEVKITPRO)/libctru/include -I$(DEVKITPRO)/portlibs/3ds/include -Isource/
+
+# Linker order is strict: High-level libs -> Low-level libs -> System libs
+LIBS     := -lcitro2d -lcitro3d -ljpeg -lcurl -lmbedtls -lmbedx509 -lmbedcrypto -lz -lctru -lm
 
 .PHONY: all clean
 
-all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
+all: $(TARGET).3dsx $(TARGET).cia
 
+# 1. Build the Icon Metadata
 $(TARGET).smdh: icon.png
-	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
+	smdhtool --create "Plex 3DS" "Plex Client" "Gemini AI" icon.png $@
 
+# 2. Build the 3DSX (For Homebrew Launcher)
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
-	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
+	3dsxtool $< $@ --smdh=$(TARGET).smdh
 
-romfs.bin: $(ROMFS_DIR)
-	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
+# 3. Build the Banner (with generated silent audio track for bannertool compatibility)
+banner.bnr: banner.png
+	@echo "Generating silent audio for banner..."
+	sox -n -r 44100 -c 2 audio.wav trim 0.0 1.0
+	bannertool makebanner -i banner.png -a audio.wav -o banner.bnr
 
-banner.bin: banner.png audio.wav
-	# Force 16-bit, Stereo, 44100Hz, and trim to 3 seconds max for the 3DS memory limit
-	sox audio.wav -b 16 -c 2 -r 44100 clean_audio.wav trim 0 3
-	bannertool makebanner -i banner.png -a clean_audio.wav -o $@
-
+# 4. Generate the RSF configuration (Multi-line echo for makerom compatibility)
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
-	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
-	@echo "  CompanyCode             : \"00\"" >> app.rsf
-	@echo "  ProductCode             : \"CTR-P-DOOR\"" >> app.rsf
-	@echo "  ContentType             : Application" >> app.rsf
-	@echo "  Logo                    : Nintendo" >> app.rsf
-	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xD0075" >> app.rsf
-	@echo "  Category                : Application" >> app.rsf
+	@echo "  Title: \"Plex 3DS\"" >> app.rsf
+	@echo "  ProductCode: \"CTR-P-PLEX\"" >> app.rsf
+	@echo "  UniqueId: 0xF1337" >> app.rsf
+	@echo "  Category: Application" >> app.rsf
 	@echo "Option:" >> app.rsf
-	@echo "  UseOnSD                 : true" >> app.rsf
+	@echo "  UseOnSD: true" >> app.rsf
+	@echo "SystemControlInfo:" >> app.rsf
+	@echo "  MemoryType: Application" >> app.rsf
+	@echo "  CPUCode: 0x00000000" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
-	@echo "  IdealProcessor          : 0" >> app.rsf
-	@echo "  AffinityMask            : 1" >> app.rsf
-	@echo "  Priority                : 16" >> app.rsf
-	@echo "  MaxCpu                  : 0x9E" >> app.rsf
-	@echo "  CoreVersion             : 2" >> app.rsf
-	@echo "  DescVersion             : 2" >> app.rsf
-	@echo "  MemoryType              : Application" >> app.rsf
-	@echo "  HandleTableSize         : 512" >> app.rsf
-	@echo "  SystemModeExt           : 124MB" >> app.rsf
-	@echo "  IORegisterMapping:" >> app.rsf
-	@echo "    - 1ff00000-1ff7ffff" >> app.rsf
 	@echo "  FileSystemAccess:" >> app.rsf
 	@echo "    - DirectSdmc" >> app.rsf
 	@echo "  ServiceAccessControl:" >> app.rsf
 	@echo "    - apt:U" >> app.rsf
 	@echo "    - gsp::Gpu" >> app.rsf
 	@echo "    - hid:USER" >> app.rsf
-	@echo "    - dsp::DSP" >> app.rsf
 	@echo "    - fs:USER" >> app.rsf
-	@echo "    - irrst:u" >> app.rsf
-	@echo "    - cfg:u" >> app.rsf
-	@echo "  SystemCallAccess:" >> app.rsf
-	@echo "    ControlMemory: 1" >> app.rsf
-	@echo "    QueryMemory: 2" >> app.rsf
-	@echo "    ExitProcess: 3" >> app.rsf
-	@echo "    CreateThread: 8" >> app.rsf
-	@echo "    ExitThread: 9" >> app.rsf
-	@echo "    SleepThread: 10" >> app.rsf
-	@echo "    CloseHandle: 35" >> app.rsf
-	@echo "    WaitSynchronization1: 36" >> app.rsf
-	@echo "    WaitSynchronizationN: 37" >> app.rsf
-	@echo "    GetSystemInfo: 42" >> app.rsf
-	@echo "    ConnectToPort: 45" >> app.rsf
-	@echo "    SendSyncRequest: 50" >> app.rsf
-	@echo "SystemControlInfo:" >> app.rsf
-	@echo "  SaveDataSize            : 128KB" >> app.rsf
-	@echo "  StackSize               : 0x40000" >> app.rsf
+	@echo "    - soc:U" >> app.rsf
+	@echo "    - http:C" >> app.rsf
 
-$(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
-	arm-none-eabi-strip --strip-debug $< -o stripped_for_cia.elf
-	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
-	rm -f stripped_for_cia.elf
+# 5. Build the CIA (For FBI Installation)
+$(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bnr app.rsf
+	makerom -f cia -o $@ -elf $< -rsf app.rsf -icon $(TARGET).smdh -banner banner.bnr -exefslogo -target t
 
+# Linking stage
 $(TARGET).elf: $(OBJS)
-	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
+	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBPATHS) $(LIBS)
 
-main.o: main.cpp vshader_shbin.h
-	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
-
-vshader.shbin.o: vshader.v.pica
-	picasso -o vshader.shbin $<
-	bin2s vshader.shbin > vshader.shbin.s
-	$(AS) -march=armv6k -mfloat-abi=hard -o $@ vshader.shbin.s
-
-vshader_shbin.h: vshader.shbin
-	echo "extern const u8 vshader_shbin[];" > $@
-	echo "extern const u32 vshader_shbin_size;" >> $@
+# Compilation stage
+source/main.o: source/main.cpp
+	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -std=c++11 $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh banner.bnr audio.wav $(TARGET).elf $(OBJS) app.rsf
