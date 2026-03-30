@@ -528,5 +528,4 @@ int main() {
         if(sWardrobeExit.data_vaddr)linearFree((void*)sWardrobeExit.data_vaddr); 
         ndspExit(); 
     }
-    romfsExit(); C3D_Fini(); gfxExit(); return 0;
-}
+    romfsExit(); C3D_Fini(); gfxExit(); return 0;}
