@@ -88,10 +88,11 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     float r=light*globalTintR, g=light*globalTintG, b=light*globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
+    // UV flip fix applied here
     float u1 = u;
-    float v1 = 1.0f - v; 
+    float v1 = v; 
     float u2 = u + (uw * repW);
-    float v2 = 1.0f - (v + (vh * repH));
+    float v2 = v + (vh * repH);
     
     addFaceTextured({{x,y,z2,1},{u1,v2},{r,g,b,1}}, {{x2,y,z2,1},{u2,v2},{r,g,b,1}}, {{x,y2,z2,1},{u1,v1},{r,g,b,1}}, {{x2,y,z2,1},{u2,v2},{r,g,b,1}}, {{x2,y2,z2,1},{u2,v1},{r,g,b,1}}, {{x,y2,z2,1},{u1,v1},{r,g,b,1}}); // N
     addFaceTextured({{x,y,z,1},{u2,v2},{r,g,b,1}}, {{x2,y,z,1},{u1,v2},{r,g,b,1}}, {{x,y2,z,1},{u2,v1},{r,g,b,1}}, {{x2,y,z,1},{u1,v2},{r,g,b,1}}, {{x2,y2,z,1},{u1,v1},{r,g,b,1}}, {{x,y2,z,1},{u2,v1},{r,g,b,1}}); // S
@@ -169,15 +170,17 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
     if(!isOpen){ addBox(x-0.4f,0.4f,z-0.3f,0.8f,0.2f,0.6f,0.35f,0.18f,0.08f,false,0,L); addBox(x-0.05f,0.3f,z+0.3f,0.1f,0.15f,0.05f,0.8f,0.8f,0.8f,false,0,L); } else{ addBox(x-0.4f,0.4f,z-0.4f,0.8f,0.6f,0.1f,0.35f,0.18f,0.08f,false,0,L); addBox(x-0.2f,0.35f,z-0.1f,0.4f,0.05f,0.2f,1.0f,0.85f,0.0f,false,0,L); }
 }
 
+// Wall texture setup included here!
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-    addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
-    addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    if(!cD){ addTiledSurface(-0.6f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(-0.6f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); } else addTiledSurface(-0.6f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
-    addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
-    addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
+    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.5f, wallVH = 0.42f, chunkSize = 2.0f;
+    addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); 
+    addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
+    if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
+    addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
+    if(!cD){ addTiledSurface(-0.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); addTiledSurface(-0.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false); } else addTiledSurface(-0.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
+    addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
+    if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
+    addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, L, false);
     auto dr = [&](float dx, bool o) {
         if(!o){ addBox(dx,0,z,1.2f,1.4f,-0.1f,0.15f,0.08f,0.05f,true,0,L); addBox(dx+0.4f,1.1f,z+0.02f,0.4f,0.12f,0.02f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+1.05f,0.7f,z+0.02f,0.05f,0.15f,0.03f,0.6f,0.6f,0.6f,false,0,L); if(rooms[rm].isLocked) addBox(dx+0.9f,0.6f,z+0.05f,0.2f,0.2f,0.05f,0.8f,0.8f,0.8f,false,0,L); } 
         else { addBox(dx,0,z,0.1f,1.4f,-1.2f,0.3f,0.15f,0.08f,true,0,L); addBox(dx+0.1f,1.1f,z-0.8f,0.02f,0.12f,0.4f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+0.1f,0.7f,z-1.05f,0.03f,0.15f,0.05f,0.6f,0.6f,0.6f,false,0,L); }
@@ -684,12 +687,12 @@ int main() {
             C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);
             C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
         } else if (hasAtlas) {
-            // ONLY DO THIS IF TEXTURE SUCCESSFULLY LOADED
             C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR);
+            C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA);
             C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             C3D_TexBind(0, &atlasTex);
         } else {
-            // FALLBACK: Disable textures to prevent hardware crash!
             C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
             C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
         }
