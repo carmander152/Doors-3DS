@@ -25,6 +25,7 @@ std::vector<BBox> collisions;
 float globalTintR = 1.0f, globalTintG = 1.0f, globalTintB = 1.0f;
 C3D_Tex atlasTex;
 bool hasAtlas = false; 
+char texErrorMessage[100] = "";
 
 struct RoomSetup {
     int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
@@ -64,13 +65,37 @@ ndspWaveBuf loadWav(const char* path) {
 }
 
 bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
-    FILE* f = fopen(path, "rb"); if (!f) return false;
-    fseek(f, 0, SEEK_END); size_t size = ftell(f); fseek(f, 0, SEEK_SET);
-    void* texData = linearAlloc(size); if (!texData) { fclose(f); return false; }
-    fread(texData, 1, size, f); fclose(f);
+    FILE* f = fopen(path, "rb"); 
+    if (!f) {
+        sprintf(texErrorMessage, "Could not find %s", path);
+        return false;
+    }
+    
+    fseek(f, 0, SEEK_END); 
+    size_t size = ftell(f); 
+    fseek(f, 0, SEEK_SET);
+    
+    void* texData = linearAlloc(size); 
+    if (!texData) { 
+        sprintf(texErrorMessage, "linearAlloc failed (%zu bytes)", size);
+        fclose(f); 
+        return false; 
+    }
+    
+    fread(texData, 1, size, f); 
+    fclose(f);
+    
     Tex3DS_Texture t3x = Tex3DS_TextureImport(texData, size, tex, NULL, false);
-    linearFree(texData); if (!t3x) return false; Tex3DS_TextureFree(t3x);
-    C3D_TexSetFilter(tex, GPU_LINEAR, GPU_LINEAR); C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
+    linearFree(texData); 
+    
+    if (!t3x) {
+        sprintf(texErrorMessage, "Tex3DS Import failed");
+        return false; 
+    }
+    
+    Tex3DS_TextureFree(t3x);
+    C3D_TexSetFilter(tex, GPU_LINEAR, GPU_LINEAR); 
+    C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
     return true;
 }
 
@@ -322,7 +347,13 @@ void buildWorld(int cChunk, int pRm) {
         
         if(isInteriorVisible && !tAN){
             for(int s=0;s<3;s++){ float zC=z-2.5f-(s*2.5f); int t=rooms[i].slotType[s]; if(t==1)buildCabinet(zC,true,L); else if(t==2)buildCabinet(zC,false,L); else if(t==5)buildDresser(zC,true,rooms[i].animMain[s],rooms[i].slotItem[s],L); else if(t==6)buildDresser(zC,false,rooms[i].animMain[s],rooms[i].slotItem[s],L); }
-            for(int p=0;p<rooms[i].pCount;p++){ float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p]; float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.88f:2.82f; addBoxTextured(wX,pY-0.05f,z-pZ+0.05f,0.06f,pH+0.1f,-pW-0.1f,0.0f,0.5f,0.5f,0.5f,1.0f,1.0f, 1.0f,1.0f,1.0f, L); addBoxTextured(cX,pY,z-pZ,0.07f,pH,-pW,0.5f,0.5f,0.5f,0.5f,1.0f,1.0f, 1.0f,1.0f,1.0f, L); }
+            for(int p=0;p<rooms[i].pCount;p++){ 
+                float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p]; 
+                float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.88f:2.82f; 
+                float pR=rooms[i].pR[p], pG=rooms[i].pG[p], pB=rooms[i].pB[p];
+                addBox(wX, pY-0.05f, z-pZ+0.05f, 0.06f, pH+0.1f, -pW-0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); 
+                addBox(cX, pY, z-pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+            }
         }
     } globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
 }
@@ -417,10 +448,6 @@ int main() {
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
     
     hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
-    if(!hasAtlas) { 
-        printf("\x1b[31m Warning: romfs:/atlas.t3x not found!\x1b[0m\n"); 
-        printf("\x1b[33m Did you forget to run tex3ds?\x1b[0m\n"); 
-    }
     
     generateRooms(); int currentChunk=0, playerCurrentRoom=-1; buildWorld(currentChunk, playerCurrentRoom);
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size); shaderProgram_s program; shaderProgramInit(&program); shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
@@ -508,7 +535,13 @@ int main() {
             printf("        PLAYER STATUS         \n==============================\n\n"); int dC=getDisplayRoom(playerCurrentRoom), nD=getNextDoorIndex(playerCurrentRoom), dN=getDisplayRoom(nD);
             if(playerCurrentRoom==-1){ printf(" Current Room : 000 (Lobby) \x1b[K\n"); if(isGlitch){char g2[4];for(int i=0;i<3;i++)g2[i]=symbols[rand()%8];g2[3]='\0';printf(" Next Door    : %s         \x1b[K\n",g2);}else printf(" Next Door    : 001         \x1b[K\n"); printf("                            \x1b[K\n\n"); } else if(isGlitch){ char g1[4],g2[4];for(int i=0;i<3;i++){g1[i]=symbols[rand()%8];g2[i]=symbols[rand()%8];}g1[3]='\0';g2[3]='\0'; printf(" Current Room : %s         \x1b[K\n Next Door    : %s         \x1b[K\n                            \x1b[K\n\n",g1,g2); } else printf(" Current Room : %03d         \x1b[K\n Next Door    : %03d         \x1b[K\n                            \x1b[K\n\n",dC,dN);
             if(nD>=0&&nD<TOTAL_ROOMS&&fabsf(camZ-(-10.0f-(nD*10.0f)))<4.0f&&fabsf(camX)<2.0f){ if(isGlitch&&tDR==nD){ if(camX<-1.4f)printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n",rooms[tDR].dupeNumbers[0]); else if(camX>=-1.4f&&camX<=0.6f)printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n",rooms[tDR].dupeNumbers[1]); else printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n",rooms[tDR].dupeNumbers[2]); } else printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n",dN); } else printf("                           \x1b[K\n\n");
+            
+            // Player UI & Controls Block
             printf(" Health       : %d / 100   \x1b[K\n Golden Key   : %s         \x1b[K\n Coins        : %04d       \x1b[K\n FPS          : %.2f       \x1b[K\n\n        --- CONTROLS ---      \x1b[K\n [A] Interact  [B] Crouch    \x1b[K\n [X] Hide(Cab/Bed) [CPAD] Move \x1b[K\n [TOUCH/CSTICK] Look Around  \x1b[K\n", playerHealth, hasKey?"EQUIPPED":"None    ", playerCoins, currentFps);
+            
+            // Texture Error Banner
+            if(texErrorMessage[0] != '\0') printf("\n \x1b[31m[TEX ERROR] %s\x1b[0m \x1b[K\n", texErrorMessage);
+
             if(messageTimer>0)printf("\n ** %s ** \x1b[K\n",uiMessage);else if(rushActive&&rushState==1)printf("\n ** The lights are flickering... ** \x1b[K\n");else if(hideState==BEHIND_DOOR)printf("\n ** Hiding behind door... ** \x1b[K\n");else printf("\n                                    \x1b[K\n");
             if(!audio_ok)printf("\x1b[31m WARNING: dspfirm.cdc MISSING!\x1b[0m\x1b[K\n\x1b[31m Sound chip could not turn on.\x1b[0m\x1b[K\n"); else printf("                                    \x1b[K\n"); printf("\x1b[0J");
         }
