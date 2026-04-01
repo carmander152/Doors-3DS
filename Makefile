@@ -6,7 +6,8 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := Doors_3DS
 OBJS := vshader.shbin.o main.o
-LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
+# Added portlibs path and -ltex3ds for texture support
+LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/portlibs/3ds/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -ltex3ds -lctru -lm
 ROMFS_DIR := romfs
 
 .PHONY: all clean
@@ -16,39 +17,44 @@ all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
 
-$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
+# Added rule to convert your atlas.png to atlas.t3x automatically
+$(ROMFS_DIR)/atlas.t3x: atlas.png
+	@mkdir -p $(ROMFS_DIR)
+	tex3ds -i $< -o $@
+
+# Make the 3dsx and romfs binaries wait for the texture to be converted
+$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh $(ROMFS_DIR)/atlas.t3x
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
-romfs.bin: $(ROMFS_DIR)
+romfs.bin: $(ROMFS_DIR) $(ROMFS_DIR)/atlas.t3x
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
-	# Force 16-bit, Stereo, 44100Hz, and trim to 3 seconds max for the 3DS memory limit
 	sox audio.wav -b 16 -c 2 -r 44100 clean_audio.wav trim 0 3
 	bannertool makebanner -i banner.png -a clean_audio.wav -o $@
 
 app.rsf:
 	@echo "BasicInfo:" > app.rsf
-	@echo "  Title                   : \"Doors 3DS\"" >> app.rsf
-	@echo "  CompanyCode             : \"00\"" >> app.rsf
-	@echo "  ProductCode             : \"CTR-P-DOOR\"" >> app.rsf
-	@echo "  ContentType             : Application" >> app.rsf
-	@echo "  Logo                    : Nintendo" >> app.rsf
+	@echo "  Title                  : \"Doors 3DS\"" >> app.rsf
+	@echo "  CompanyCode            : \"00\"" >> app.rsf
+	@echo "  ProductCode            : \"CTR-P-DOOR\"" >> app.rsf
+	@echo "  ContentType            : Application" >> app.rsf
+	@echo "  Logo                   : Nintendo" >> app.rsf
 	@echo "TitleInfo:" >> app.rsf
-	@echo "  UniqueId                : 0xD0075" >> app.rsf
-	@echo "  Category                : Application" >> app.rsf
+	@echo "  UniqueId               : 0xD0075" >> app.rsf
+	@echo "  Category               : Application" >> app.rsf
 	@echo "Option:" >> app.rsf
-	@echo "  UseOnSD                 : true" >> app.rsf
+	@echo "  UseOnSD                : true" >> app.rsf
 	@echo "AccessControlInfo:" >> app.rsf
-	@echo "  IdealProcessor          : 0" >> app.rsf
-	@echo "  AffinityMask            : 1" >> app.rsf
-	@echo "  Priority                : 16" >> app.rsf
-	@echo "  MaxCpu                  : 0x9E" >> app.rsf
-	@echo "  CoreVersion             : 2" >> app.rsf
-	@echo "  DescVersion             : 2" >> app.rsf
-	@echo "  MemoryType              : Application" >> app.rsf
-	@echo "  HandleTableSize         : 512" >> app.rsf
-	@echo "  SystemModeExt           : 124MB" >> app.rsf
+	@echo "  IdealProcessor         : 0" >> app.rsf
+	@echo "  AffinityMask           : 1" >> app.rsf
+	@echo "  Priority               : 16" >> app.rsf
+	@echo "  MaxCpu                 : 0x9E" >> app.rsf
+	@echo "  CoreVersion            : 2" >> app.rsf
+	@echo "  DescVersion            : 2" >> app.rsf
+	@echo "  MemoryType             : Application" >> app.rsf
+	@echo "  HandleTableSize        : 512" >> app.rsf
+	@echo "  SystemModeExt          : 124MB" >> app.rsf
 	@echo "  IORegisterMapping:" >> app.rsf
 	@echo "    - 1ff00000-1ff7ffff" >> app.rsf
 	@echo "  FileSystemAccess:" >> app.rsf
@@ -75,19 +81,19 @@ app.rsf:
 	@echo "    ConnectToPort: 45" >> app.rsf
 	@echo "    SendSyncRequest: 50" >> app.rsf
 	@echo "SystemControlInfo:" >> app.rsf
-	@echo "  SaveDataSize            : 128KB" >> app.rsf
-	@echo "  StackSize               : 0x40000" >> app.rsf
+	@echo "  SaveDataSize           : 128KB" >> app.rsf
+	@echo "  StackSize              : 0x40000" >> app.rsf
 
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	arm-none-eabi-strip --strip-debug $< -o stripped_for_cia.elf
 	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
 	rm -f stripped_for_cia.elf
 
+main.o: main.cpp vshader_shbin.h
+	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/portlibs/3ds/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
+
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
-
-main.o: main.cpp vshader_shbin.h
-	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O2 -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
 vshader.shbin.o: vshader.v.pica
 	picasso -o vshader.shbin $<
@@ -99,4 +105,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf $(ROMFS_DIR)/atlas.t3x
