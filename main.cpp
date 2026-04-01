@@ -87,7 +87,6 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     float r=light*globalTintR, g=light*globalTintG, b=light*globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
-    // Invert V specifically for the 3DS Graphics Hardware to read top-down correctly
     float u1 = u;
     float v1 = 1.0f - v; 
     float u2 = u + (uw * repW);
@@ -319,7 +318,6 @@ void buildWorld(int cChunk, int pRm) {
             addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true);
             addTiledSurface(sW,0.0f,srZ-5.0f,6.0f,0.4f,-0.12f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
             
-            // Side-Room rendering optimization: Only generate if the door is open!
             if (i == pRm && dO) {
                 srand(i*(isL?123:321)); if(rand()%2==0){ float pY=0.6f+(rand()%50)/100.0f, pZ=srZ-1.5f-(rand()%20)/10.0f, pW=0.5f+(rand()%40)/100.0f, pH=0.5f+(rand()%40)/100.0f; addBoxTextured(isL?-8.95f:8.89f,pY-0.05f,pZ+0.05f,0.06f,pH+0.1f,-pW-0.1f,0.0f,0.5f,0.5f,0.5f,1.0f,1.0f,L); addBoxTextured(isL?-8.9f:8.83f,pY,pZ,0.07f,pH,-pW,0.5f,0.5f,0.5f,0.5f,1.0f,1.0f,L); } srand(time(NULL));
                 for(int s=0;s<3;s++){ float fZ=srZ-0.9f-(s*1.6f); 
@@ -443,7 +441,6 @@ int main() {
     AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); // v1: UV Coords
     AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); // v2: Colors
     
-    // COMBINED VBO to save memory and prevent silent failures!
     void* vbo_main = linearAlloc(MAX_VERTS * sizeof(vertex)); 
     
     int colored_size = world_mesh_colored.size();
@@ -672,6 +669,7 @@ int main() {
             if(hideState==NOT_HIDING||hideState==BEHIND_DOOR){ bool iDZ=false; for(auto& b:collisions)if(b.type==4&&camX>b.minX&&camX<b.maxX&&camZ>b.minZ&&camZ<b.maxZ){iDZ=true;break;} if(iDZ&&hideState==NOT_HIDING)hideState=BEHIND_DOOR; else if(!iDZ&&hideState==BEHIND_DOOR)hideState=NOT_HIDING; }
         }
 
+        // --- RENDER PASS FIX --- 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
         
         float dCX=camX, dCZ=camZ, dCY=camYaw, dCP=camPitch; static float lCCZ=0.0f;
@@ -679,9 +677,12 @@ int main() {
         C3D_Mtx proj, view; Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); Mtx_Identity(&view); Mtx_RotateX(&view, -dCP, true); Mtx_RotateY(&view, -dCY, true); Mtx_Translate(&view, -dCX, isDead?-0.1f:(isCrouching?-0.4f:(hideState==NOT_HIDING||hideState==BEHIND_DOOR?-0.9f:(hideState==IN_CABINET?-0.7f:-0.15f))), -dCZ, true); Mtx_Multiply(&view, &proj, &view);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); 
         
+        // 1. We bind the Buffer ONCE to avoid misaligning the memory pointer
         C3D_BufInfo* buf = C3D_GetBufInfo();
+        BufInfo_Init(buf);
+        BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
 
-        // --- 1. Draw Colored Mesh ---
+        // 2. Draw Colored Mesh
         C3D_TexEnvInit(env); 
         if(flashRedFrames>0 && !isDead){
             C3D_TexEnvColor(env,0xFF0000FF);
@@ -693,25 +694,26 @@ int main() {
         }
         
         if (colored_size > 0) {
-            BufInfo_Init(buf); BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
-            C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
+            // Draw starting from index 0
+            C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size); 
         }
 
-        // --- 2. Draw Textured Mesh ---
+        // 3. Draw Textured Mesh
         C3D_TexEnvInit(env); 
         if(flashRedFrames>0 && !isDead){
             C3D_TexEnvColor(env,0xFF0000FF);
             C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);
             C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
         } else {
-            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            // Properly blend the Texture with the Vertex Color (Lighting)
+            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0);
             C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             C3D_TexBind(0, &atlasTex);
         }
         
         if (textured_size > 0) {
-            BufInfo_Init(buf); BufInfo_Add(buf, (vertex*)vbo_main + colored_size, sizeof(vertex), 3, 0x210);
-            C3D_DrawArrays(GPU_TRIANGLES, 0, textured_size);
+            // Tell the GPU to skip past the colored vertices, using OpenGL's intended "first" parameter
+            C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size); 
         }
 
         C3D_FrameEnd(0);
