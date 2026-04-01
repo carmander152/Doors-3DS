@@ -1,14 +1,16 @@
-; Basic 3DS Projection Shader
+; Basic 3DS Projection Shader with Textures
 
 ; Uniforms (The Camera Matrix)
 .fvec proj_mtx[4]
 
-; Inputs from our C++ code (v0 = Position, v1 = Color)
+; Inputs from our C++ code (v0 = Position, v1 = UVs, v2 = Color)
 .alias in_pos v0
-.alias in_clr v1
+.alias in_tc0 v1
+.alias in_clr v2
 
 ; Outputs to the screen
 .out out_pos position
+.out out_tc0 texcoord0
 .out out_clr color
 
 .entry main
@@ -19,7 +21,8 @@
     dp4 out_pos.z, proj_mtx[2], in_pos
     dp4 out_pos.w, proj_mtx[3], in_pos
 
-    ; Pass the color straight through to the screen
+    ; Pass the Texture UVs and the color straight through
+    mov out_tc0, in_tc0
     mov out_clr, in_clr
     
     end
