@@ -706,7 +706,7 @@ int main() {
             C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
         } else {
             // Properly blend the Texture with the Vertex Color (Lighting)
-            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0);
+            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
             C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             C3D_TexBind(0, &atlasTex);
         }
