@@ -88,11 +88,12 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     float r=light*globalTintR, g=light*globalTintG, b=light*globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
-    // UV flip fix applied here
+    // RESTORED THE INVERSION MATH HERE:
+    // This forces V=0.0 to start at the top of atlas.jpg instead of the bottom
     float u1 = u;
-    float v1 = v; 
+    float v1 = 1.0f - v; 
     float u2 = u + (uw * repW);
-    float v2 = v + (vh * repH);
+    float v2 = 1.0f - (v + (vh * repH));
     
     addFaceTextured({{x,y,z2,1},{u1,v2},{r,g,b,1}}, {{x2,y,z2,1},{u2,v2},{r,g,b,1}}, {{x,y2,z2,1},{u1,v1},{r,g,b,1}}, {{x2,y,z2,1},{u2,v2},{r,g,b,1}}, {{x2,y2,z2,1},{u2,v1},{r,g,b,1}}, {{x,y2,z2,1},{u1,v1},{r,g,b,1}}); // N
     addFaceTextured({{x,y,z,1},{u2,v2},{r,g,b,1}}, {{x2,y,z,1},{u1,v2},{r,g,b,1}}, {{x,y2,z,1},{u2,v1},{r,g,b,1}}, {{x2,y,z,1},{u1,v2},{r,g,b,1}}, {{x2,y2,z,1},{u1,v1},{r,g,b,1}}, {{x,y2,z,1},{u2,v1},{r,g,b,1}}); // S
