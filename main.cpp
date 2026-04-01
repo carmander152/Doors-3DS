@@ -13,12 +13,16 @@
 #define MAX_VERTS 150000 
 #define TOTAL_ROOMS 102 
 
-// Vertex now includes UV Texcoords
+// Vertex structure
 typedef struct { float pos[4]; float texcoord[2]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
 
-std::vector<vertex> world_mesh; std::vector<BBox> collisions;
+// Separation of Colored (Untextured) and Textured meshes
+std::vector<vertex> world_mesh_colored;
+std::vector<vertex> world_mesh_textured; 
+std::vector<BBox> collisions;
+
 float globalTintR = 1.0f, globalTintG = 1.0f, globalTintB = 1.0f;
 C3D_Tex atlasTex;
 
@@ -72,13 +76,23 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
 }
 
 void addFaceTextured(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6) {
-    world_mesh.push_back(v1); world_mesh.push_back(v2); world_mesh.push_back(v3);
-    world_mesh.push_back(v4); world_mesh.push_back(v5); world_mesh.push_back(v6);
+    world_mesh_textured.push_back(v1); world_mesh_textured.push_back(v2); world_mesh_textured.push_back(v3);
+    world_mesh_textured.push_back(v4); world_mesh_textured.push_back(v5); world_mesh_textured.push_back(v6);
+}
+
+void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6) {
+    world_mesh_colored.push_back(v1); world_mesh_colored.push_back(v2); world_mesh_colored.push_back(v3);
+    world_mesh_colored.push_back(v4); world_mesh_colored.push_back(v5); world_mesh_colored.push_back(v6);
 }
 
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float light = 1.0f) {
     float r=light*globalTintR, g=light*globalTintG, b=light*globalTintB;
-    float x2=x+w, y2=y+h, z2=z+d; float u1 = u, v1 = v; float u2 = u + (uw * repW), v2 = v + (vh * repH);
+    float x2=x+w, y2=y+h, z2=z+d; 
+    
+    // Invert V specifically for the 3DS Graphics Hardware
+    float u1 = u, v1 = 1.0f - v; 
+    float u2 = u + (uw * repW), v2 = 1.0f - (v + (vh * repH));
+    
     addFaceTextured({{x,y,z2,1},{u1,v2},{r,g,b,1}}, {{x2,y,z2,1},{u2,v2},{r,g,b,1}}, {{x,y2,z2,1},{u1,v1},{r,g,b,1}}, {{x2,y,z2,1},{u2,v2},{r,g,b,1}}, {{x2,y2,z2,1},{u2,v1},{r,g,b,1}}, {{x,y2,z2,1},{u1,v1},{r,g,b,1}}); // N
     addFaceTextured({{x,y,z,1},{u2,v2},{r,g,b,1}}, {{x2,y,z,1},{u1,v2},{r,g,b,1}}, {{x,y2,z,1},{u2,v1},{r,g,b,1}}, {{x2,y,z,1},{u1,v2},{r,g,b,1}}, {{x2,y2,z,1},{u1,v1},{r,g,b,1}}, {{x,y2,z,1},{u2,v1},{r,g,b,1}}); // S
     addFaceTextured({{x,y,z,1},{u1,v2},{r,g,b,1}}, {{x,y,z2,1},{u2,v2},{r,g,b,1}}, {{x,y2,z,1},{u1,v1},{r,g,b,1}}, {{x,y,z2,1},{u2,v2},{r,g,b,1}}, {{x,y2,z2,1},{u2,v1},{r,g,b,1}}, {{x,y2,z,1},{u1,v1},{r,g,b,1}}); // W
@@ -87,12 +101,20 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     addFaceTextured({{x,y,z,1},{u1,v2},{r,g,b,1}}, {{x2,y,z,1},{u2,v2},{r,g,b,1}}, {{x,y,z2,1},{u1,v1},{r,g,b,1}}, {{x2,y,z,1},{u2,v2},{r,g,b,1}}, {{x2,y,z2,1},{u2,v1},{r,g,b,1}}, {{x,y,z2,1},{u1,v1},{r,g,b,1}}); // Bot
 }
 
+void addBoxColored(float x, float y, float z, float w, float h, float d, float r, float g, float b, float light = 1.0f) {
+    float r_c=r*light*globalTintR, g_c=g*light*globalTintG, b_c=b*light*globalTintB;
+    if(r_c>1.0f) r_c=1.0f; if(g_c>1.0f) g_c=1.0f; if(b_c>1.0f) b_c=1.0f;
+    float x2=x+w, y2=y+h, z2=z+d;
+    addFaceColored({{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}); // N
+    addFaceColored({{x,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}); // S
+    addFaceColored({{x,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}); // W
+    addFaceColored({{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}); // E
+    addFaceColored({{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}); // Top
+    addFaceColored({{x,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}); // Bot
+}
+
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0, float light = 1.0f) {
-    addBoxTextured(x,y,z,w,h,d, 0.99f, 0.99f, 0.0f, 0.0f, 1.0f, 1.0f, light);
-    for(size_t i = world_mesh.size() - 36; i < world_mesh.size(); i++) {
-        world_mesh[i].clr[0] = r*light*globalTintR; world_mesh[i].clr[1] = g*light*globalTintG; world_mesh[i].clr[2] = b*light*globalTintB;
-        if(world_mesh[i].clr[0]>1.0f) world_mesh[i].clr[0]=1.0f; if(world_mesh[i].clr[1]>1.0f) world_mesh[i].clr[1]=1.0f; if(world_mesh[i].clr[2]>1.0f) world_mesh[i].clr[2]=1.0f;
-    }
+    addBoxColored(x, y, z, w, h, d, r, g, b, light);
     if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),colType});
 }
 
@@ -161,7 +183,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
 }
 
 void buildWorld(int cChunk, int pRm) {
-    world_mesh.clear(); collisions.clear();
+    world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
     if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
     if(seekActive){
@@ -289,7 +311,7 @@ void buildWorld(int cChunk, int pRm) {
         
         if(isInteriorVisible && !tAN){
             for(int s=0;s<3;s++){ float zC=z-2.5f-(s*2.5f); int t=rooms[i].slotType[s]; if(t==1)buildCabinet(zC,true,L); else if(t==2)buildCabinet(zC,false,L); else if(t==5)buildDresser(zC,true,rooms[i].animMain[s],rooms[i].slotItem[s],L); else if(t==6)buildDresser(zC,false,rooms[i].animMain[s],rooms[i].slotItem[s],L); }
-            for(int p=0;p<rooms[i].pCount;p++){ float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p]; float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.95f:2.88f; addBoxTextured(wX,pY-0.05f,z-pZ+0.05f,0.06f,pH+0.1f,-pW-0.1f,0.0f,0.5f,0.5f,0.5f,1.0f,1.0f,L); addBoxTextured(cX,pY,z-pZ,0.07f,pH,-pW,0.5f,0.5f,0.5f,0.5f,1.0f,1.0f,L); }
+            for(int p=0;p<rooms[i].pCount;p++){ float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p]; float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.88f:2.82f; addBoxTextured(wX,pY-0.05f,z-pZ+0.05f,0.06f,pH+0.1f,-pW-0.1f,0.0f,0.5f,0.5f,0.5f,1.0f,1.0f,L); addBoxTextured(cX,pY,z-pZ,0.07f,pH,-pW,0.5f,0.5f,0.5f,0.5f,1.0f,1.0f,L); }
         }
     } globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
 }
@@ -383,26 +405,27 @@ int main() {
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
     
-    // LOAD TEXTURE
     if(!loadTextureFromFile("romfs:/atlas.t3x", &atlasTex)) { printf("\x1b[31m Failed to load romfs:/atlas.t3x!\x1b[0m\n"); }
     
     generateRooms(); int currentChunk=0, playerCurrentRoom=-1; buildWorld(currentChunk, playerCurrentRoom);
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size); shaderProgram_s program; shaderProgramInit(&program); shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
     
-    // UPDATED ATTRIBUTES FOR UV MAPPING
     int uLoc_proj = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx"); C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr); 
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); // v0: Position
     AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); // v1: UV Coords
     AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); // v2: Colors
     
-    void* vbo_ptr = linearAlloc(MAX_VERTS * sizeof(vertex)); memcpy(vbo_ptr, world_mesh.data(), world_mesh.size() * sizeof(vertex)); GSPGPU_FlushDataCache(vbo_ptr, world_mesh.size() * sizeof(vertex));
-    // UPDATED BUFINFO FOR 3 ATTRIBUTES
-    C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf); BufInfo_Add(buf, vbo_ptr, sizeof(vertex), 3, 0x210); C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
+    // Allocate Two separate VBOs
+    void* vbo_colored = linearAlloc(MAX_VERTS * sizeof(vertex)); 
+    void* vbo_textured = linearAlloc(MAX_VERTS * sizeof(vertex)); 
     
-    // UPDATED TEXENV FOR MODULATE BLENDING
-    C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
-    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
-    C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
+    memcpy(vbo_colored, world_mesh_colored.data(), world_mesh_colored.size() * sizeof(vertex)); 
+    GSPGPU_FlushDataCache(vbo_colored, world_mesh_colored.size() * sizeof(vertex));
+    memcpy(vbo_textured, world_mesh_textured.data(), world_mesh_textured.size() * sizeof(vertex)); 
+    GSPGPU_FlushDataCache(vbo_textured, world_mesh_textured.size() * sizeof(vertex));
+    
+    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
+    C3D_TexEnv* env = C3D_GetTexEnv(0); 
 
     float camX=0, camZ=7.5f, camYaw=0, camPitch=0; const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false;
     static int lastRoomForDarkCheck = -1;
@@ -412,7 +435,7 @@ int main() {
         bool needsVBOUpdate=false; static bool deathSoundPlayed=false; static u64 totalFrames = 0; totalFrames++;
 
         if(isDead){ if(!deathSoundPlayed){ if(audio_ok){ ndspChnWaveBufClear(3); ndspChnWaveBufClear(5); ndspChnWaveBufClear(7); ndspChnWaveBufClear(9); bool wAA=(sAttack.status==NDSP_WBUF_PLAYING||sAttack.status==NDSP_WBUF_QUEUED||sDupeAttack.status==NDSP_WBUF_PLAYING||sDupeAttack.status==NDSP_WBUF_QUEUED); if(!wAA){ ndspChnWaveBufClear(8); if(sDeath.data_vaddr){sDeath.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(8,&sDeath);} deathSoundPlayed=true; } } else deathSoundPlayed=true; } } else deathSoundPlayed=false;
-        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR);buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
+        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_colored,world_mesh_colored.data(),world_mesh_colored.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_colored,world_mesh_colored.size()*sizeof(vertex));memcpy(vbo_textured,world_mesh_textured.data(),world_mesh_textured.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_textured,world_mesh_textured.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
         
         if(!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) {
             if(kDown & KEY_DDOWN) { camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; needsVBOUpdate = true; sprintf(uiMessage, "Teleported to Seek!"); messageTimer = 90; }
@@ -603,7 +626,13 @@ int main() {
             int nC=(camZ<-10.0f)?(int)((fabsf(camZ)-10.0f)/10.0f)+1:0; if(nC!=currentChunk||needsVBOUpdate){ if(nC!=currentChunk&&playerCurrentRoom>1&&!rushActive&&rushCooldown<=0&&!iSE&&rand()%100<12){rushActive=true;rushState=1;rushTimer=300+(rand()%120);rushStartTimer=(float)rushTimer;if(audio_ok){if(sLightsFlicker.data_vaddr){float m[12]={0};m[0]=2.5f;m[1]=2.5f;ndspChnSetMix(12,m);ndspChnWaveBufClear(12);sLightsFlicker.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(12,&sLightsFlicker);}if(sRushScream.data_vaddr){float m[12]={0};ndspChnSetMix(3,m);ndspChnWaveBufClear(3);sRushScream.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(3,&sRushScream);}}} currentChunk=nC;needsVBOUpdate=true; }
             int st=currentChunk-1, en=currentChunk+2; if(currentChunk>=seekStartRoom&&currentChunk<=seekStartRoom+2){st=seekStartRoom;en=seekStartRoom+3;} if(st<0)st=0; if(en>TOTAL_ROOMS-1)en=TOTAL_ROOMS-1;
             for(int i=st;i<=en;i++){ if(rooms[i].isDupeRoom||i==seekStartRoom+1||i==seekStartRoom+2)continue; bool sBO=(fabsf(camZ-(-10.0f-(i*10.0f)))<1.5f&&fabsf(camX-((rooms[i].doorPos==0)?-2.0f:((rooms[i].doorPos==1)?0.0f:2.0f)))<1.5f); if(rooms[i].isLocked||rooms[i].isJammed)sBO=false; if(doorOpen[i]!=sBO){if(sBO&&audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);doorOpen[i]=sBO;needsVBOUpdate=true;}} }
-            if(needsVBOUpdate){buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));}
+            if(needsVBOUpdate){
+                buildWorld(currentChunk,playerCurrentRoom);
+                memcpy(vbo_colored, world_mesh_colored.data(), world_mesh_colored.size() * sizeof(vertex));
+                GSPGPU_FlushDataCache(vbo_colored, world_mesh_colored.size() * sizeof(vertex));
+                memcpy(vbo_textured, world_mesh_textured.data(), world_mesh_textured.size() * sizeof(vertex));
+                GSPGPU_FlushDataCache(vbo_textured, world_mesh_textured.size() * sizeof(vertex));
+            }
             float pH=isCrouching?0.5f:1.1f; circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
             if((hideState==NOT_HIDING||hideState==BEHIND_DOOR)&&seekState!=1){
                 if(abs(cS.dx)>10)camYaw-=cS.dx/1560.0f*0.8f; if(abs(cS.dy)>10)camPitch+=cS.dy/1560.0f*0.8f;
@@ -616,16 +645,49 @@ int main() {
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
         
-        // BIND TEXTURE BEFORE DRAWING
-        C3D_TexBind(0, &atlasTex);
-        
-        if(flashRedFrames>0&&!isDead){C3D_TexEnvColor(env,0xFF0000FF);C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);flashRedFrames--;} 
-        else if(!isDead)C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR);
-        
         float dCX=camX, dCZ=camZ, dCY=camYaw, dCP=camPitch; static float lCCZ=0.0f;
         if(seekState==1){ if(seekTimer==1)lCCZ=seekZ-4.0f; if(seekTimer<=90){float t=seekTimer/90.0f;t=t*t*(3.0f-2.0f*t);dCZ=camZ+(lCCZ-camZ)*t;dCY=camYaw+(3.14159f-camYaw)*t;} else{dCZ=lCCZ;dCY=3.14159f;if(seekTimer>180)dCP=sinf(seekTimer*0.8f)*0.03f;} }
         C3D_Mtx proj, view; Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); Mtx_Identity(&view); Mtx_RotateX(&view, -dCP, true); Mtx_RotateY(&view, -dCY, true); Mtx_Translate(&view, -dCX, isDead?-0.1f:(isCrouching?-0.4f:(hideState==NOT_HIDING||hideState==BEHIND_DOOR?-0.9f:(hideState==IN_CABINET?-0.7f:-0.15f))), -dCZ, true); Mtx_Multiply(&view, &proj, &view);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh.size()); C3D_FrameEnd(0);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); 
+        
+        C3D_BufInfo* buf = C3D_GetBufInfo();
+
+        // --- 1. Draw Colored Mesh (Enemies, Furniture, Lamps, Collision boxes) ---
+        C3D_TexEnvInit(env); 
+        if(flashRedFrames>0 && !isDead){
+            C3D_TexEnvColor(env,0xFF0000FF);
+            C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);
+            C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
+        } else {
+            // Ignore textures completely for these models and just use their vertex color
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+        }
+        
+        if (world_mesh_colored.size() > 0) {
+            BufInfo_Init(buf); BufInfo_Add(buf, vbo_colored, sizeof(vertex), 3, 0x210);
+            C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh_colored.size());
+        }
+
+        // --- 2. Draw Textured Mesh (Walls, Floors, Ceilings) ---
+        C3D_TexEnvInit(env); 
+        if(flashRedFrames>0 && !isDead){
+            C3D_TexEnvColor(env,0xFF0000FF);
+            C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);
+            C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
+        } else {
+            // Multiply the texture atlas by the vertex color (for lighting)
+            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
+            C3D_TexBind(0, &atlasTex);
+        }
+        
+        if (world_mesh_textured.size() > 0) {
+            BufInfo_Init(buf); BufInfo_Add(buf, vbo_textured, sizeof(vertex), 3, 0x210);
+            C3D_DrawArrays(GPU_TRIANGLES, 0, world_mesh_textured.size());
+        }
+
+        C3D_FrameEnd(0);
     }
     
     if(audio_ok){ 
@@ -644,6 +706,8 @@ int main() {
         if(sWardrobeExit.data_vaddr)linearFree((void*)sWardrobeExit.data_vaddr); 
         ndspExit(); 
     }
-    C3D_TexDelete(&atlasTex); // Free memory!
+    C3D_TexDelete(&atlasTex); 
+    linearFree(vbo_colored);
+    linearFree(vbo_textured);
     romfsExit(); C3D_Fini(); gfxExit(); return 0;
 }
