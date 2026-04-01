@@ -25,9 +25,6 @@ jobs:
           apt-get update
           apt-get install -y wget unzip zip make sox
 
-      - name: Install devkitPro Dependencies
-        run: dkp-pacman -Syu --noconfirm 3ds-dev
-
       - name: Install CIA Build Tools
         run: |
           echo "Downloading makerom v0.18..."
