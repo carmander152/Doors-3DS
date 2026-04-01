@@ -19,7 +19,7 @@ $(TARGET).smdh: icon.png
 # Convert your atlas.png to atlas.t3x automatically
 $(ROMFS_DIR)/atlas.t3x: atlas.png
 	@mkdir -p $(ROMFS_DIR)
-	tex3ds -i $< -o $@
+	tex3ds $< -o $@
 
 # Make the 3dsx and romfs binaries wait for the texture to be converted
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh $(ROMFS_DIR)/atlas.t3x
