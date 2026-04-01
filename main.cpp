@@ -401,7 +401,7 @@ int main() {
     
     // UPDATED TEXENV FOR MODULATE BLENDING
     C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
-    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0); 
+    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
     C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
 
     float camX=0, camZ=7.5f, camYaw=0, camPitch=0; const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false;
@@ -412,7 +412,7 @@ int main() {
         bool needsVBOUpdate=false; static bool deathSoundPlayed=false; static u64 totalFrames = 0; totalFrames++;
 
         if(isDead){ if(!deathSoundPlayed){ if(audio_ok){ ndspChnWaveBufClear(3); ndspChnWaveBufClear(5); ndspChnWaveBufClear(7); ndspChnWaveBufClear(9); bool wAA=(sAttack.status==NDSP_WBUF_PLAYING||sAttack.status==NDSP_WBUF_QUEUED||sDupeAttack.status==NDSP_WBUF_PLAYING||sDupeAttack.status==NDSP_WBUF_QUEUED); if(!wAA){ ndspChnWaveBufClear(8); if(sDeath.data_vaddr){sDeath.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(8,&sDeath);} deathSoundPlayed=true; } } else deathSoundPlayed=true; } } else deathSoundPlayed=false;
-        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_PRIMARY_COLOR,0);buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
+        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR);buildWorld(currentChunk,playerCurrentRoom);memcpy(vbo_ptr,world_mesh.data(),world_mesh.size()*sizeof(vertex));GSPGPU_FlushDataCache(vbo_ptr,world_mesh.size()*sizeof(vertex));if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
         
         if(!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) {
             if(kDown & KEY_DDOWN) { camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; needsVBOUpdate = true; sprintf(uiMessage, "Teleported to Seek!"); messageTimer = 90; }
@@ -620,7 +620,7 @@ int main() {
         C3D_TexBind(0, &atlasTex);
         
         if(flashRedFrames>0&&!isDead){C3D_TexEnvColor(env,0xFF0000FF);C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);flashRedFrames--;} 
-        else if(!isDead)C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_PRIMARY_COLOR,0);
+        else if(!isDead)C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_PRIMARY_COLOR,GPU_PRIMARY_COLOR);
         
         float dCX=camX, dCZ=camZ, dCY=camYaw, dCP=camPitch; static float lCCZ=0.0f;
         if(seekState==1){ if(seekTimer==1)lCCZ=seekZ-4.0f; if(seekTimer<=90){float t=seekTimer/90.0f;t=t*t*(3.0f-2.0f*t);dCZ=camZ+(lCCZ-camZ)*t;dCY=camYaw+(3.14159f-camYaw)*t;} else{dCZ=lCCZ;dCY=3.14159f;if(seekTimer>180)dCP=sinf(seekTimer*0.8f)*0.03f;} }
@@ -644,6 +644,6 @@ int main() {
         if(sWardrobeExit.data_vaddr)linearFree((void*)sWardrobeExit.data_vaddr); 
         ndspExit(); 
     }
-    Tex3DS_TextureFree(atlasTex); // Free memory!
+    C3D_TexDelete(&atlasTex); // Free memory!
     romfsExit(); C3D_Fini(); gfxExit(); return 0;
 }
