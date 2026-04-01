@@ -16,15 +16,16 @@ all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
 
-# Convert your atlas.png to atlas.t3x automatically
+# Convert atlas.png to atlas.t3x and FORCE 32-bit RGBA color formatting
 $(ROMFS_DIR)/atlas.t3x: atlas.png
 	@mkdir -p $(ROMFS_DIR)
-	tex3ds $< -o $@
+	tex3ds -f rgba8888 $< -o $@
 
-# Make the 3dsx and romfs binaries wait for the texture to be converted
+# Make the 3dsx wait for the texture to be converted
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh $(ROMFS_DIR)/atlas.t3x
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
+# Make the CIA romfs.bin wait for the texture to be converted
 romfs.bin: $(ROMFS_DIR) $(ROMFS_DIR)/atlas.t3x
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
