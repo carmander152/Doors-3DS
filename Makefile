@@ -6,8 +6,8 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := Doors_3DS
 OBJS := vshader.shbin.o main.o
-# Added portlibs path and -ltex3ds for texture support
-LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/portlibs/3ds/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -ltex3ds -lctru -lm
+# Removed -ltex3ds since texture support is built into citro3d
+LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/portlibs/3ds/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 ROMFS_DIR := romfs
 
 .PHONY: all clean
