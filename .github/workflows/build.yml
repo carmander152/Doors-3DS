@@ -26,7 +26,7 @@ jobs:
           apt-get install -y wget unzip zip make sox
 
       - name: Install devkitPro Dependencies
-        run: dkp-pacman -Sy --noconfirm 3ds-tex3ds
+        run: dkp-pacman -Sy --noconfirm tex3ds
 
       - name: Install CIA Build Tools
         run: |
