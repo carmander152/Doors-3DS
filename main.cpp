@@ -24,6 +24,7 @@ std::vector<BBox> collisions;
 
 float globalTintR = 1.0f, globalTintG = 1.0f, globalTintB = 1.0f;
 C3D_Tex atlasTex;
+bool hasAtlas = false; // Failsafe flag
 
 struct RoomSetup {
     int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
@@ -169,35 +170,14 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    // Upper part of walls (Green section: V=0.0 to 0.42)
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-    // Lower part of walls (Baseboard section: V=0.42 to 0.50)
     addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    
-    if(!lD){ 
-        addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-        addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); 
-    } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
-    
-    addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-    addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    
-    if(!cD){ 
-        addTiledSurface(-0.6f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-        addTiledSurface(-0.6f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); 
-    } else addTiledSurface(-0.6f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
-    
-    addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-    addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    
-    if(!rD){ 
-        addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-        addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); 
-    } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
-    
-    addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); 
-    addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
-    
+    if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
+    addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
+    if(!cD){ addTiledSurface(-0.6f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(-0.6f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); } else addTiledSurface(-0.6f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
+    addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
+    if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,false);
+    addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f,0.0f,0.0f,0.5f,0.42f,2.0f,L,true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f,0.0f,0.42f,0.5f,0.08f,2.0f,L,false);
     auto dr = [&](float dx, bool o) {
         if(!o){ addBox(dx,0,z,1.2f,1.4f,-0.1f,0.15f,0.08f,0.05f,true,0,L); addBox(dx+0.4f,1.1f,z+0.02f,0.4f,0.12f,0.02f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+1.05f,0.7f,z+0.02f,0.05f,0.15f,0.03f,0.6f,0.6f,0.6f,false,0,L); if(rooms[rm].isLocked) addBox(dx+0.9f,0.6f,z+0.05f,0.2f,0.2f,0.05f,0.8f,0.8f,0.8f,false,0,L); } 
         else { addBox(dx,0,z,0.1f,1.4f,-1.2f,0.3f,0.15f,0.08f,true,0,L); addBox(dx+0.1f,1.1f,z-0.8f,0.02f,0.12f,0.4f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+0.1f,0.7f,z-1.05f,0.03f,0.15f,0.05f,0.6f,0.6f,0.6f,false,0,L); }
@@ -206,6 +186,9 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
 
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
+    // Pre-allocate memory to prevent huge performance drops
+    world_mesh_colored.reserve(MAX_VERTS/2); world_mesh_textured.reserve(MAX_VERTS/2); collisions.reserve(2000);
+    
     if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
     if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
     if(seekActive){
@@ -214,13 +197,7 @@ void buildWorld(int cChunk, int pRm) {
     }
     
     if(figureActive){
-        addBox(figureX-0.2f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, true); 
-        addBox(figureX+0.05f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, true);
-        addBox(figureX-0.2f, figureY+0.9f, figureZ-0.1f, 0.4f, 0.7f, 0.2f, 0.4f, 0.1f, 0.05f, true);
-        addBox(figureX-0.35f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false);
-        addBox(figureX+0.2f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false);
-        addBox(figureX-0.15f, figureY+1.6f, figureZ-0.15f, 0.3f, 0.3f, 0.3f, 0.5f, 0.1f, 0.05f, false);
-        addBox(figureX-0.1f, figureY+1.65f, figureZ-0.16f, 0.2f, 0.2f, 0.02f, 0.8f, 0.8f, 0.5f, false, 0, 1.5f);
+        addBox(figureX-0.2f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, true); addBox(figureX+0.05f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, true); addBox(figureX-0.2f, figureY+0.9f, figureZ-0.1f, 0.4f, 0.7f, 0.2f, 0.4f, 0.1f, 0.05f, true); addBox(figureX-0.35f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX+0.2f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX-0.15f, figureY+1.6f, figureZ-0.15f, 0.3f, 0.3f, 0.3f, 0.5f, 0.1f, 0.05f, false); addBox(figureX-0.1f, figureY+1.65f, figureZ-0.16f, 0.2f, 0.2f, 0.02f, 0.8f, 0.8f, 0.5f, false, 0, 1.5f);
     }
     
     if(cChunk<2){
@@ -431,7 +408,12 @@ int main() {
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
     
-    if(!loadTextureFromFile("romfs:/atlas.t3x", &atlasTex)) { printf("\x1b[31m Failed to load romfs:/atlas.t3x!\x1b[0m\n"); }
+    // THE SAFETY CATCH: Check if it actually loaded!
+    hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
+    if(!hasAtlas) { 
+        printf("\x1b[31m Warning: romfs:/atlas.t3x not found!\x1b[0m\n"); 
+        printf("\x1b[33m Did you forget to run tex3ds?\x1b[0m\n"); 
+    }
     
     generateRooms(); int currentChunk=0, playerCurrentRoom=-1; buildWorld(currentChunk, playerCurrentRoom);
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size); shaderProgram_s program; shaderProgramInit(&program); shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
@@ -669,7 +651,6 @@ int main() {
             if(hideState==NOT_HIDING||hideState==BEHIND_DOOR){ bool iDZ=false; for(auto& b:collisions)if(b.type==4&&camX>b.minX&&camX<b.maxX&&camZ>b.minZ&&camZ<b.maxZ){iDZ=true;break;} if(iDZ&&hideState==NOT_HIDING)hideState=BEHIND_DOOR; else if(!iDZ&&hideState==BEHIND_DOOR)hideState=NOT_HIDING; }
         }
 
-        // --- RENDER PASS FIX --- 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
         
         float dCX=camX, dCZ=camZ, dCY=camYaw, dCP=camPitch; static float lCCZ=0.0f;
@@ -677,12 +658,11 @@ int main() {
         C3D_Mtx proj, view; Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); Mtx_Identity(&view); Mtx_RotateX(&view, -dCP, true); Mtx_RotateY(&view, -dCY, true); Mtx_Translate(&view, -dCX, isDead?-0.1f:(isCrouching?-0.4f:(hideState==NOT_HIDING||hideState==BEHIND_DOOR?-0.9f:(hideState==IN_CABINET?-0.7f:-0.15f))), -dCZ, true); Mtx_Multiply(&view, &proj, &view);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); 
         
-        // 1. We bind the Buffer ONCE to avoid misaligning the memory pointer
         C3D_BufInfo* buf = C3D_GetBufInfo();
         BufInfo_Init(buf);
         BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
 
-        // 2. Draw Colored Mesh
+        // 1. Draw Colored Mesh
         C3D_TexEnvInit(env); 
         if(flashRedFrames>0 && !isDead){
             C3D_TexEnvColor(env,0xFF0000FF);
@@ -694,25 +674,27 @@ int main() {
         }
         
         if (colored_size > 0) {
-            // Draw starting from index 0
             C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size); 
         }
 
-        // 3. Draw Textured Mesh
+        // 2. Draw Textured Mesh Safely
         C3D_TexEnvInit(env); 
         if(flashRedFrames>0 && !isDead){
             C3D_TexEnvColor(env,0xFF0000FF);
             C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,GPU_CONSTANT,GPU_CONSTANT);
             C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
-        } else {
-            // Properly blend the Texture with the Vertex Color (Lighting)
+        } else if (hasAtlas) {
+            // ONLY DO THIS IF TEXTURE SUCCESSFULLY LOADED
             C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
             C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             C3D_TexBind(0, &atlasTex);
+        } else {
+            // FALLBACK: Disable textures to prevent hardware crash!
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+            C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
         }
         
         if (textured_size > 0) {
-            // Tell the GPU to skip past the colored vertices, using OpenGL's intended "first" parameter
             C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size); 
         }
 
