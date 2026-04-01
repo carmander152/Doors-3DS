@@ -6,7 +6,6 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := Doors_3DS
 OBJS := vshader.shbin.o main.o
-# Removed -ltex3ds since texture support is built into citro3d
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/portlibs/3ds/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 ROMFS_DIR := romfs
 
@@ -17,7 +16,7 @@ all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
 
-# Added rule to convert your atlas.png to atlas.t3x automatically
+# Convert your atlas.png to atlas.t3x automatically
 $(ROMFS_DIR)/atlas.t3x: atlas.png
 	@mkdir -p $(ROMFS_DIR)
 	tex3ds -i $< -o $@
