@@ -241,8 +241,8 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.5f, wallVH = 1.0f;
-    float texScale = 2.5f; // Adjust this to change diamond scale!
+    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f; // Adjusted width to ignore white line
+    float texScale = 0.8f; // Scaled down diamond size
     float r = 1.0f, g = 1.0f, b = 1.0f; 
     
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
@@ -264,11 +264,11 @@ void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     world_mesh_colored.reserve(MAX_VERTS/2); world_mesh_textured.reserve(MAX_VERTS/2); collisions.reserve(2000);
     
-    float floorU = 0.5f, floorV = 0.0f, floorUW = 0.5f, floorVH = 1.0f;
-    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.5f, wallVH = 1.0f;
+    float floorU = 0.52f, floorV = 0.0f, floorUW = 0.48f, floorVH = 1.0f; // Shifted over the white line
+    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f;     // Stopped before the white line
     float cR = 1.0f, cG = 1.0f, cB = 1.0f; 
-    float floorScale = 2.5f; // Adjust this to change wood plank size!
-    float wallScale = 2.5f;  // Adjust this to change diamond scale!
+    float floorScale = 1.0f; // Natural plank scaling
+    float wallScale = 0.8f;  // Shrunk diamond scaling
     
     if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
     if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
