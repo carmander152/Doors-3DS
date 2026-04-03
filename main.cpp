@@ -18,7 +18,6 @@ typedef struct { float pos[4]; float texcoord[2]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
 
-// SPLIT MESH: This is REQUIRED to prevent the texture from tinting your solid-color objects.
 std::vector<vertex> world_mesh_colored;
 std::vector<vertex> world_mesh_textured; 
 std::vector<BBox> collisions;
@@ -71,29 +70,13 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
         sprintf(texErrorMessage, "Could not find %s", path);
         return false;
     }
-    
-    fseek(f, 0, SEEK_END); 
-    size_t size = ftell(f); 
-    fseek(f, 0, SEEK_SET);
-    
+    fseek(f, 0, SEEK_END); size_t size = ftell(f); fseek(f, 0, SEEK_SET);
     void* texData = linearAlloc(size); 
-    if (!texData) { 
-        sprintf(texErrorMessage, "linearAlloc failed (%zu bytes)", size);
-        fclose(f); 
-        return false; 
-    }
-    
-    fread(texData, 1, size, f); 
-    fclose(f);
-    
+    if (!texData) { sprintf(texErrorMessage, "linearAlloc failed (%zu bytes)", size); fclose(f); return false; }
+    fread(texData, 1, size, f); fclose(f);
     Tex3DS_Texture t3x = Tex3DS_TextureImport(texData, size, tex, NULL, false);
     linearFree(texData); 
-    
-    if (!t3x) {
-        sprintf(texErrorMessage, "Tex3DS Import failed");
-        return false; 
-    }
-    
+    if (!t3x) { sprintf(texErrorMessage, "Tex3DS Import failed"); return false; }
     Tex3DS_TextureFree(t3x);
     C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST); 
     C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
@@ -111,15 +94,10 @@ void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, verte
 }
 
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float r, float g, float b, float light = 1.0f) {
-    float r_c = r * light * globalTintR;
-    float g_c = g * light * globalTintG;
-    float b_c = b * light * globalTintB;
+    float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
-    
-    float u1 = u;
-    float v1 = v; 
-    float u2 = u + (uw * repW);
-    float v2 = v + (vh * repH);
+    float u1 = u, v1 = v; 
+    float u2 = u + (uw * repW), v2 = v + (vh * repH);
     
     addFaceTextured({{x,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
     addFaceTextured({{x,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}); 
@@ -146,10 +124,75 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),colType});
 }
 
-void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float chunkSize, float r, float g, float b, float light, bool collide) {
+// ===========================================================================
+// GLOBAL WORLD-MAPPED UV FUNCTION
+// ===========================================================================
+void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),0});
-    if(fabs(d) > fabs(w)) { float dir = (d>0)?1.0f:-1.0f; for(float curr = 0; curr < fabs(d); curr += chunkSize) { float segD = (curr+chunkSize > fabs(d)) ? (fabs(d)-curr) : chunkSize; addBoxTextured(x, y, z + (curr*dir), w, h, segD*dir, u, v, uw, vh, 1.0f, 1.0f, r, g, b, light); } } 
-    else { for(float curr = 0; curr < fabs(w); curr += chunkSize) { float segW = (curr+chunkSize > fabs(w)) ? (fabs(w)-curr) : chunkSize; addBoxTextured(x + curr, y, z, segW, h, d, u, v, uw, vh, 1.0f, 1.0f, r, g, b, light); } }
+    
+    // Always draw min to max to make coordinates foolproof
+    float minX = fmin(x, x+w), maxX = fmax(x, x+w);
+    float minY = fmin(y, y+h), maxY = fmax(y, y+h);
+    float minZ = fmin(z, z+d), maxZ = fmax(z, z+d);
+    
+    float width = maxX - minX;
+    float height = maxY - minY;
+    float depth = maxZ - minZ;
+    
+    // Safely gets the repeating phase across negative and positive world coords
+    auto getP = [](float val, float s) { float p = fmod(val, s); if(p<0) p+=s; return p; };
+    
+    // Vertical alignment is globally locked to the Y coordinate
+    float phaseY = getP(minY, texScale);
+    float vOff = v + (phaseY / texScale) * vh;
+    float repY = height / texScale;
+    
+    if (width > 0.001f && depth > 0.001f) { 
+        // FLOOR / CEILING logic
+        float currX = minX;
+        while(currX < maxX - 0.0001f) {
+            float pX = getP(currX, texScale);
+            float segW = fmin(texScale - pX, maxX - currX);
+            float uOff = u + (pX / texScale) * uw;
+            float repX = segW / texScale;
+            
+            float currZ = minZ;
+            while(currZ < maxZ - 0.0001f) {
+                float pZ = getP(currZ, texScale);
+                float segD = fmin(texScale - pZ, maxZ - currZ);
+                float vOffFloor = v + (pZ / texScale) * vh; // Map Z to V for floors
+                float repZ = segD / texScale;
+                
+                addBoxTextured(currX, minY, currZ, segW, height, segD, uOff, vOffFloor, uw, vh, repX, repZ, r, g, b, light);
+                currZ += segD;
+            }
+            currX += segW;
+        }
+    } else if (width > 0.001f) { 
+        // WALL ALONG X AXIS logic
+        float currX = minX;
+        while(currX < maxX - 0.0001f) {
+            float pX = getP(currX, texScale);
+            float segW = fmin(texScale - pX, maxX - currX);
+            float uOff = u + (pX / texScale) * uw;
+            float repX = segW / texScale;
+            
+            addBoxTextured(currX, minY, minZ, segW, height, depth, uOff, vOff, uw, vh, repX, repY, r, g, b, light);
+            currX += segW;
+        }
+    } else if (depth > 0.001f) { 
+        // WALL ALONG Z AXIS logic
+        float currZ = minZ;
+        while(currZ < maxZ - 0.0001f) {
+            float pZ = getP(currZ, texScale);
+            float segD = fmin(texScale - pZ, maxZ - currZ);
+            float uOff = u + (pZ / texScale) * uw;
+            float repX = segD / texScale;
+            
+            addBoxTextured(minX, minY, currZ, width, height, segD, uOff, vOff, uw, vh, repX, repY, r, g, b, light);
+            currZ += segD;
+        }
+    }
 }
 
 bool checkCollision(float x, float y, float z, float h) {
@@ -198,17 +241,18 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.5f, wallVH = 1.0f, chunkSize = 4.0f; 
+    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.5f, wallVH = 1.0f;
+    float texScale = 2.5f; // Adjust this to change diamond scale!
     float r = 1.0f, g = 1.0f, b = 1.0f; 
     
-    addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); 
-    addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
-    if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
-    addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
-    if(!cD){ addTiledSurface(-0.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); addTiledSurface(-0.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false); } else addTiledSurface(-0.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
-    addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
-    if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
-    addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
+    addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
+    addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    if(!cD){ addTiledSurface(-0.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-0.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-0.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
     auto dr = [&](float dx, bool o) {
         if(!o){ addBox(dx,0,z,1.2f,1.4f,-0.1f,0.15f,0.08f,0.05f,true,0,L); addBox(dx+0.4f,1.1f,z+0.02f,0.4f,0.12f,0.02f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+1.05f,0.7f,z+0.02f,0.05f,0.15f,0.03f,0.6f,0.6f,0.6f,false,0,L); if(rooms[rm].isLocked) addBox(dx+0.9f,0.6f,z+0.05f,0.2f,0.2f,0.05f,0.8f,0.8f,0.8f,false,0,L); } 
@@ -223,8 +267,8 @@ void buildWorld(int cChunk, int pRm) {
     float floorU = 0.5f, floorV = 0.0f, floorUW = 0.5f, floorVH = 1.0f;
     float wallU = 0.0f, wallV = 0.0f, wallUW = 0.5f, wallVH = 1.0f;
     float cR = 1.0f, cG = 1.0f, cB = 1.0f; 
-    float floorChunk = 5.0f;
-    float wallChunk = 4.0f;
+    float floorScale = 2.5f; // Adjust this to change wood plank size!
+    float wallScale = 2.5f;  // Adjust this to change diamond scale!
     
     if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
     if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
@@ -239,13 +283,13 @@ void buildWorld(int cChunk, int pRm) {
     
     if(cChunk<2){
         globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f;
-        addTiledSurface(-2,0,5,4,0.01f,4, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, 1.0f,false); 
-        addTiledSurface(-2,2,5,4,0.1f,4, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, 1.0f,false); 
+        addTiledSurface(-2,0,5,4,0.01f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
+        addTiledSurface(-2,2,5,4,0.1f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
         addBox(-2,0,9,4,2,0.1f,0.4f,0.3f,0.2f,true); addBox(-2,0,5,0.1f,2,4,0.4f,0.3f,0.2f,true); addBox(1.9f,0,5,0.1f,2,4,0.4f,0.3f,0.2f,true);   
         addBox(1.8f,0.6f,6.5f,0.15f,0.3f,0.2f,0.1f,0.1f,0.1f,false); addBox(1.75f,0.7f,6.55f,0.05f,0.1f,0.1f,0,0.8f,0,false,0,1.5f); addBox(-2.0f-elevatorDoorOffset,0,5.05f,2,2,0.1f,0.6f,0.6f,0.6f,true); addBox(0.0f+elevatorDoorOffset,0,5.05f,2,2,0.1f,0.6f,0.6f,0.6f,true);  
         if(elevatorDoorOffset<0.05f) addBox(-0.02f,0,5.04f,0.04f,2,0.12f,0,0,0,false); if(elevatorClosing) collisions.push_back({-2.0f,0.0f,4.8f,2.0f,2.0f,5.1f,0});
-        addTiledSurface(-6,0,5,12,0.01f,-15, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, 1.0f,false); 
-        addTiledSurface(-6,1.8f,5,12,0.01f,-15, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, 1.0f,false); 
+        addTiledSurface(-6,0,5,12,0.01f,-15, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
+        addTiledSurface(-6,1.8f,5,12,0.01f,-15, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
         addBox(-6,0,5,0.1f,1.8f,-15,0.3f,0.3f,0.3f,true); addBox(6,0,5,0.1f,1.8f,-15,0.3f,0.3f,0.3f,true);  
         addBox(-6,0,-10,3,1.8f,0.1f,0.25f,0.2f,0.15f,true); addBox(3,0,-10,3,1.8f,0.1f,0.25f,0.2f,0.15f,true); addBox(-6,0,4.9f,4,1.8f,0.1f,0.25f,0.15f,0.1f,true); addBox(2,0,4.9f,4,1.8f,0.1f,0.25f,0.15f,0.1f,true);  
         addBox(-6,0,-7,3.5f,0.8f,-0.8f,0.3f,0.15f,0.1f,true); addBox(-3.3f,0,-7.8f,0.8f,0.8f,-1.0f,0.3f,0.15f,0.1f,true); addBox(-2.5f,0.1f,-8.6f,1,0.05f,-1.4f,0.8f,0.7f,0.2f,false); addBox(-2.5f,0.15f,-8.6f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); 
@@ -266,13 +310,13 @@ void buildWorld(int cChunk, int pRm) {
             float cL = rooms[i].lightLevel; globalTintR=0.9f; globalTintG=0.8f; globalTintB=0.6f; 
             addWallWithDoors(z - 20.0f, false, false, true, doorOpen[i], false, false, i, cL);
             if (isInteriorVisible) {
-                addTiledSurface(-6.0f, 0.0f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, cL, false); 
-                addTiledSurface(-6.0f, 3.6f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, cL, false); 
-                addTiledSurface(-6.1f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true); 
-                addTiledSurface(6.0f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true);  
-                addTiledSurface(-6.0f, 0.0f, z, 4.6f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true); 
-                addTiledSurface(1.4f, 0.0f, z, 4.6f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true);
-                addTiledSurface(-1.4f, 1.8f, z, 2.8f, 1.8f, -0.1f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true); 
+                addTiledSurface(-6.0f, 0.0f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, cL, false); 
+                addTiledSurface(-6.0f, 3.6f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, cL, false); 
+                addTiledSurface(-6.1f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
+                addTiledSurface(6.0f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);  
+                addTiledSurface(-6.0f, 0.0f, z, 4.6f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
+                addTiledSurface(1.4f, 0.0f, z, 4.6f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
+                addTiledSurface(-1.4f, 1.8f, z, 2.8f, 1.8f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
                 addBox(-6.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
                 addBox(3.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL);  
                 addBox(-3.0f, 1.8f, z-15.0f, 6.0f, 0.1f, -3.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
@@ -287,8 +331,8 @@ void buildWorld(int cChunk, int pRm) {
                 addBox(-1.5f, 0.0f, z-7.0f, 3.0f, 0.6f, -4.0f, 0.3f, 0.18f, 0.1f, true, 0, cL); 
                 addBox(-1.6f, 0.6f, z-6.9f, 3.2f, 0.1f, -4.2f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
                 buildLamp(-1.2f, z-7.5f, cL); buildLamp(1.2f, z-7.5f, cL);
-                addTiledSurface(-2.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true);
-                addTiledSurface(1.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, cL, true);
+                addTiledSurface(-2.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
+                addTiledSurface(1.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
             }
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; continue; 
         }
@@ -310,27 +354,27 @@ void buildWorld(int cChunk, int pRm) {
         else if(rooms[i].isSeekFinale){ addBox(-2.95f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); addBox(2.85f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); addBox(-3,0,z-2,3.5f,1.8f,0.4f,0.05f,0.05f,0.05f,true,0,L); addBox(-0.1f,0.5f,z-2.1f,0.6f,0.6f,0.6f,1,0,0,false,0,1.5f); rooms[i].pW[0]=2.6f; rooms[i].pZ[0]=z-2.0f; rooms[i].pSide[0]=1; addBox(2,0.8f,z-2.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); rooms[i].pW[1]=1.8f; rooms[i].pZ[1]=z-3.5f; rooms[i].pSide[1]=0; addBox(1.4f,0,z-3.9f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); addBox(1.6f,0.3f,z-3.7f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); addBox(-0.5f,0,z-5,3.5f,1.8f,0.4f,0.05f,0.05f,0.05f,true,0,L); addBox(-0.5f,0.5f,z-5.1f,0.6f,0.6f,0.6f,1,0,0,false,0,1.5f); rooms[i].pW[2]=-2.6f; rooms[i].pZ[2]=z-5.0f; rooms[i].pSide[2]=1; addBox(-3,0.8f,z-5.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); rooms[i].pW[3]=-1.8f; rooms[i].pZ[3]=z-6.5f; rooms[i].pSide[3]=0; addBox(-2.2f,0,z-6.9f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); addBox(-2.0f,0.3f,z-6.7f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); addBox(-3,0,z-8,3.5f,1.8f,0.4f,0.05f,0.05f,0.05f,true,0,L); addBox(-0.1f,0.5f,z-8.1f,0.6f,0.6f,0.6f,1,0,0,false,0,1.5f); rooms[i].pW[4]=2.6f; rooms[i].pZ[4]=z-8.0f; rooms[i].pSide[4]=1; addBox(2,0.8f,z-8.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); rooms[i].pW[5]=0.8f; rooms[i].pZ[5]=z-9.0f; rooms[i].pSide[5]=0; addBox(0.4f,0,z-9.4f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); addBox(0.6f,0.3f,z-9.2f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); } 
         else if(rooms[i].isSeekHallway){ addBox(-2.95f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); addBox(2.85f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); } 
         
-        addTiledSurface(-3, 0, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, L, false); // Floor
-        addTiledSurface(-3, 1.8f, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, L, false); // Ceiling
+        addTiledSurface(-3, 0, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); // Floor
+        addTiledSurface(-3, 1.8f, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); // Ceiling
         
         auto drawSide = [&](bool isL) {
             float dZ=z+(isL?rooms[i].leftDoorOffset:rooms[i].rightDoorOffset), bL=fabsf(dZ-z), aL=fabsf((z-10.0f)-(dZ-1.2f)), m=(isL?-1.0f:1.0f), bX=isL?-3.0f:2.9f, dO=isL?rooms[i].leftDoorOpen:rooms[i].rightDoorOpen;
-            if(bL>0.05f) { addTiledSurface(bX, 0.4f, z, 0.1f, 1.4f, -bL, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, z, 0.12f, 0.4f, -bL, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, false); }
-            if(aL>0.05f) { addTiledSurface(bX, 0.4f, dZ-1.2f, 0.1f, 1.4f, -aL, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, dZ-1.2f, 0.12f, 0.4f, -aL, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, false); }
-            addTiledSurface(bX, 1.4f, dZ, 0.1f, 0.4f, -1.2f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, false);
+            if(bL>0.05f) { addTiledSurface(bX, 0.4f, z, 0.1f, 1.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, z, 0.12f, 0.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); }
+            if(aL>0.05f) { addTiledSurface(bX, 0.4f, dZ-1.2f, 0.1f, 1.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, dZ-1.2f, 0.12f, 0.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); }
+            addTiledSurface(bX, 1.4f, dZ, 0.1f, 0.4f, -1.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
             addBox(bX-(isL?-0.05f:0.0f),0,dZ,0.05f,1.4f,-0.05f,0.15f,0.1f,0.05f,false,0,L); addBox(bX-(isL?-0.05f:0.0f),0,dZ-1.15f,0.05f,1.4f,-0.05f,0.15f,0.1f,0.05f,false,0,L); addBox(bX-(isL?-0.05f:0.0f),1.35f,dZ,0.05f,0.05f,-1.2f,0.15f,0.1f,0.05f,false,0,L); 
             
             if(dO){ addBox(isL?-4.1f:3.0f,0,dZ-1.15f,1.1f,1.4f,0.05f,0.12f,0.06f,0.03f,true,0,L); addBox(isL?-4.0f:3.9f,0.7f,dZ-1.10f,0.1f,0.05f,0.05f,0.8f,0.7f,0.2f,false,0,L); collisions.push_back({isL?-4.1f:3.0f,0.0f,dZ-1.15f,isL?-3.0f:4.1f,1.8f,dZ-1.10f,4}); } else{ addBox(isL?-3.0f:2.95f,0,dZ-0.05f,0.05f,1.4f,-1.1f,0.12f,0.06f,0.03f,true,0,L); addBox(isL?-2.95f:2.9f,0.7f,dZ-0.15f,0.05f,0.1f,-0.1f,0.8f,0.7f,0.2f,false,0,L); } 
             
             float srZ=dZ+2.5f, sW=isL?-9.0f:3.0f; 
-            addTiledSurface(sW,0,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, L, false); 
-            addTiledSurface(sW,1.8f,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorChunk, cR,cG,cB, L, false); 
-            addTiledSurface(isL?-9.0f:8.9f,0.4f,srZ,0.1f,1.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L,true);
-            addTiledSurface(isL?-9.02f:8.88f,0.0f,srZ,0.12f,0.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L,false);
-            addTiledSurface(sW,0.4f,srZ,6.0f,1.4f,0.1f,wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L,true);
-            addTiledSurface(sW,0.0f,srZ,6.0f,0.4f,0.12f,wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L,false);
-            addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L,true);
-            addTiledSurface(sW,0.0f,srZ-5.0f,6.0f,0.4f,-0.12f,wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L,false);
+            addTiledSurface(sW,0,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
+            addTiledSurface(sW,1.8f,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
+            addTiledSurface(isL?-9.0f:8.9f,0.4f,srZ,0.1f,1.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true);
+            addTiledSurface(isL?-9.02f:8.88f,0.0f,srZ,0.12f,0.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
+            addTiledSurface(sW,0.4f,srZ,6.0f,1.4f,0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true);
+            addTiledSurface(sW,0.0f,srZ,6.0f,0.4f,0.12f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
+            addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true);
+            addTiledSurface(sW,0.0f,srZ-5.0f,6.0f,0.4f,-0.12f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
             
             if (i == pRm && dO) {
                 srand(i*(isL?123:321)); 
@@ -352,8 +396,8 @@ void buildWorld(int cChunk, int pRm) {
             }
         };
         
-        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, false); }
-        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallChunk, cR,cG,cB, L, false); } 
+        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); }
+        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); } 
         addBox(-0.4f,1.78f,z-5.4f,0.8f,0.02f,0.8f,(L>0.5f?0.9f:0.2f),(L>0.5f?0.9f:0.2f),(L>0.5f?0.8f:0.2f),false);
         
         if(isInteriorVisible && !tAN){
@@ -725,7 +769,6 @@ int main() {
         BufInfo_Init(buf);
         BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
 
-        // 1. DRAW COLORED OBJECTS (Untextured)
         if (colored_size > 0) {
             C3D_TexEnv* env = C3D_GetTexEnv(0);
             C3D_TexEnvInit(env); // Clean state for solid colors
@@ -741,30 +784,26 @@ int main() {
             C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
         }
 
-        // 2. DRAW TEXTURED OBJECTS (Walls & Floors)
         if (textured_size > 0) {
             C3D_TexBind(0, &atlasTex);
             
             C3D_TexEnv* env = C3D_GetTexEnv(0);
-            C3D_TexEnvInit(env); // CRITICAL FIX: Flush the solid color state out of the GPU!
+            C3D_TexEnvInit(env); 
             
             if (flashRedFrames > 0 && !isDead) {
                 C3D_TexEnvColor(env, 0xFF0000FF);
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) {
-                // Mix the texture with pure white vertex colors
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR);
                 C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA);
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else {
-                // Failsafe in case texture can't load
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             }
             
-            // Draw starting at the end of the colored mesh
             C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
         }
 
