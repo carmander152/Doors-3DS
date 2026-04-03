@@ -199,7 +199,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
     float wallU = 0.5f, wallV = 0.0f, wallUW = 0.5f, wallVH = 1.0f, chunkSize = 2.0f;
-    float r = 1.0f, g = 1.0f, b = 1.0f; // Pure white (preserves true texture color)
+    float r = 1.0f, g = 1.0f, b = 1.0f; 
     
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, true); 
     addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, chunkSize, r,g,b, L, false);
@@ -709,7 +709,10 @@ int main() {
             if(hideState==NOT_HIDING||hideState==BEHIND_DOOR){ bool iDZ=false; for(auto& b:collisions)if(b.type==4&&camX>b.minX&&camX<b.maxX&&camZ>b.minZ&&camZ<b.maxZ){iDZ=true;break;} if(iDZ&&hideState==NOT_HIDING)hideState=BEHIND_DOOR; else if(!iDZ&&hideState==BEHIND_DOOR)hideState=NOT_HIDING; }
         }
 
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
+        // --- DRAWING BLOCK FIX ---
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW); 
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
+        C3D_FrameDrawOn(target);
         
         float dCX=camX, dCZ=camZ, dCY=camYaw, dCP=camPitch; static float lCCZ=0.0f;
         if(seekState==1){ if(seekTimer==1)lCCZ=seekZ-4.0f; if(seekTimer<=90){float t=seekTimer/90.0f;t=t*t*(3.0f-2.0f*t);dCZ=camZ+(lCCZ-camZ)*t;dCY=camYaw+(3.14159f-camYaw)*t;} else{dCZ=lCCZ;dCY=3.14159f;if(seekTimer>180)dCP=sinf(seekTimer*0.8f)*0.03f;} }
@@ -720,19 +723,16 @@ int main() {
         BufInfo_Init(buf);
         BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
 
-        // --- DRAWING BLOCK FIX ---
-        // We only initialize the environment once per frame, then explicitly swap states.
-        C3D_TexEnv* env = C3D_GetTexEnv(0);
-        C3D_TexEnvInit(env);
-
         // 1. DRAW COLORED OBJECTS (Untextured)
         if (colored_size > 0) {
+            C3D_TexEnv* env = C3D_GetTexEnv(0);
+            C3D_TexEnvInit(env); // Clean state for solid colors
+            
             if (flashRedFrames > 0 && !isDead) {
                 C3D_TexEnvColor(env, 0xFF0000FF);
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT);
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else {
-                // Ignore texture entirely, just draw with the normal RGB colors you defined
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             }
@@ -742,6 +742,9 @@ int main() {
         // 2. DRAW TEXTURED OBJECTS (Walls & Floors)
         if (textured_size > 0) {
             C3D_TexBind(0, &atlasTex);
+            
+            C3D_TexEnv* env = C3D_GetTexEnv(0);
+            C3D_TexEnvInit(env); // CRITICAL FIX: Flush the solid color state out of the GPU!
             
             if (flashRedFrames > 0 && !isDead) {
                 C3D_TexEnvColor(env, 0xFF0000FF);
@@ -758,6 +761,7 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             }
+            
             // Draw starting at the end of the colored mesh
             C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
         }
