@@ -11,7 +11,6 @@
 
 #define DISPLAY_TRANSFER_FLAGS (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
-// Lowered to a safe 7.2MB footprint to prevent linearAlloc failures
 #define MAX_VERTS 180000 
 #define TOTAL_ROOMS 102 
 
@@ -86,14 +85,12 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
 }
 
 void addFaceTextured(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6) {
-    // IRONCLAD SAFETY NET: Stop drawing if we reach the memory limit
     if (world_mesh_textured.size() + world_mesh_colored.size() + 6 >= MAX_VERTS) return;
     world_mesh_textured.push_back(v1); world_mesh_textured.push_back(v2); world_mesh_textured.push_back(v3);
     world_mesh_textured.push_back(v4); world_mesh_textured.push_back(v5); world_mesh_textured.push_back(v6);
 }
 
 void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6) {
-    // IRONCLAD SAFETY NET: Stop drawing if we reach the memory limit
     if (world_mesh_textured.size() + world_mesh_colored.size() + 6 >= MAX_VERTS) return;
     world_mesh_colored.push_back(v1); world_mesh_colored.push_back(v2); world_mesh_colored.push_back(v3);
     world_mesh_colored.push_back(v4); world_mesh_colored.push_back(v5); world_mesh_colored.push_back(v6);
@@ -130,22 +127,34 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),colType});
 }
 
+// ===========================================================================
+// SOFTLOCK FIX: Protected against floating point precision traps
+// ===========================================================================
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),0});
     float minX = fmin(x, x+w), maxX = fmax(x, x+w);
     float minY = fmin(y, y+h), maxY = fmax(y, y+h);
     float minZ = fmin(z, z+d), maxZ = fmax(z, z+d);
     float width = maxX - minX, height = maxY - minY, depth = maxZ - minZ;
-    auto getP = [](float val, float s) { float p = fmod(val, s); if(p<0) p+=s; return p; };
+    
+    auto getP = [](float val, float s) { 
+        float p = fmod(val, s); 
+        if(p < 0) p += s; 
+        if(s - p < 0.001f) p = 0.0f; // Softlock Fix 1: Snap to 0 if infinitely close
+        return p; 
+    };
+    
     float phaseY = getP(minY, texScale), vOff = v + (phaseY / texScale) * vh, repY = height / texScale;
     
     if (width > 0.001f && depth > 0.001f) { 
         float currX = minX;
         while(currX < maxX - 0.0001f) {
             float pX = getP(currX, texScale), segW = fmin(texScale - pX, maxX - currX), uOff = u + (pX / texScale) * uw, repX = segW / texScale;
+            if (segW < 0.001f) segW = 0.001f; // Softlock Fix 2: Force Forward Progress
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
                 float pZ = getP(currZ, texScale), segD = fmin(texScale - pZ, maxZ - currZ), vOffFloor = v + (pZ / texScale) * vh, repZ = segD / texScale;
+                if (segD < 0.001f) segD = 0.001f; // Softlock Fix 2: Force Forward Progress
                 addBoxTextured(currX, minY, currZ, segW, height, segD, uOff, vOffFloor, uw, vh, repX, repZ, r, g, b, light);
                 currZ += segD;
             } currX += segW;
@@ -154,6 +163,7 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         float currX = minX;
         while(currX < maxX - 0.0001f) {
             float pX = getP(currX, texScale), segW = fmin(texScale - pX, maxX - currX), uOff = u + (pX / texScale) * uw, repX = segW / texScale;
+            if (segW < 0.001f) segW = 0.001f; // Softlock Fix 2: Force Forward Progress
             addBoxTextured(currX, minY, minZ, segW, height, depth, uOff, vOff, uw, vh, repX, repY, r, g, b, light);
             currX += segW;
         }
@@ -161,6 +171,7 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         float currZ = minZ;
         while(currZ < maxZ - 0.0001f) {
             float pZ = getP(currZ, texScale), segD = fmin(texScale - pZ, maxZ - currZ), uOff = u + (pZ / texScale) * uw, repX = segD / texScale;
+            if (segD < 0.001f) segD = 0.001f; // Softlock Fix 2: Force Forward Progress
             addBoxTextured(minX, minY, currZ, width, height, segD, uOff, vOff, uw, vh, repX, repY, r, g, b, light);
             currZ += segD;
         }
@@ -214,7 +225,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
     float wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f;
-    float texScale = 1.2f; // Increased slightly to save on drawn polygons while keeping it scaled
+    float texScale = 1.2f; 
     float r = 1.0f, g = 1.0f, b = 1.0f; 
     
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
@@ -234,13 +245,17 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
 
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
-    world_mesh_colored.reserve(MAX_VERTS/2); world_mesh_textured.reserve(MAX_VERTS/2); collisions.reserve(2000);
+    
+    // Softlock Fix 3: Reserve absolute max memory to prevent mid-frame reallocation OOMs
+    world_mesh_colored.reserve(MAX_VERTS); 
+    world_mesh_textured.reserve(MAX_VERTS); 
+    collisions.reserve(2000);
     
     float floorU = 0.52f, floorV = 0.0f, floorUW = 0.48f, floorVH = 1.0f; 
     float wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f; 
-    float floorScale = 1.2f; // Increased to 1.2f to dramatically cut down on polygons
-    float wallScale = 1.2f;  // Increased to 1.2f 
+    float floorScale = 1.2f; 
+    float wallScale = 1.2f;  
     
     if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
     if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
@@ -484,7 +499,6 @@ int main() {
     AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); 
     AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); 
     
-    // IRONCLAD SAFETY NET: Check if memory actually exists!
     void* vbo_main = linearAlloc(MAX_VERTS * sizeof(vertex)); 
     if (!vbo_main) {
         printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n");
@@ -501,7 +515,6 @@ int main() {
     int colored_size = world_mesh_colored.size();
     int textured_size = world_mesh_textured.size();
 
-    // Secondary Safety Check
     if (colored_size + textured_size > MAX_VERTS) {
         textured_size = MAX_VERTS - colored_size; 
     }
@@ -510,7 +523,10 @@ int main() {
     memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex)); 
     GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
     
-    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
+    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); 
+    
+    // BACKFACE CULLING ADDED: Saves ~50% processing power
+    C3D_CullFace(GPU_CULL_BACK_CCW); 
 
     float camX=0, camZ=7.5f, camYaw=0, camPitch=0; const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false;
     static int lastRoomForDarkCheck = -1;
@@ -732,7 +748,6 @@ int main() {
                 colored_size = world_mesh_colored.size();
                 textured_size = world_mesh_textured.size();
 
-                // Secondary Safety Check
                 if (colored_size + textured_size > MAX_VERTS) {
                     textured_size = MAX_VERTS - colored_size; 
                 }
