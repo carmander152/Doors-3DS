@@ -134,27 +134,31 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     bool isFloor = (height <= 0.05f);
     
     if (isFloor) {
+        float scaleU = texScale * 1.5f; 
+        float scaleV = texScale * 1.5f; 
         float currX = minX;
         while(currX < maxX - 0.0001f) {
-            float pX = getP(currX, texScale), segW = fmin(texScale - pX, maxX - currX), uOff = u + (pX / texScale) * uw, repX = segW / texScale;
+            float pX = getP(currX, scaleU), segW = fmin(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
             if (segW < 0.001f) segW = 0.001f; 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, texScale), segD = fmin(texScale - pZ, maxZ - currZ), vOffFloor = v + (pZ / texScale) * vh, repZ = segD / texScale;
+                float pZ = getP(currZ, scaleV), segD = fmin(scaleV - pZ, maxZ - currZ), vOffFloor = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
                 if (segD < 0.001f) segD = 0.001f; 
                 addBoxTextured(currX, minY, currZ, segW, height, segD, uOff, vOffFloor, uw, vh, repX, repZ, r, g, b, light);
                 currZ += segD;
             } currX += segW;
         }
     } else {
+        float scaleU = texScale; 
+        float scaleV = texScale * 2.0f; 
         if (width >= depth) { 
             float currX = minX;
             while(currX < maxX - 0.0001f) {
-                float pX = getP(currX, texScale), segW = fmin(texScale - pX, maxX - currX), uOff = u + (pX / texScale) * uw, repX = segW / texScale;
+                float pX = getP(currX, scaleU), segW = fmin(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
                 if (segW < 0.001f) segW = 0.001f; 
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, texScale), segH = fmin(texScale - pY, maxY - currY), vOffWall = v + (pY / texScale) * vh, repY = segH / texScale;
+                    float pY = getP(currY, scaleV), segH = fmin(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     if (segH < 0.001f) segH = 0.001f;
                     addBoxTextured(currX, currY, minZ, segW, segH, depth, uOff, vOffWall, uw, vh, repX, repY, r, g, b, light);
                     currY += segH;
@@ -163,11 +167,11 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         } else { 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, texScale), segD = fmin(texScale - pZ, maxZ - currZ), uOff = u + (pZ / texScale) * uw, repZ = segD / texScale;
+                float pZ = getP(currZ, scaleU), segD = fmin(scaleU - pZ, maxZ - currZ), uOff = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
                 if (segD < 0.001f) segD = 0.001f; 
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, texScale), segH = fmin(texScale - pY, maxY - currY), vOffWall = v + (pY / texScale) * vh, repY = segH / texScale;
+                    float pY = getP(currY, scaleV), segH = fmin(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     if (segH < 0.001f) segH = 0.001f;
                     addBoxTextured(minX, currY, currZ, width, segH, segD, uOff, vOffWall, uw, vh, repZ, repY, r, g, b, light);
                     currY += segH;
@@ -231,6 +235,10 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(0.6f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(0.6f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
+    
+    auto bb = [&](float bx, float bw) { addBox(bx, 0.0f, z-0.02f, bw, 0.12f, 0.05f, 0.12f, 0.06f, 0.03f, false, 0, L); };
+    bb(-3.0f, 0.4f); if(!lD) bb(-2.6f, 1.2f); bb(-1.4f, 0.8f); if(!cD) bb(-0.6f, 1.2f); bb(0.6f, 0.8f); if(!rD) bb(1.4f, 1.2f); bb(2.6f, 0.4f);
+
     auto dr = [&](float dx, bool o) {
         if(!o){ addBox(dx,0,z,1.2f,1.4f,-0.1f,0.15f,0.08f,0.05f,true,0,L); addBox(dx+0.4f,1.1f,z+0.02f,0.4f,0.12f,0.02f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+1.05f,0.7f,z+0.02f,0.05f,0.15f,0.03f,0.6f,0.6f,0.6f,false,0,L); if(rooms[rm].isLocked) addBox(dx+0.9f,0.6f,z+0.05f,0.2f,0.2f,0.05f,0.8f,0.8f,0.8f,false,0,L); } 
         else { addBox(dx,0,z,0.1f,1.4f,-1.2f,0.3f,0.15f,0.08f,false,0,L); addBox(dx+0.1f,1.1f,z-0.8f,0.02f,0.12f,0.4f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+0.1f,0.7f,z-1.05f,0.03f,0.15f,0.05f,0.6f,0.6f,0.6f,false,0,L); }
@@ -331,14 +339,12 @@ void buildWorld(int cChunk, int pRm) {
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; continue; 
         }
 
-        // TINT FIX: Front structural walls belong to the "previous" room visually, so only Seek (global) alters them here
         if(seekState==1){globalTintR=1.0f;globalTintG=0.2f;globalTintB=0.2f;} 
         else{globalTintR=1.0f;globalTintG=1.0f;globalTintB=1.0f;}
 
         if(i==seekStartRoom+9 && rooms[i].isLocked) addBox(-3.0f,0,z+0.2f,6.0f,1.8f,0.1f,0.4f,0.7f,1.0f,true,0,1.5f);
         if(!(i==seekStartRoom+1 || i==seekStartRoom+2)){ if(rooms[i].isDupeRoom){ if(pRm>=i) addWallWithDoors(z,(rooms[i].correctDupePos==0),((rooms[i].correctDupePos==0)&&doorOpen[i]),(rooms[i].correctDupePos==1),((rooms[i].correctDupePos==1)&&doorOpen[i]),(rooms[i].correctDupePos==2),((rooms[i].correctDupePos==2)&&doorOpen[i]),i,wL); else addWallWithDoors(z,true,(rooms[i].correctDupePos==0&&doorOpen[i]),true,(rooms[i].correctDupePos==1&&doorOpen[i]),true,(rooms[i].correctDupePos==2&&doorOpen[i]),i,wL); } else addWallWithDoors(z,(rooms[i].doorPos==0),((rooms[i].doorPos==0)&&doorOpen[i]),(rooms[i].doorPos==1),((rooms[i].doorPos==1)&&doorOpen[i]),(rooms[i].doorPos==2),((rooms[i].doorPos==2)&&doorOpen[i]),i,wL); }
         
-        // TINT FIX: Apply Eyes purple tint ONLY for the interior properties of the specific room
         if(seekState==1){globalTintR=1.0f;globalTintG=0.2f;globalTintB=0.2f;} 
         else if(rooms[i].hasEyes){globalTintR=0.8f;globalTintG=0.3f;globalTintB=1.0f;} 
         else{globalTintR=1.0f;globalTintG=1.0f;globalTintB=1.0f;}
@@ -359,8 +365,8 @@ void buildWorld(int cChunk, int pRm) {
         
         auto drawSide = [&](bool isL) {
             float dZ=z+(isL?rooms[i].leftDoorOffset:rooms[i].rightDoorOffset), bL=fabsf(dZ-z), aL=fabsf((z-10.0f)-(dZ-1.2f)), m=(isL?-1.0f:1.0f), bX=isL?-3.0f:2.9f, dO=isL?rooms[i].leftDoorOpen:rooms[i].rightDoorOpen;
-            if(bL>0.05f) { addTiledSurface(bX, 0.4f, z, 0.1f, 1.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, z, 0.12f, 0.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); }
-            if(aL>0.05f) { addTiledSurface(bX, 0.4f, dZ-1.2f, 0.1f, 1.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, dZ-1.2f, 0.12f, 0.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); }
+            if(bL>0.05f) { addTiledSurface(bX, 0.4f, z, 0.1f, 1.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, z, 0.12f, 0.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(isL?-2.98f:2.94f, 0.0f, z, 0.04f, 0.12f, -bL, 0.12f, 0.06f, 0.03f, false, 0, L); }
+            if(aL>0.05f) { addTiledSurface(bX, 0.4f, dZ-1.2f, 0.1f, 1.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, dZ-1.2f, 0.12f, 0.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(isL?-2.98f:2.94f, 0.0f, dZ-1.2f, 0.04f, 0.12f, -aL, 0.12f, 0.06f, 0.03f, false, 0, L); }
             addTiledSurface(bX, 1.4f, dZ, 0.1f, 0.4f, -1.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
             addBox(bX-(isL?-0.05f:0.0f),0,dZ,0.05f,1.4f,-0.05f,0.15f,0.1f,0.05f,false,0,L); addBox(bX-(isL?-0.05f:0.0f),0,dZ-1.15f,0.05f,1.4f,-0.05f,0.15f,0.1f,0.05f,false,0,L); addBox(bX-(isL?-0.05f:0.0f),1.35f,dZ,0.05f,0.05f,-1.2f,0.15f,0.1f,0.05f,false,0,L); 
             
@@ -369,11 +375,11 @@ void buildWorld(int cChunk, int pRm) {
             float srZ=dZ+2.5f, sW=isL?-9.0f:3.0f; 
             addTiledSurface(sW,0,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
             addTiledSurface(sW,1.8f,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
-            addTiledSurface(isL?-9.0f:8.9f,0.4f,srZ,0.1f,1.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true);
+            addTiledSurface(isL?-9.0f:8.9f,0.4f,srZ,0.1f,1.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); addBox(isL?-8.98f:8.94f, 0.0f, srZ, 0.04f, 0.12f, -5.0f, 0.12f, 0.06f, 0.03f, false, 0, L);
             addTiledSurface(isL?-9.02f:8.88f,0.0f,srZ,0.12f,0.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
-            addTiledSurface(sW,0.4f,srZ,6.0f,1.4f,0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true);
+            addTiledSurface(sW,0.4f,srZ,6.0f,1.4f,0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); addBox(sW, 0.0f, srZ-0.05f, 6.0f, 0.12f, 0.05f, 0.12f, 0.06f, 0.03f, false, 0, L);
             addTiledSurface(sW,0.0f,srZ,6.0f,0.4f,0.12f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
-            addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true);
+            addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); addBox(sW, 0.0f, srZ-4.95f, 6.0f, 0.12f, 0.05f, 0.12f, 0.06f, 0.03f, false, 0, L);
             addTiledSurface(sW,0.0f,srZ-5.0f,6.0f,0.4f,-0.12f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
             
             if (i == pRm && dO) {
@@ -395,8 +401,8 @@ void buildWorld(int cChunk, int pRm) {
             }
         };
         
-        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); }
-        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); } 
+        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(-2.98f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); }
+        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(2.94f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); } 
         addBox(-0.4f,1.78f,z-5.4f,0.8f,0.02f,0.8f,(L>0.5f?0.9f:0.2f),(L>0.5f?0.9f:0.2f),(L>0.5f?0.8f:0.2f),false);
         
         if(isInteriorVisible && !tAN){
@@ -409,7 +415,6 @@ void buildWorld(int cChunk, int pRm) {
             }
         }
         
-        // TINT FIX: Reset global tint at the exact end of every room loop
         globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
     } 
     globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
@@ -542,7 +547,7 @@ int main() {
                 auto cI=[&](int ty,float zC,float sX,bool& iO,int& it){ if(ty!=0){float dx=sX-camX, dz=zC-camZ, distSq=dx*dx+dz*dz;if(distSq<6.25f){float dist=sqrt(distSq);float fx=-sinf(camYaw), fz=-cosf(camYaw), dot=(fx*(dx/dist))+(fz*(dz/dist));if(dot>0.7f){float aX=sX-(dx/dist)*0.5f, aZ=zC-(dz/dist)*0.5f;if(checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,aX,0.5f,aZ)){if(kDown&KEY_X&&(ty==5||ty==6)){iO=!iO;needsVBOUpdate=true;if(audio_ok){ndspChnWaveBufClear(10);if(iO&&sDrawerOpen.data_vaddr){sDrawerOpen.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerOpen);}else if(!iO&&sDrawerClose.data_vaddr){sDrawerClose.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerClose);}}return true;} if(kDown&KEY_A){ if((ty==5||ty==6)&&iO){if(it==1){hasKey=true;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Grabbed the Golden Key!");messageTimer=90;return true;}else if(it==2){playerHealth+=10;if(playerHealth>100)playerHealth=100;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Used a Bandaid! (+10 HP)");messageTimer=90;return true;}else if(it==3){playerCoins+=(rand()%15)+5;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Looted some Coins!");messageTimer=90;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}return true;}else{sprintf(uiMessage,"Drawer is empty...");messageTimer=60;return true;}}else if((ty==3||ty==4)){if(it==1){hasKey=true;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Grabbed Key off the bed!");messageTimer=90;return true;}else if(it==3){playerCoins+=(rand()%15)+5;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Looted Coins off the bed!");messageTimer=90;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}return true;}} }}}}} return false; };
                 auto cC=[&](float cX,float cZ,bool& iO){ if((kDown&KEY_X)&&!iO){float dx=cX-camX, dz=cZ-camZ, distSq=dx*dx+dz*dz;if(distSq<6.25f){float dist=sqrt(distSq);float fx=-sinf(camYaw), fz=-cosf(camYaw), dot=(fx*(dx/dist))+(fz*(dz/dist));if(dot>0.7f){float aX=cX-(dx/dist)*0.5f, aZ=cZ-(dz/dist)*0.5f;if(checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,aX,0.3f,aZ)){iO=true;needsVBOUpdate=true;playerCoins+=20;sprintf(uiMessage,"Opened Chest!");messageTimer=90;if(audio_ok&&sDrawerOpen.data_vaddr){ndspChnWaveBufClear(10);sDrawerOpen.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerOpen);}return true;}}}} return false; };
                 if(inElevator&&!elevatorDoorsOpen&&camX>0&&camZ>5.0f&&camZ<8.0f){ elevatorJamFinished=true;elevatorDoorsOpen=true;iA=true;needsVBOUpdate=true;if(audio_ok&&sElevatorJamEnd.data_vaddr){ndspChnWaveBufClear(9);sElevatorJamEnd.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(9,&sElevatorJamEnd);} }
-                if(!iA&&playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){ for(int s=0;s<3;s++)if(cI(rooms[playerCurrentRoom].slotType[s],(-10.0f-(playerCurrentRoom*10.0f))-2.5f-(s*2.5f),((rooms[playerCurrentRoom].slotType[s]%2!=0)?-2.4f:2.4f),rooms[playerCurrentRoom].drawerOpen[s],rooms[playerCurrentRoom].slotItem[s])){iA=true;break;} if(!iA&&rooms[playerCurrentRoom].hasLeftRoom){ float srZ=(-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].leftDoorOffset+2.5f; for(int s=0;s<3;s++){float fZ=srZ-0.9f-(s*1.6f);int tL=rooms[playerCurrentRoom].leftRoomSlotTypeL[s];if(tL>0&&tL!=99){if(tL==7||tL==8){if(cC(-8.4f,fZ,rooms[playerCurrentRoom].leftRoomDrawerOpenL[s])){iA=true;break;}}else if(cI(tL,fZ,-8.4f,rooms[playerCurrentRoom].leftRoomDrawerOpenL[s],rooms[playerCurrentRoom].leftRoomSlotItemL[s])){iA=true;break;}} int tR=rooms[playerCurrentRoom].leftRoomSlotTypeR[s];if(tR>0&&tR!=99){if(tR==7||tR==8){if(cC(-3.6f,fZ,rooms[playerCurrentRoom].leftRoomDrawerOpenR[s])){iA=true;break;}}else if(cI(tR,fZ,-3.6f,rooms[playerCurrentRoom].leftRoomDrawerOpenR[s],rooms[playerCurrentRoom].leftRoomSlotItemR[s])){iA=true;break;}} } } if(!iA&&rooms[playerCurrentRoom].hasRightRoom){ float srZ=(-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].rightDoorOffset+2.5f; for(int s=0;s<3;s++){float fZ=srZ-0.9f-(s*1.6f);int tL=rooms[playerCurrentRoom].rightRoomSlotTypeL[s];if(tL>0&&tL!=99){if(tL==7||tL==8){if(cC(3.6f,fZ,rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])){iA=true;break;}}else if(cI(tL,fZ,3.6f,rooms[playerCurrentRoom].rightRoomDrawerOpenL[s],rooms[playerCurrentRoom].rightRoomSlotItemL[s])){iA=true;break;}} int tR=rooms[playerCurrentRoom].rightRoomSlotTypeR[s];if(tR>0&&tR!=99){if(tR==7||tR==8){if(cC(8.4f,fZ,rooms[playerCurrentRoom].rightRoomDrawerOpenR[s])){iA=true;break;}}else if(cI(tR,fZ,8.4f,rooms[playerCurrentRoom].rightRoomDrawerOpenR[s],rooms[playerCurrentRoom].rightRoomSlotItemR[s])){iA=true;break;}} } } }
+                if(!iA&&playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){ for(int s=0;s<3;s++)if(cI(rooms[playerCurrentRoom].slotType[s],(-10.0f-(playerCurrentRoom*10.0f))-2.5f-(s*2.5f),((rooms[playerCurrentRoom].slotType[s]%2!=0)?-2.4f:2.4f),rooms[playerCurrentRoom].drawerOpen[s],rooms[playerCurrentRoom].slotItem[s])){iA=true;break;} if(!iA&&rooms[playerCurrentRoom].hasLeftRoom){ float srZ=(-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].leftDoorOffset+2.5f; for(int s=0;s<3;s++){float fZ=srZ-0.9f-(s*1.6f);int tL=rooms[playerCurrentRoom].leftRoomSlotTypeL[s];if(tL>0&&tL!=99){if(tL==7||tL==8){if(cC(-8.4f,fZ,rooms[playerCurrentRoom].leftRoomDrawerOpenL[s])){iA=true;break;}}else if(cI(tL,fZ,-8.4f,rooms[playerCurrentRoom].leftRoomDrawerOpenL[s],rooms[playerCurrentRoom].leftRoomSlotItemL[s])){iA=true;break;}} int tR=rooms[playerCurrentRoom].leftRoomSlotTypeR[s];if(tR>0&&tR!=99){if(tR==7||tR==8){if(cC(-3.6f,fZ,rooms[playerCurrentRoom].leftRoomDrawerOpenR[s])){iA=true;break;}}else if(cI(tR,fZ,-3.6f,rooms[playerCurrentRoom].leftRoomDrawerOpenR[s],rooms[playerCurrentRoom].leftRoomSlotItemR[s])){iA=true;break;}} } } if(!iA&&rooms[playerCurrentRoom].hasRightRoom){ float srZ=(-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].rightDoorOffset+2.5f; for(int s=0;s<3;s++){float fZ=srZ-0.9f-(s*1.6f);int tL=rooms[playerCurrentRoom].rightRoomSlotTypeL[s];if(tL>0&&tL!=99){if(tL==7||tL==8){if(cC(8.4f,fZ,rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])){iA=true;break;}}else if(cI(tL,fZ,8.4f,rooms[playerCurrentRoom].rightRoomDrawerOpenL[s],rooms[playerCurrentRoom].rightRoomSlotItemL[s])){iA=true;break;}} int tR=rooms[playerCurrentRoom].rightRoomSlotTypeR[s];if(tR>0&&tR!=99){if(tR==7||tR==8){if(cC(8.4f,fZ,rooms[playerCurrentRoom].rightRoomDrawerOpenR[s])){iA=true;break;}}else if(cI(tR,fZ,8.4f,rooms[playerCurrentRoom].rightRoomDrawerOpenR[s],rooms[playerCurrentRoom].rightRoomSlotItemR[s])){iA=true;break;}} } } }
                 if(!iA&&!lobbyKeyPickedUp&&rooms[0].isLocked&&camX<-3.5f&&camZ<-8.5f){lobbyKeyPickedUp=true;hasKey=true;needsVBOUpdate=true;sprintf(uiMessage,"Found the Lobby Key!");messageTimer=90;iA=true;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}}
                 if(!iA){ for(int i=0;i<TOTAL_ROOMS;i++){ if(i==seekStartRoom+1||i==seekStartRoom+2)continue; if(rooms[i].isLocked||rooms[i].isJammed){ float dZ=-10.0f-(i*10.0f), dX=(rooms[i].doorPos==0)?-2.0f:((rooms[i].doorPos==1)?0.0f:2.0f); if(fabsf(camZ-dZ)<2.5f&&fabsf(camX-dX)<2.0f){ if(rooms[i].isJammed){if(audio_ok&&sLockedDoor.data_vaddr){ndspChnWaveBufClear(1);sLockedDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sLockedDoor);}sprintf(uiMessage,"The door is jammed shut!");messageTimer=60;} else if(hasKey){rooms[i].isLocked=false;hasKey=false;needsVBOUpdate=true;sprintf(uiMessage,"Door Unlocked!");messageTimer=60;} else{if(audio_ok&&sLockedDoor.data_vaddr){ndspChnWaveBufClear(1);sLockedDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sLockedDoor);}sprintf(uiMessage,"It's locked...");messageTimer=60;} iA=true;break; } } } }
             } 
