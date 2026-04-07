@@ -12,6 +12,7 @@
 #define DISPLAY_TRANSFER_FLAGS (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
 
 #define MAX_VERTS 180000 
+#define MAX_ENTITY_VERTS 5000
 #define TOTAL_ROOMS 102 
 
 typedef struct { float pos[4]; float texcoord[2]; float clr[4]; } vertex;
@@ -20,11 +21,14 @@ typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
 
 std::vector<vertex> world_mesh_colored;
 std::vector<vertex> world_mesh_textured; 
+std::vector<vertex> entity_mesh_colored;
+std::vector<vertex> entity_mesh_textured;
 std::vector<BBox> collisions;
 
 float globalTintR = 1.0f, globalTintG = 1.0f, globalTintB = 1.0f;
 C3D_Tex atlasTex;
 bool hasAtlas = false; 
+bool isBuildingEntities = false;
 char texErrorMessage[100] = "";
 
 struct RoomSetup {
@@ -81,15 +85,17 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
 }
 
 void addFaceTextured(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6) {
-    if (world_mesh_textured.size() + world_mesh_colored.size() + 6 >= MAX_VERTS) return;
-    world_mesh_textured.push_back(v1); world_mesh_textured.push_back(v2); world_mesh_textured.push_back(v3);
-    world_mesh_textured.push_back(v4); world_mesh_textured.push_back(v5); world_mesh_textured.push_back(v6);
+    std::vector<vertex>& target = isBuildingEntities ? entity_mesh_textured : world_mesh_textured;
+    if (target.size() + 6 >= (isBuildingEntities ? MAX_ENTITY_VERTS : MAX_VERTS)) return;
+    target.push_back(v1); target.push_back(v2); target.push_back(v3);
+    target.push_back(v4); target.push_back(v5); target.push_back(v6);
 }
 
 void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6) {
-    if (world_mesh_textured.size() + world_mesh_colored.size() + 6 >= MAX_VERTS) return;
-    world_mesh_colored.push_back(v1); world_mesh_colored.push_back(v2); world_mesh_colored.push_back(v3);
-    world_mesh_colored.push_back(v4); world_mesh_colored.push_back(v5); world_mesh_colored.push_back(v6);
+    std::vector<vertex>& target = isBuildingEntities ? entity_mesh_colored : world_mesh_colored;
+    if (target.size() + 6 >= (isBuildingEntities ? MAX_ENTITY_VERTS : MAX_VERTS)) return;
+    target.push_back(v1); target.push_back(v2); target.push_back(v3);
+    target.push_back(v4); target.push_back(v5); target.push_back(v6);
 }
 
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float r, float g, float b, float light = 1.0f) {
@@ -119,17 +125,17 @@ void addBoxColored(float x, float y, float z, float w, float h, float d, float r
 
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType = 0, float light = 1.0f) {
     addBoxColored(x, y, z, w, h, d, r, g, b, light);
-    if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),colType});
+    if(collide && !isBuildingEntities) collisions.push_back({fminf(x,x+w),fminf(y,y+h),fminf(z,z+d),fmaxf(x,x+w),fmaxf(y,y+h),fmaxf(z,z+d),colType});
 }
 
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
-    if(collide) collisions.push_back({fmin(x,x+w),fmin(y,y+h),fmin(z,z+d),fmax(x,x+w),fmax(y,y+h),fmax(z,z+d),0});
-    float minX = fmin(x, x+w), maxX = fmax(x, x+w);
-    float minY = fmin(y, y+h), maxY = fmax(y, y+h);
-    float minZ = fmin(z, z+d), maxZ = fmax(z, z+d);
+    if(collide && !isBuildingEntities) collisions.push_back({fminf(x,x+w),fminf(y,y+h),fminf(z,z+d),fmaxf(x,x+w),fmaxf(y,y+h),fmaxf(z,z+d),0});
+    float minX = fminf(x, x+w), maxX = fmaxf(x, x+w);
+    float minY = fminf(y, y+h), maxY = fmaxf(y, y+h);
+    float minZ = fminf(z, z+d), maxZ = fmaxf(z, z+d);
     float width = maxX - minX, height = maxY - minY, depth = maxZ - minZ;
     
-    auto getP = [](float val, float s) { float p = fmod(val, s); if(p < 0) p += s; if(s - p < 0.001f) p = 0.0f; return p; };
+    auto getP = [](float val, float s) { float p = fmodf(val, s); if(p < 0) p += s; if(s - p < 0.001f) p = 0.0f; return p; };
     
     bool isFloor = (height <= 0.05f);
     
@@ -138,11 +144,11 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         float scaleV = texScale * 1.5f; 
         float currX = minX;
         while(currX < maxX - 0.0001f) {
-            float pX = getP(currX, scaleU), segW = fmin(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
+            float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
             if (segW < 0.001f) segW = 0.001f; 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleV), segD = fmin(scaleV - pZ, maxZ - currZ), vOffFloor = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
+                float pZ = getP(currZ, scaleV), segD = fminf(scaleV - pZ, maxZ - currZ), vOffFloor = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
                 if (segD < 0.001f) segD = 0.001f; 
                 addBoxTextured(currX, minY, currZ, segW, height, segD, uOff, vOffFloor, uw, vh, repX, repZ, r, g, b, light);
                 currZ += segD;
@@ -154,11 +160,11 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         if (width >= depth) { 
             float currX = minX;
             while(currX < maxX - 0.0001f) {
-                float pX = getP(currX, scaleU), segW = fmin(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
+                float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
                 if (segW < 0.001f) segW = 0.001f; 
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fmin(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
+                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     if (segH < 0.001f) segH = 0.001f;
                     addBoxTextured(currX, currY, minZ, segW, segH, depth, uOff, vOffWall, uw, vh, repX, repY, r, g, b, light);
                     currY += segH;
@@ -167,11 +173,11 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         } else { 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleU), segD = fmin(scaleU - pZ, maxZ - currZ), uOff = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
+                float pZ = getP(currZ, scaleU), segD = fminf(scaleU - pZ, maxZ - currZ), uOff = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
                 if (segD < 0.001f) segD = 0.001f; 
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fmin(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
+                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     if (segH < 0.001f) segH = 0.001f;
                     addBoxTextured(minX, currY, currZ, width, segH, segD, uOff, vOffWall, uw, vh, repZ, repY, r, g, b, light);
                     currY += segH;
@@ -210,7 +216,7 @@ void buildBed(float zC, bool isL, int item, float L=1.0f, float offX=0.0f) {
     addBox(pX,0.5f,zC+1.0f,0.5f,0.08f,-0.6f,0.9f,0.9f,0.9f,false,0,L); 
     if(item==1){ float ix=(isL?-2.2f:2.1f)+offX; addBox(ix,0.52f,zC-0.1f,0.14f,0.035f,0.035f,0.9f,0.75f,0.1f,false,0,L); addBox(ix+0.1f,0.52f,zC-0.13f,0.07f,0.035f,0.1f,0.9f,0.75f,0.1f,false,0,L); addBox(ix+0.03f,0.52f,zC-0.065f,0.035f,0.035f,0.05f,0.9f,0.75f,0.1f,false,0,L); } 
     else if(item==3) addBox((isL?-2.2f:2.1f)+offX+0.02f,0.52f,zC-0.01f,0.04f,0.005f,0.04f,1.0f,0.85f,0.0f,false,0,L);
-    collisions.push_back({x,0.0f,zC-1.25f,x+1.4f,0.6f,zC+1.25f,2});
+    if(!isBuildingEntities) collisions.push_back({x,0.0f,zC-1.25f,x+1.4f,0.6f,zC+1.25f,2});
 }
 void buildDresser(float zC, bool isL, float openFactor, int item, float L=1.0f, float offX=0.0f, bool hasLamp=false) {
     float frX=(isL?-2.95f:2.45f)+offX, oOff=openFactor*(isL?0.35f:-0.35f), trX=(isL?(-2.9f+oOff):(2.4f+oOff))+offX, hX=(isL?(-2.4f+oOff):(2.35f+oOff))+offX, iX=(isL?(-2.6f+oOff):(2.5f+oOff))+offX;
@@ -248,23 +254,29 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     }; if(lD)dr(-2.6f,lO); if(cD)dr(-0.6f,cO); if(rD)dr(1.4f,rO);
 }
 
-void buildWorld(int cChunk, int pRm) {
-    world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
-    world_mesh_colored.reserve(MAX_VERTS); world_mesh_textured.reserve(MAX_VERTS); collisions.reserve(2000);
-    
-    float floorU = 0.52f, floorV = 0.0f, floorUW = 0.48f, floorVH = 1.0f, wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f;     
-    float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 1.2f, wallScale = 1.2f;  
+void buildEntities() {
+    entity_mesh_colored.clear(); entity_mesh_textured.clear();
+    isBuildingEntities = true;
     
     if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
     if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
     if(seekActive){
-        float sY=0.0f,sH=1.1f; if(seekState==1){ if(seekTimer<=130)sY=-1.1f+(seekTimer/130.0f)*1.1f; else{sY=0;sH=1.1f;} srand(seekTimer); for(int d=0;d<8;d++){ float dx=-1.5f+(rand()%30)/10.0f, dz=seekZ-0.5f-(rand()%30)/10.0f, dy=1.8f-fmod((seekTimer+d*20)*0.05f,1.8f); addBox(dx,dy,dz,0.08f,0.2f,0.08f,0.05f,0.05f,0.05f,false); } srand(time(NULL)); } else if(seekState==2){sY=0;sH=1.1f;}
+        float sY=0.0f,sH=1.1f; if(seekState==1){ if(seekTimer<=130)sY=-1.1f+(seekTimer/130.0f)*1.1f; else{sY=0;sH=1.1f;} srand(seekTimer); for(int d=0;d<8;d++){ float dx=-1.5f+(rand()%30)/10.0f, dz=seekZ-0.5f-(rand()%30)/10.0f, dy=1.8f-fmodf((seekTimer+d*20)*0.05f,1.8f); addBox(dx,dy,dz,0.08f,0.2f,0.08f,0.05f,0.05f,0.05f,false); } srand(time(NULL)); } else if(seekState==2){sY=0;sH=1.1f;}
         addBox(-0.3f,sY,seekZ-0.3f,0.6f,sH,0.6f,0.05f,0.05f,0.05f,false); addBox(-0.15f,sY+0.8f,seekZ-0.35f,0.3f,0.2f,0.06f,0.9f,0.9f,0.9f,false,0,1.5f); addBox(-0.05f,sY+0.8f,seekZ-0.38f,0.1f,0.2f,0.04f,0,0,0,false,0,1.5f); if(seekState==1) addBox(-1.0f,0.01f,seekZ-1.0f,2.0f,0.01f,2.0f,0.02f,0.02f,0.02f,false);
     }
     
     if(figureActive){
-        addBox(figureX-0.2f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, true); addBox(figureX+0.05f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, true); addBox(figureX-0.2f, figureY+0.9f, figureZ-0.1f, 0.4f, 0.7f, 0.2f, 0.4f, 0.1f, 0.05f, true); addBox(figureX-0.35f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX+0.2f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX-0.15f, figureY+1.6f, figureZ-0.15f, 0.3f, 0.3f, 0.3f, 0.5f, 0.1f, 0.05f, false); addBox(figureX-0.1f, figureY+1.65f, figureZ-0.16f, 0.2f, 0.2f, 0.02f, 0.8f, 0.8f, 0.5f, false, 0, 1.5f);
+        addBox(figureX-0.2f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX+0.05f, figureY, figureZ-0.1f, 0.15f, 0.9f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX-0.2f, figureY+0.9f, figureZ-0.1f, 0.4f, 0.7f, 0.2f, 0.4f, 0.1f, 0.05f, false); addBox(figureX-0.35f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX+0.2f, figureY+0.5f, figureZ-0.1f, 0.15f, 1.1f, 0.2f, 0.3f, 0.05f, 0.05f, false); addBox(figureX-0.15f, figureY+1.6f, figureZ-0.15f, 0.3f, 0.3f, 0.3f, 0.5f, 0.1f, 0.05f, false); addBox(figureX-0.1f, figureY+1.65f, figureZ-0.16f, 0.2f, 0.2f, 0.02f, 0.8f, 0.8f, 0.5f, false, 0, 1.5f);
     }
+    
+    isBuildingEntities = false;
+}
+
+void buildWorld(int cChunk, int pRm) {
+    world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
+    
+    float floorU = 0.52f, floorV = 0.0f, floorUW = 0.48f, floorVH = 1.0f, wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f;     
+    float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 1.2f, wallScale = 1.2f;  
 
     int st = pRm;
     int en = pRm + 1; 
@@ -497,13 +509,20 @@ int main() {
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
     hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
-    generateRooms(); int currentChunk=0, playerCurrentRoom=-1; buildWorld(currentChunk, playerCurrentRoom);
+    generateRooms(); int currentChunk=0, playerCurrentRoom=-1; 
+    
+    world_mesh_colored.reserve(MAX_VERTS); world_mesh_textured.reserve(MAX_VERTS); 
+    entity_mesh_colored.reserve(MAX_ENTITY_VERTS); entity_mesh_textured.reserve(MAX_ENTITY_VERTS);
+
+    void* vbo_main = linearAlloc(MAX_VERTS * sizeof(vertex)); 
+    void* vbo_entities = linearAlloc(MAX_ENTITY_VERTS * sizeof(vertex));
+    
+    if (!vbo_main || !vbo_entities) { printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); while (aptMainLoop()) { hidScanInput(); if (hidKeysDown() & KEY_START) break; gfxFlushBuffers(); gfxSwapBuffers(); gspWaitForVBlank(); } if(audio_ok) ndspExit(); C3D_TexDelete(&atlasTex); romfsExit(); C3D_Fini(); gfxExit(); return 0; }
+    
+    buildWorld(currentChunk, playerCurrentRoom);
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size); shaderProgram_s program; shaderProgramInit(&program); shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
     int uLoc_proj = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx"); C3D_AttrInfo* attr = C3D_GetAttrInfo(); AttrInfo_Init(attr); 
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); 
-    
-    void* vbo_main = linearAlloc(MAX_VERTS * sizeof(vertex)); 
-    if (!vbo_main) { printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); while (aptMainLoop()) { hidScanInput(); if (hidKeysDown() & KEY_START) break; gfxFlushBuffers(); gfxSwapBuffers(); gspWaitForVBlank(); } if(audio_ok) ndspExit(); C3D_TexDelete(&atlasTex); romfsExit(); C3D_Fini(); gfxExit(); return 0; }
     
     int colored_size = world_mesh_colored.size(); int textured_size = world_mesh_textured.size();
     if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
@@ -524,7 +543,12 @@ int main() {
         
         playerCurrentRoom=(camZ>=-10.0f)?-1:(int)((-camZ-10.0f)/10.0f); if(playerCurrentRoom<-1)playerCurrentRoom=-1; if(playerCurrentRoom>TOTAL_ROOMS-2)playerCurrentRoom=TOTAL_ROOMS-2;
         bool isGlitch=false; int tDR=-1; for(int k=1;k<TOTAL_ROOMS;k++){if(rooms[k].isDupeRoom&&playerCurrentRoom==(k-1)){isGlitch=true;tDR=k;break;}}
-        if(messageTimer>0)messageTimer--; if(screechCooldown>0)screechCooldown--; if(rushCooldown>0)rushCooldown--; if(eyesSoundCooldown>0)eyesSoundCooldown--;
+        
+        if(messageTimer>0)messageTimer--; 
+        if(flashRedFrames>0 && !isDead)flashRedFrames--; 
+        if(screechCooldown>0)screechCooldown--; 
+        if(rushCooldown>0)rushCooldown--; 
+        if(eyesSoundCooldown>0)eyesSoundCooldown--;
 
         if(playerCurrentRoom != lastRoomForDarkCheck && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { lastRoomForDarkCheck = playerCurrentRoom; if(rooms[playerCurrentRoom].lightLevel < 0.5f && audio_ok && sDarkRoomEnter.data_vaddr){ float m[12]={0}; m[0]=0.3f; m[1]=0.3f; ndspChnSetMix(11,m); ndspChnWaveBufClear(11); sDarkRoomEnter.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(11,&sDarkRoomEnter); } }
         if(inElevator&&!elevatorDoorsOpen){ if(elevatorTimer==1593&&audio_ok&&sElevatorJam.data_vaddr){ndspChnWaveBufClear(9);sElevatorJam.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(9,&sElevatorJam);} if(elevatorTimer>0)elevatorTimer--; bool tTO=false; if(audio_ok&&sElevatorJam.data_vaddr){if(elevatorTimer<1590&&sElevatorJam.status==NDSP_WBUF_DONE&&!elevatorJamFinished)tTO=true;}else if(elevatorTimer<=0&&!elevatorJamFinished)tTO=true; if(tTO){elevatorJamFinished=true;elevatorDoorsOpen=true;needsVBOUpdate=true;if(audio_ok){ndspChnWaveBufClear(9);if(sElevatorJamEnd.data_vaddr){sElevatorJamEnd.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(9,&sElevatorJamEnd);}}} }
@@ -549,29 +573,29 @@ int main() {
         }
 
         if(!isDead){
-            if(playerCurrentRoom == 49 && !figureActive) { figureActive = true; figureZ = -10.0f - (49 * 10.0f) - 5.0f; needsVBOUpdate = true; sprintf(uiMessage, "Shh... He can hear you."); messageTimer = 150; }
-            if(figureActive) { float distSq = (camX - figureX)*(camX - figureX) + (camZ - figureZ)*(camZ - figureZ); if(figureState == 0) { if(!isCrouching && distSq < 16.0f) figureState = 2; } else if(figureState == 2) { if(camX > figureX) figureX += figureSpeed; else figureX -= figureSpeed; if(camZ > figureZ) figureZ += figureSpeed; else figureZ -= figureSpeed; if(distSq < 0.64f) { playerHealth = 0; isDead = true; flashRedFrames = 50; sprintf(uiMessage, "The Figure found you..."); messageTimer = 120; } needsVBOUpdate = true; } }
+            if(playerCurrentRoom == 49 && !figureActive) { figureActive = true; figureZ = -10.0f - (49 * 10.0f) - 5.0f; sprintf(uiMessage, "Shh... He can hear you."); messageTimer = 150; }
+            if(figureActive) { float distSq = (camX - figureX)*(camX - figureX) + (camZ - figureZ)*(camZ - figureZ); if(figureState == 0) { if(!isCrouching && distSq < 16.0f) figureState = 2; } else if(figureState == 2) { if(camX > figureX) figureX += figureSpeed; else figureX -= figureSpeed; if(camZ > figureZ) figureZ += figureSpeed; else figureZ -= figureSpeed; if(distSq < 0.64f) { playerHealth = 0; isDead = true; flashRedFrames = 50; sprintf(uiMessage, "The Figure found you..."); messageTimer = 120; } } }
             if(playerCurrentRoom>=seekStartRoom&&playerCurrentRoom<=seekStartRoom+2){ if(camZ<-10.0f-((seekStartRoom+2)*10.0f)-8.0f&&seekState==0){seekState=1;seekActive=true;seekTimer=0;seekSpeed=0.0f;seekZ=-10.0f-(seekStartRoom*10.0f);needsVBOUpdate=true;if(audio_ok&&sSeekRise.data_vaddr){ndspChnWaveBufClear(7);sSeekRise.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekRise);}} }
-            if(seekState==1){ seekTimer++;needsVBOUpdate=true; if(seekTimer>=180&&seekTimer<230){if(seekSpeed<0.12f)seekSpeed+=0.005f;seekZ-=seekSpeed;} if(seekTimer>=230){seekState=2;seekSpeed=0;sprintf(uiMessage,"RUN!");messageTimer=90;flashRedFrames=10;if(audio_ok&&sSeekChase.data_vaddr){ndspChnWaveBufClear(7);sSeekChase.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekChase);}} } else if(seekState==2){ seekSpeed=(seekZ>-10.0f-((seekStartRoom+2)*10.0f))?0.065f:seekMaxSpeed; seekZ-=seekSpeed;needsVBOUpdate=true; if(audio_ok && sSeekChase.data_vaddr) { float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; ndspChnSetMix(7, mix); } if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;flashRedFrames=50;sprintf(uiMessage,"Seek caught you...");messageTimer=120;if(audio_ok)ndspChnWaveBufClear(7);} if(playerCurrentRoom>=0&&rooms[playerCurrentRoom].isSeekFinale){for(int h=0;h<6;h++){if(fabsf(camX-rooms[playerCurrentRoom].pW[h])<0.6f&&fabsf(camZ-rooms[playerCurrentRoom].pZ[h])<0.6f){if(rooms[playerCurrentRoom].pSide[h]==0&&!isDead&&messageTimer<=0){playerHealth-=40;flashRedFrames=25;camZ+=1.5f;sprintf(uiMessage,"Burned! (-40 HP)");messageTimer=60;if(playerHealth<=0){isDead=true;if(audio_ok)ndspChnWaveBufClear(7);}}else if(rooms[playerCurrentRoom].pSide[h]==1&&!isDead&&!isCrouching){playerHealth=0;isDead=true;flashRedFrames=50;sprintf(uiMessage,"The hands grabbed you!");messageTimer=120;if(audio_ok)ndspChnWaveBufClear(7);}}}} if(seekActive){ float fLZ=-10.0f-((seekStartRoom+8)*10.0f)-10.0f; int sR=seekStartRoom+9; bool pS=(camZ<fLZ-1.5f); if(pS||seekZ<fLZ+3.0f){ if(!rooms[sR].isJammed){doorOpen[sR]=false;rooms[sR].isLocked=false;rooms[sR].isJammed=true;needsVBOUpdate=true;if(audio_ok){if(sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}ndspChnWaveBufClear(7);if(sSeekEscaped.data_vaddr){sSeekEscaped.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekEscaped);}}} if(pS){seekActive=false;seekState=0;sprintf(uiMessage,"You escaped!");messageTimer=150;needsVBOUpdate=true;} else{playerHealth=0;isDead=true;flashRedFrames=50;sprintf(uiMessage,"The door slammed shut!");messageTimer=120;seekActive=false;seekState=0;needsVBOUpdate=true;if(audio_ok)ndspChnWaveBufClear(7);} } } }
+            if(seekState==1){ seekTimer++; if(seekTimer>=180&&seekTimer<230){if(seekSpeed<0.12f)seekSpeed+=0.005f;seekZ-=seekSpeed;} if(seekTimer>=230){seekState=2;seekSpeed=0;sprintf(uiMessage,"RUN!");messageTimer=90;flashRedFrames=10;if(audio_ok&&sSeekChase.data_vaddr){ndspChnWaveBufClear(7);sSeekChase.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekChase);}} } else if(seekState==2){ seekSpeed=(seekZ>-10.0f-((seekStartRoom+2)*10.0f))?0.065f:seekMaxSpeed; seekZ-=seekSpeed; if(audio_ok && sSeekChase.data_vaddr) { float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; ndspChnSetMix(7, mix); } if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;flashRedFrames=50;sprintf(uiMessage,"Seek caught you...");messageTimer=120;if(audio_ok)ndspChnWaveBufClear(7);} if(playerCurrentRoom>=0&&rooms[playerCurrentRoom].isSeekFinale){for(int h=0;h<6;h++){if(fabsf(camX-rooms[playerCurrentRoom].pW[h])<0.6f&&fabsf(camZ-rooms[playerCurrentRoom].pZ[h])<0.6f){if(rooms[playerCurrentRoom].pSide[h]==0&&!isDead&&messageTimer<=0){playerHealth-=40;flashRedFrames=25;camZ+=1.5f;sprintf(uiMessage,"Burned! (-40 HP)");messageTimer=60;if(playerHealth<=0){isDead=true;if(audio_ok)ndspChnWaveBufClear(7);}}else if(rooms[playerCurrentRoom].pSide[h]==1&&!isDead&&!isCrouching){playerHealth=0;isDead=true;flashRedFrames=50;sprintf(uiMessage,"The hands grabbed you!");messageTimer=120;if(audio_ok)ndspChnWaveBufClear(7);}}}} if(seekActive){ float fLZ=-10.0f-((seekStartRoom+8)*10.0f)-10.0f; int sR=seekStartRoom+9; bool pS=(camZ<fLZ-1.5f); if(pS||seekZ<fLZ+3.0f){ if(!rooms[sR].isJammed){doorOpen[sR]=false;rooms[sR].isLocked=false;rooms[sR].isJammed=true;needsVBOUpdate=true;if(audio_ok){if(sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}ndspChnWaveBufClear(7);if(sSeekEscaped.data_vaddr){sSeekEscaped.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekEscaped);}}} if(pS){seekActive=false;seekState=0;sprintf(uiMessage,"You escaped!");messageTimer=150;needsVBOUpdate=true;} else{playerHealth=0;isDead=true;flashRedFrames=50;sprintf(uiMessage,"The door slammed shut!");messageTimer=120;seekActive=false;seekState=0;needsVBOUpdate=true;if(audio_ok)ndspChnWaveBufClear(7);} } } }
             bool inE=(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS&&rooms[playerCurrentRoom].hasEyes); if(inE&&!inEyesRoom){ inEyesRoom=true;eyesGraceTimer=60; if(audio_ok){ndspChnWaveBufClear(4);if(sEyesAppear.data_vaddr){sEyesAppear.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAppear);}ndspChnWaveBufClear(5);if(sEyesGarble.data_vaddr){float m[12]={0};m[0]=1.8f;m[1]=1.8f;ndspChnSetMix(5,m);sEyesGarble.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(5,&sEyesGarble);}} } else if(!inE&&inEyesRoom){inEyesRoom=false;if(audio_ok)ndspChnWaveBufClear(5);} if(inE)if(eyesGraceTimer>0)eyesGraceTimer--;
-            if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0){float dist=sqrt(distSq); vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=5;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;} eyesDamageTimer++; if(eyesDamageTimer>=6){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=2;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=120;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
+            if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0){float dist=sqrtf(distSq); vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=5;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;} eyesDamageTimer++; if(eyesDamageTimer>=6){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=2;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=120;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
             bool iSE=(playerCurrentRoom>=seekStartRoom-5&&playerCurrentRoom<=seekStartRoom+9); int sC=(playerCurrentRoom>0&&rooms[playerCurrentRoom].lightLevel<0.5f)?400:12000;
             if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true; screechTimer=240; float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; screechOffsetX=-sinf(sY)*2.0f; screechOffsetZ=-cosf(sY)*2.0f; screechOffsetY=(rand()%8)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
             if(screechActive){ 
                 screechTimer--; float cOX = screechOffsetX, cOZ = screechOffsetZ; float pY = isCrouching ? 0.4f : 0.9f; float nSX = camX + cOX, nSZ = camZ + cOZ, nSY = 0.8f + screechOffsetY;
                 int att = 0; float currentDist = 2.0f; while( (!checkLineOfSight(camX, pY, camZ, nSX, nSY, nSZ) || checkCollision(nSX, nSY, nSZ, 0.4f)) && att < 10 && currentDist > 1.2f) { cOX *= 0.85f; cOZ *= 0.85f; currentDist *= 0.85f; nSX = camX + cOX; nSZ = camZ + cOZ; att++; }
-                if(screechX!=nSX || screechZ!=nSZ){screechX=nSX; screechZ=nSZ; screechY=nSY; needsVBOUpdate=true;} 
-                float vx=screechX-camX, vy=screechY-(isCrouching?0.4f:0.9f), vz=screechZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0.0f){float dist=sqrt(distSq);vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); 
-                if(dP>0.85f){ screechActive=false; screechCooldown=1800; needsVBOUpdate=true; sprintf(uiMessage,"Dodged Screech!"); messageTimer=90; if(audio_ok){ndspChnWaveBufClear(0); if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sCaught);}} } else if(screechTimer<=0){ screechActive=false; screechCooldown=1800; needsVBOUpdate=true; playerHealth-=20; flashRedFrames=25; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=90; if(playerHealth<=0)isDead=true; if(audio_ok){ndspChnWaveBufClear(0); if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sAttack);}} } 
+                if(screechX!=nSX || screechZ!=nSZ){screechX=nSX; screechZ=nSZ; screechY=nSY; } 
+                float vx=screechX-camX, vy=screechY-(isCrouching?0.4f:0.9f), vz=screechZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0.0f){float dist=sqrtf(distSq);vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); 
+                if(dP>0.85f){ screechActive=false; screechCooldown=1800; sprintf(uiMessage,"Dodged Screech!"); messageTimer=90; if(audio_ok){ndspChnWaveBufClear(0); if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sCaught);}} } else if(screechTimer<=0){ screechActive=false; screechCooldown=1800; playerHealth-=20; flashRedFrames=25; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=90; if(playerHealth<=0)isDead=true; if(audio_ok){ndspChnWaveBufClear(0); if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sAttack);}} } 
             }
-            if(rushActive){ if(rushState==1){rushTimer--;if(rushTimer%10==0){if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS)rooms[playerCurrentRoom].lightLevel=(rand()%2==0)?0.3f:1.0f;needsVBOUpdate=true;}if(rushTimer<=0){rushState=2;rushZ=camZ+40.0f;rushTargetZ=camZ-60.0f;}} else if(rushState==2){rushZ-=0.8f;needsVBOUpdate=true;if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){rooms[playerCurrentRoom].lightLevel=0.3f;if(playerCurrentRoom+1<TOTAL_ROOMS)rooms[playerCurrentRoom+1].lightLevel=0.3f;}if(fabsf(rushZ-camZ)<3.0f&&fabsf(camX)<3.0f&&hideState==NOT_HIDING){playerHealth=0;isDead=true;flashRedFrames=50;}if(rushZ<rushTargetZ){rushActive=false;rushState=0;needsVBOUpdate=true;rushCooldown=1800;if(audio_ok)ndspChnWaveBufClear(3);}} if(audio_ok&&sRushScream.data_vaddr){float dist=(rushState==1)?40.0f+(rushTimer/rushStartTimer)*110.0f:(fabsf(rushZ-camZ)*(rushZ<camZ?1.5f:1.0f));float vol=1.0f-(dist/150.0f);if(vol<0)vol=0;if(vol>1)vol=1;vol=vol*vol*vol;float mix[12]={0};mix[0]=vol*3.5f;mix[1]=vol*3.5f;ndspChnSetMix(3,mix);} }
+            if(rushActive){ if(rushState==1){rushTimer--;if(rushTimer%10==0){if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS)rooms[playerCurrentRoom].lightLevel=(rand()%2==0)?0.3f:1.0f;needsVBOUpdate=true;}if(rushTimer<=0){rushState=2;rushZ=camZ+40.0f;rushTargetZ=camZ-60.0f;}} else if(rushState==2){rushZ-=0.8f;if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){if(rooms[playerCurrentRoom].lightLevel!=0.3f){rooms[playerCurrentRoom].lightLevel=0.3f;needsVBOUpdate=true;}if(playerCurrentRoom+1<TOTAL_ROOMS&&rooms[playerCurrentRoom+1].lightLevel!=0.3f){rooms[playerCurrentRoom+1].lightLevel=0.3f;needsVBOUpdate=true;}}if(fabsf(rushZ-camZ)<3.0f&&fabsf(camX)<3.0f&&hideState==NOT_HIDING){playerHealth=0;isDead=true;flashRedFrames=50;}if(rushZ<rushTargetZ){rushActive=false;rushState=0;rushCooldown=1800;if(audio_ok)ndspChnWaveBufClear(3);}} if(audio_ok&&sRushScream.data_vaddr){float dist=(rushState==1)?40.0f+(rushTimer/rushStartTimer)*110.0f:(fabsf(rushZ-camZ)*(rushZ<camZ?1.5f:1.0f));float vol=1.0f-(dist/150.0f);if(vol<0)vol=0;if(vol>1)vol=1;vol=vol*vol*vol;float mix[12]={0};mix[0]=vol*3.5f;mix[1]=vol*3.5f;ndspChnSetMix(3,mix);} }
             if(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){ if(rooms[playerCurrentRoom].hasLeftRoom&&!rooms[playerCurrentRoom].leftDoorOpen&&fabsf(camZ-((-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].leftDoorOffset-0.6f))<2.0f&&camX<-1.5f){rooms[playerCurrentRoom].leftDoorOpen=true;needsVBOUpdate=true;if(audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}} if(rooms[playerCurrentRoom].hasRightRoom&&!rooms[playerCurrentRoom].rightDoorOpen&&fabsf(camZ-((-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].rightDoorOffset-0.6f))<2.0f&&camX>1.5f){rooms[playerCurrentRoom].rightDoorOpen=true;needsVBOUpdate=true;if(audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}} }
-            if(kDown&KEY_X&&hideState==NOT_HIDING){ float r=0.5f; for(auto& b:collisions){ if((b.type==1||b.type==2)&&camX+r>b.minX&&camX-r<b.maxX&&camZ+r>b.minZ&&camZ-r<b.maxZ){ float rCZ=(b.minZ+b.maxZ)/2.0f, cCX=((b.minX+b.maxX)/2.0f), tOX=(cCX<-4.0f)?-6.0f:((cCX>4.0f)?6.0f:0.0f); if(b.type==1){hideState=IN_CABINET;camZ=rCZ;camPitch=0;camX=(cCX-tOX<0)?-2.5f+tOX:2.5f+tOX;camYaw=(cCX-tOX<0)?-1.57f:1.57f;}else{hideState=UNDER_BED;camZ=rCZ;camPitch=0;camX=(cCX-tOX<0)?-2.2f+tOX:2.2f+tOX;camYaw=(cCX-tOX<0)?-1.57f:1.57f;} isCrouching=false;needsVBOUpdate=true;if(audio_ok&&sWardrobeEnter.data_vaddr){ndspChnWaveBufClear(10);sWardrobeEnter.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeEnter);}break; } } } else if(kDown&KEY_X){ if(hideState==IN_CABINET||hideState==UNDER_BED){camX=(camX<-4.0f)?-6.0f:((camX>4.0f)?6.0f:0.0f);hideState=NOT_HIDING;camYaw=0;needsVBOUpdate=true;if(audio_ok&&sWardrobeExit.data_vaddr){ndspChnWaveBufClear(10);sWardrobeExit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeExit);}} }
+            if(kDown&KEY_X&&hideState==NOT_HIDING){ float r=0.5f; for(auto& b:collisions){ if((b.type==1||b.type==2)&&camX+r>b.minX&&camX-r<b.maxX&&camZ+r>b.minZ&&camZ-r<b.maxZ){ float rCZ=(b.minZ+b.maxZ)/2.0f, cCX=((b.minX+b.maxX)/2.0f), tOX=(cCX<-4.0f)?-6.0f:((cCX>4.0f)?6.0f:0.0f); if(b.type==1){hideState=IN_CABINET;camZ=rCZ;camPitch=0;camX=(cCX-tOX<0)?-2.5f+tOX:2.5f+tOX;camYaw=(cCX-tOX<0)?-1.57f:1.57f;}else{hideState=UNDER_BED;camZ=rCZ;camPitch=0;camX=(cCX-tOX<0)?-2.2f+tOX:2.2f+tOX;camYaw=(cCX-tOX<0)?-1.57f:1.57f;} isCrouching=false;if(audio_ok&&sWardrobeEnter.data_vaddr){ndspChnWaveBufClear(10);sWardrobeEnter.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeEnter);}break; } } } else if(kDown&KEY_X){ if(hideState==IN_CABINET||hideState==UNDER_BED){camX=(camX<-4.0f)?-6.0f:((camX>4.0f)?6.0f:0.0f);hideState=NOT_HIDING;camYaw=0;if(audio_ok&&sWardrobeExit.data_vaddr){ndspChnWaveBufClear(10);sWardrobeExit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeExit);}} }
             bool iA=false;
-            if(!iA && (kDown&KEY_A)){ int nI=getNextDoorIndex(playerCurrentRoom); if(nI>=0&&nI<TOTAL_ROOMS&&rooms[nI].isDupeRoom){ float dZ=-10.0f-(nI*10.0f); if(fabsf(camZ-dZ)<2.5f){ float fx=-sinf(camYaw), fz=-cosf(camYaw); int tD=-1; float bD=0.85f; for(int d=0;d<3;d++){ float dx=(-2.0f+d*2.0f)-camX, dz=dZ-camZ, distSq=dx*dx+dz*dz; if(distSq>0&&distSq<9.0f){ float dist=sqrt(distSq); float dot=(fx*(dx/dist))+(fz*(dz/dist)); if(dot>bD){bD=dot;tD=d;} } } if(tD!=-1){ if(tD==rooms[nI].correctDupePos){ if(!doorOpen[nI]){if(audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}doorOpen[nI]=true;needsVBOUpdate=true;} } else { if(audio_ok&&sDupeAttack.data_vaddr){ndspChnWaveBufClear(2);sDupeAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sDupeAttack);}playerHealth-=34;flashRedFrames=25;camZ+=2.0f;if(playerHealth<=0)isDead=true; } iA=true; } } } }
+            if(!iA && (kDown&KEY_A)){ int nI=getNextDoorIndex(playerCurrentRoom); if(nI>=0&&nI<TOTAL_ROOMS&&rooms[nI].isDupeRoom){ float dZ=-10.0f-(nI*10.0f); if(fabsf(camZ-dZ)<2.5f){ float fx=-sinf(camYaw), fz=-cosf(camYaw); int tD=-1; float bD=0.85f; for(int d=0;d<3;d++){ float dx=(-2.0f+d*2.0f)-camX, dz=dZ-camZ, distSq=dx*dx+dz*dz; if(distSq>0&&distSq<9.0f){ float dist=sqrtf(distSq); float dot=(fx*(dx/dist))+(fz*(dz/dist)); if(dot>bD){bD=dot;tD=d;} } } if(tD!=-1){ if(tD==rooms[nI].correctDupePos){ if(!doorOpen[nI]){if(audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}doorOpen[nI]=true;needsVBOUpdate=true;} } else { if(audio_ok&&sDupeAttack.data_vaddr){ndspChnWaveBufClear(2);sDupeAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sDupeAttack);}playerHealth-=34;flashRedFrames=25;camZ+=2.0f;if(playerHealth<=0)isDead=true; } iA=true; } } } }
             if((kDown&KEY_A)||(kDown&KEY_X&&hideState==NOT_HIDING)){
-                auto cI=[&](int ty,float zC,float sX,bool& iO,int& it){ if(ty!=0){float dx=sX-camX, dz=zC-camZ, distSq=dx*dx+dz*dz;if(distSq<6.25f){float dist=sqrt(distSq);float fx=-sinf(camYaw), fz=-cosf(camYaw), dot=(fx*(dx/dist))+(fz*(dz/dist));if(dot>0.7f){float aX=sX-(dx/dist)*0.5f, aZ=zC-(dz/dist)*0.5f;if(checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,aX,0.5f,aZ)){if(kDown&KEY_X&&(ty==5||ty==6)){iO=!iO;needsVBOUpdate=true;if(audio_ok){ndspChnWaveBufClear(10);if(iO&&sDrawerOpen.data_vaddr){sDrawerOpen.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerOpen);}else if(!iO&&sDrawerClose.data_vaddr){sDrawerClose.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerClose);}}return true;} if(kDown&KEY_A){ if((ty==5||ty==6)&&iO){if(it==1){hasKey=true;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Grabbed the Golden Key!");messageTimer=90;return true;}else if(it==2){playerHealth+=10;if(playerHealth>100)playerHealth=100;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Used a Bandaid! (+10 HP)");messageTimer=90;return true;}else if(it==3){playerCoins+=(rand()%15)+5;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Looted some Coins!");messageTimer=90;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}return true;}else{sprintf(uiMessage,"Drawer is empty...");messageTimer=60;return true;}}else if((ty==3||ty==4)){if(it==1){hasKey=true;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Grabbed Key off the bed!");messageTimer=90;return true;}else if(it==3){playerCoins+=(rand()%15)+5;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Looted Coins off the bed!");messageTimer=90;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}return true;}} }}}}} return false; };
-                auto cC=[&](float cX,float cZ,bool& iO){ if((kDown&KEY_X)&&!iO){float dx=cX-camX, dz=cZ-camZ, distSq=dx*dx+dz*dz;if(distSq<6.25f){float dist=sqrt(distSq);float fx=-sinf(camYaw), fz=-cosf(camYaw), dot=(fx*(dx/dist))+(fz*(dz/dist));if(dot>0.7f){float aX=cX-(dx/dist)*0.5f, aZ=cZ-(dz/dist)*0.5f;if(checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,aX,0.3f,aZ)){iO=true;needsVBOUpdate=true;playerCoins+=20;sprintf(uiMessage,"Opened Chest!");messageTimer=90;if(audio_ok&&sDrawerOpen.data_vaddr){ndspChnWaveBufClear(10);sDrawerOpen.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerOpen);}return true;}}}} return false; };
+                auto cI=[&](int ty,float zC,float sX,bool& iO,int& it){ if(ty!=0){float dx=sX-camX, dz=zC-camZ, distSq=dx*dx+dz*dz;if(distSq<6.25f){float dist=sqrtf(distSq);float fx=-sinf(camYaw), fz=-cosf(camYaw), dot=(fx*(dx/dist))+(fz*(dz/dist));if(dot>0.7f){float aX=sX-(dx/dist)*0.5f, aZ=zC-(dz/dist)*0.5f;if(checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,aX,0.5f,aZ)){if(kDown&KEY_X&&(ty==5||ty==6)){iO=!iO;needsVBOUpdate=true;if(audio_ok){ndspChnWaveBufClear(10);if(iO&&sDrawerOpen.data_vaddr){sDrawerOpen.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerOpen);}else if(!iO&&sDrawerClose.data_vaddr){sDrawerClose.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerClose);}}return true;} if(kDown&KEY_A){ if((ty==5||ty==6)&&iO){if(it==1){hasKey=true;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Grabbed the Golden Key!");messageTimer=90;return true;}else if(it==2){playerHealth+=10;if(playerHealth>100)playerHealth=100;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Used a Bandaid! (+10 HP)");messageTimer=90;return true;}else if(it==3){playerCoins+=(rand()%15)+5;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Looted some Coins!");messageTimer=90;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}return true;}else{sprintf(uiMessage,"Drawer is empty...");messageTimer=60;return true;}}else if((ty==3||ty==4)){if(it==1){hasKey=true;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Grabbed Key off the bed!");messageTimer=90;return true;}else if(it==3){playerCoins+=(rand()%15)+5;it=0;needsVBOUpdate=true;sprintf(uiMessage,"Looted Coins off the bed!");messageTimer=90;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}return true;}} }}}}} return false; };
+                auto cC=[&](float cX,float cZ,bool& iO){ if((kDown&KEY_X)&&!iO){float dx=cX-camX, dz=cZ-camZ, distSq=dx*dx+dz*dz;if(distSq<6.25f){float dist=sqrtf(distSq);float fx=-sinf(camYaw), fz=-cosf(camYaw), dot=(fx*(dx/dist))+(fz*(dz/dist));if(dot>0.7f){float aX=cX-(dx/dist)*0.5f, aZ=cZ-(dz/dist)*0.5f;if(checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,aX,0.3f,aZ)){iO=true;needsVBOUpdate=true;playerCoins+=20;sprintf(uiMessage,"Opened Chest!");messageTimer=90;if(audio_ok&&sDrawerOpen.data_vaddr){ndspChnWaveBufClear(10);sDrawerOpen.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sDrawerOpen);}return true;}}}} return false; };
                 if(inElevator&&!elevatorDoorsOpen&&camX>0&&camZ>5.0f&&camZ<8.0f){ elevatorJamFinished=true;elevatorDoorsOpen=true;iA=true;needsVBOUpdate=true;if(audio_ok&&sElevatorJamEnd.data_vaddr){ndspChnWaveBufClear(9);sElevatorJamEnd.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(9,&sElevatorJamEnd);} }
                 if(!iA&&playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS){ for(int s=0;s<3;s++)if(cI(rooms[playerCurrentRoom].slotType[s],(-10.0f-(playerCurrentRoom*10.0f))-2.5f-(s*2.5f),((rooms[playerCurrentRoom].slotType[s]%2!=0)?-2.4f:2.4f),rooms[playerCurrentRoom].drawerOpen[s],rooms[playerCurrentRoom].slotItem[s])){iA=true;break;} if(!iA&&rooms[playerCurrentRoom].hasLeftRoom){ float srZ=(-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].leftDoorOffset+2.5f; for(int s=0;s<3;s++){float fZ=srZ-0.9f-(s*1.6f);int tL=rooms[playerCurrentRoom].leftRoomSlotTypeL[s];if(tL>0&&tL!=99){if(tL==7||tL==8){if(cC(-8.4f,fZ,rooms[playerCurrentRoom].leftRoomDrawerOpenL[s])){iA=true;break;}}else if(cI(tL,fZ,-8.4f,rooms[playerCurrentRoom].leftRoomDrawerOpenL[s],rooms[playerCurrentRoom].leftRoomSlotItemL[s])){iA=true;break;}} int tR=rooms[playerCurrentRoom].leftRoomSlotTypeR[s];if(tR>0&&tR!=99){if(tR==7||tR==8){if(cC(-3.6f,fZ,rooms[playerCurrentRoom].leftRoomDrawerOpenR[s])){iA=true;break;}}else if(cI(tR,fZ,-3.6f,rooms[playerCurrentRoom].leftRoomDrawerOpenR[s],rooms[playerCurrentRoom].leftRoomSlotItemR[s])){iA=true;break;}} } } if(!iA&&rooms[playerCurrentRoom].hasRightRoom){ float srZ=(-10.0f-(playerCurrentRoom*10.0f))+rooms[playerCurrentRoom].rightDoorOffset+2.5f; for(int s=0;s<3;s++){float fZ=srZ-0.9f-(s*1.6f);int tL=rooms[playerCurrentRoom].rightRoomSlotTypeL[s];if(tL>0&&tL!=99){if(tL==7||tL==8){if(cC(8.4f,fZ,rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])){iA=true;break;}}else if(cI(tL,fZ,8.4f,rooms[playerCurrentRoom].rightRoomDrawerOpenL[s],rooms[playerCurrentRoom].rightRoomSlotItemL[s])){iA=true;break;}} int tR=rooms[playerCurrentRoom].rightRoomSlotTypeR[s];if(tR>0&&tR!=99){if(tR==7||tR==8){if(cC(8.4f,fZ,rooms[playerCurrentRoom].rightRoomDrawerOpenR[s])){iA=true;break;}}else if(cI(tR,fZ,8.4f,rooms[playerCurrentRoom].rightRoomDrawerOpenR[s],rooms[playerCurrentRoom].rightRoomSlotItemR[s])){iA=true;break;}} } } }
                 if(!iA&&!lobbyKeyPickedUp&&rooms[0].isLocked&&camX<-3.5f&&camZ<-8.5f){lobbyKeyPickedUp=true;hasKey=true;needsVBOUpdate=true;sprintf(uiMessage,"Found the Lobby Key!");messageTimer=90;iA=true;if(audio_ok&&sCoinsCollect.data_vaddr){ndspChnWaveBufClear(10);sCoinsCollect.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sCoinsCollect);}}
@@ -606,6 +630,15 @@ int main() {
                 memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
                 GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
             }
+
+            buildEntities();
+            int ent_col_size = entity_mesh_colored.size();
+            int ent_tex_size = entity_mesh_textured.size();
+            if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
+            if (ent_col_size > 0) memcpy(vbo_entities, entity_mesh_colored.data(), ent_col_size * sizeof(vertex));
+            if (ent_tex_size > 0) memcpy((vertex*)vbo_entities + ent_col_size, entity_mesh_textured.data(), ent_tex_size * sizeof(vertex));
+            if ((ent_col_size + ent_tex_size) > 0) GSPGPU_FlushDataCache(vbo_entities, (ent_col_size + ent_tex_size) * sizeof(vertex));
+
             float pH=isCrouching?0.5f:1.1f; circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
             if((hideState==NOT_HIDING||hideState==BEHIND_DOOR)&&seekState!=1){
                 if(abs(cS.dx)>10)camYaw-=cS.dx/1560.0f*0.8f; if(abs(cS.dy)>10)camPitch+=cS.dy/1560.0f*0.8f;
@@ -623,21 +656,41 @@ int main() {
         C3D_Mtx proj, view; Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); Mtx_Identity(&view); Mtx_RotateX(&view, -dCP, true); Mtx_RotateY(&view, -dCY, true); Mtx_Translate(&view, -dCX, isDead?-0.1f:(isCrouching?-0.4f:(hideState==NOT_HIDING||hideState==BEHIND_DOOR?-0.9f:(hideState==IN_CABINET?-0.7f:-0.15f))), -dCZ, true); Mtx_Multiply(&view, &proj, &view);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); 
         
-        C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf); BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
-
+        C3D_BufInfo* buf = C3D_GetBufInfo(); 
+        
+        // --- DRAW STATIC WORLD ---
+        BufInfo_Init(buf); BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
         if (colored_size > 0) {
             C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
             if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
             C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
         }
-
         if (textured_size > 0) {
             C3D_TexBind(0, &atlasTex); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
             if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
             C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
+        }
+
+        // --- DRAW DYNAMIC ENTITIES ---
+        BufInfo_Init(buf); BufInfo_Add(buf, vbo_entities, sizeof(vertex), 3, 0x210);
+        int ent_col_size = entity_mesh_colored.size();
+        int ent_tex_size = entity_mesh_textured.size();
+        
+        if (ent_col_size > 0) {
+            C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
+            if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+            } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
+            C3D_DrawArrays(GPU_TRIANGLES, 0, ent_col_size);
+        }
+        if (ent_tex_size > 0) {
+            C3D_TexBind(0, &atlasTex); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
+            if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+            } else if (hasAtlas) { C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
+            } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
+            C3D_DrawArrays(GPU_TRIANGLES, ent_col_size, ent_tex_size);
         }
 
         C3D_FrameEnd(0);
@@ -647,5 +700,5 @@ int main() {
         if(sPsst.data_vaddr)linearFree((void*)sPsst.data_vaddr); if(sAttack.data_vaddr)linearFree((void*)sAttack.data_vaddr); if(sCaught.data_vaddr)linearFree((void*)sCaught.data_vaddr); if(sDoor.data_vaddr)linearFree((void*)sDoor.data_vaddr); if(sLockedDoor.data_vaddr)linearFree((void*)sLockedDoor.data_vaddr); if(sDupeAttack.data_vaddr)linearFree((void*)sDupeAttack.data_vaddr); if(sRushScream.data_vaddr)linearFree((void*)sRushScream.data_vaddr); if(sEyesAppear.data_vaddr)linearFree((void*)sEyesAppear.data_vaddr); if(sEyesGarble.data_vaddr)linearFree((void*)sEyesGarble.data_vaddr); if(sEyesAttack.data_vaddr)linearFree((void*)sEyesAttack.data_vaddr); if(sEyesHit.data_vaddr)linearFree((void*)sEyesHit.data_vaddr); if(sSeekRise.data_vaddr)linearFree((void*)sSeekRise.data_vaddr); if(sSeekChase.data_vaddr)linearFree((void*)sSeekChase.data_vaddr); if(sSeekEscaped.data_vaddr)linearFree((void*)sSeekEscaped.data_vaddr); if(sDeath.data_vaddr)linearFree((void*)sDeath.data_vaddr); if(sElevatorJam.data_vaddr)linearFree((void*)sElevatorJam.data_vaddr); if(sElevatorJamEnd.data_vaddr)linearFree((void*)sElevatorJamEnd.data_vaddr); if(sCoinsCollect.data_vaddr)linearFree((void*)sCoinsCollect.data_vaddr); if(sDarkRoomEnter.data_vaddr)linearFree((void*)sDarkRoomEnter.data_vaddr); if(sDrawerClose.data_vaddr)linearFree((void*)sDrawerClose.data_vaddr); if(sDrawerOpen.data_vaddr)linearFree((void*)sDrawerOpen.data_vaddr); if(sLightsFlicker.data_vaddr)linearFree((void*)sLightsFlicker.data_vaddr); if(sWardrobeEnter.data_vaddr)linearFree((void*)sWardrobeEnter.data_vaddr); if(sWardrobeExit.data_vaddr)linearFree((void*)sWardrobeExit.data_vaddr); 
         ndspExit(); 
     }
-    C3D_TexDelete(&atlasTex); linearFree(vbo_main); romfsExit(); C3D_Fini(); gfxExit(); return 0;
+    C3D_TexDelete(&atlasTex); linearFree(vbo_main); linearFree(vbo_entities); romfsExit(); C3D_Fini(); gfxExit(); return 0;
 }
