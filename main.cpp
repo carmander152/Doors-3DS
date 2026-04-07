@@ -519,9 +519,11 @@ int main() {
     world_mesh_colored.reserve(MAX_VERTS); world_mesh_textured.reserve(MAX_VERTS); 
     entity_mesh_colored.reserve(MAX_ENTITY_VERTS); entity_mesh_textured.reserve(MAX_ENTITY_VERTS);
 
-    void* vbo_main = linearAlloc(MAX_VERTS * sizeof(vertex)); 
+    // Completely separated buffers to avoid cross-contamination
+    void* vbo_world = linearAlloc(MAX_VERTS * sizeof(vertex)); 
+    void* vbo_entities = linearAlloc(MAX_ENTITY_VERTS * sizeof(vertex)); 
     
-    if (!vbo_main) { printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); while (aptMainLoop()) { hidScanInput(); if (hidKeysDown() & KEY_START) break; gfxFlushBuffers(); gfxSwapBuffers(); gspWaitForVBlank(); } if(audio_ok) ndspExit(); C3D_TexDelete(&atlasTex); romfsExit(); C3D_Fini(); gfxExit(); return 0; }
+    if (!vbo_world || !vbo_entities) { printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); while (aptMainLoop()) { hidScanInput(); if (hidKeysDown() & KEY_START) break; gfxFlushBuffers(); gfxSwapBuffers(); gspWaitForVBlank(); } if(audio_ok) ndspExit(); C3D_TexDelete(&atlasTex); romfsExit(); C3D_Fini(); gfxExit(); return 0; }
     
     buildWorld(currentChunk, playerCurrentRoom);
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size); shaderProgram_s program; shaderProgramInit(&program); shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]); C3D_BindProgram(&program);
@@ -529,10 +531,10 @@ int main() {
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); 
     
     int colored_size = world_mesh_colored.size(); int textured_size = world_mesh_textured.size();
-    if (colored_size + textured_size > MAX_VERTS - MAX_ENTITY_VERTS) textured_size = MAX_VERTS - MAX_ENTITY_VERTS - colored_size; 
-    memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex)); memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex)); GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
+    if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
     
-    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
+    // Default 3DS Depth Test Restored
+    C3D_DepthTest(true, GPU_LESS, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
     float camX=0, camZ=7.5f, camYaw=0, camPitch=0; const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false; static int lastRoomForDarkCheck = -1; u64 lastTime = osGetTime(); int frames = 0; float currentFps = 0.0f;
 
     while (aptMainLoop()) {
@@ -541,7 +543,7 @@ int main() {
         bool needsVBOUpdate=false; static bool deathSoundPlayed=false; static u64 totalFrames = 0; totalFrames++;
 
         if(isDead){ if(!deathSoundPlayed){ if(audio_ok){ ndspChnWaveBufClear(3); ndspChnWaveBufClear(5); ndspChnWaveBufClear(7); ndspChnWaveBufClear(9); bool wAA=(sAttack.status==NDSP_WBUF_PLAYING||sAttack.status==NDSP_WBUF_QUEUED||sDupeAttack.status==NDSP_WBUF_PLAYING||sDupeAttack.status==NDSP_WBUF_QUEUED); if(!wAA){ ndspChnWaveBufClear(8); if(sDeath.data_vaddr){sDeath.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(8,&sDeath);} deathSoundPlayed=true; } } else deathSoundPlayed=true; } } else deathSoundPlayed=false;
-        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();buildWorld(currentChunk,playerCurrentRoom); colored_size=world_mesh_colored.size(); textured_size=world_mesh_textured.size(); if (colored_size + textured_size > MAX_VERTS - MAX_ENTITY_VERTS) textured_size = MAX_VERTS - MAX_ENTITY_VERTS - colored_size; memcpy(vbo_main,world_mesh_colored.data(),colored_size*sizeof(vertex)); memcpy((vertex*)vbo_main+colored_size,world_mesh_textured.data(),textured_size*sizeof(vertex)); GSPGPU_FlushDataCache(vbo_main,(colored_size+textured_size)*sizeof(vertex)); if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
+        if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;flashRedFrames=0;playerCoins=0;screechCooldown=1800;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=1593;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();buildWorld(currentChunk,playerCurrentRoom); colored_size=world_mesh_colored.size(); textured_size=world_mesh_textured.size(); if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
         
         if(!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) { if(kDown & KEY_DDOWN) { camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; needsVBOUpdate = true; sprintf(uiMessage, "Teleported to Seek!"); messageTimer = 90; } if(kDown & KEY_DLEFT) { camZ = -10.0f - (48 * 10.0f) + 5.0f; camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; needsVBOUpdate = true; sprintf(uiMessage, "Teleported near Library!"); messageTimer = 90; } }
         
@@ -681,33 +683,18 @@ int main() {
             if (nChunk != currentChunk || needsVBOUpdate) {
                 currentChunk = nChunk; buildWorld(currentChunk, playerCurrentRoom);
                 colored_size = world_mesh_colored.size(); textured_size = world_mesh_textured.size();
-                if (colored_size + textured_size > MAX_VERTS - MAX_ENTITY_VERTS) textured_size = MAX_VERTS - MAX_ENTITY_VERTS - colored_size;
-                memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex));
-                memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
-                GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
+                if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size;
             }
         }
 
-        // --- PACKED VBO ENTITY RENDERING ---
         buildEntities();
         int ent_colored_size = entity_mesh_colored.size();
         int ent_textured_size = entity_mesh_textured.size();
-        
-        // Append dynamically built entities to the END of the static world chunk inside vbo_main
-        if (ent_colored_size > 0) memcpy((vertex*)vbo_main + colored_size + textured_size, entity_mesh_colored.data(), ent_colored_size * sizeof(vertex));
-        if (ent_textured_size > 0) memcpy((vertex*)vbo_main + colored_size + textured_size + ent_colored_size, entity_mesh_textured.data(), ent_textured_size * sizeof(vertex));
-        
-        if (ent_colored_size + ent_textured_size > 0) {
-            GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size, (ent_colored_size + ent_textured_size) * sizeof(vertex));
-        }
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         
-        // This MUST be 0 so the 3DS reversed depth buffer doesn't clip your walls!
-        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, (flashRedFrames>0)?0xFF0000FF:0x000000FF, 0);
-        
-        C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
-        BufInfo_Add(bufInfo, vbo_main, sizeof(vertex), 3, 0x210);
+        // STANDARD depth clearing restored!
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, (flashRedFrames>0)?0xFF0000FF:0x000000FF, 0xFFFFFFFF);
 
         // --- RESTORED ORIGINAL MANUAL MATRICES ---
         float pMtx[16];
@@ -738,44 +725,65 @@ int main() {
         C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 2, mvp_t[8], mvp_t[9], mvp_t[10], mvp_t[11]);
         C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 3, mvp_t[12], mvp_t[13], mvp_t[14], mvp_t[15]);
 
-        // Draw World Colored
-        C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
-        C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
-        C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-        if (colored_size > 0) C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
-        
-        // Draw World Textured
-        if (hasAtlas && textured_size > 0) {
-            C3D_TexBind(0, &atlasTex);
-            C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); 
-            C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
-            C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
-            C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
-            C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
-            C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
+        // --- DRAW PASS 1: WORLD ---
+        if (colored_size + textured_size > 0) {
+            memcpy(vbo_world, world_mesh_colored.data(), colored_size * sizeof(vertex));
+            if (textured_size > 0) memcpy((vertex*)vbo_world + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
+            GSPGPU_FlushDataCache(vbo_world, (colored_size + textured_size) * sizeof(vertex));
+
+            C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
+            BufInfo_Add(bufInfo, vbo_world, sizeof(vertex), 3, 0x210);
+
+            // Draw World Colored
+            C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+            if (colored_size > 0) C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
+            
+            // Draw World Textured
+            if (hasAtlas && textured_size > 0) {
+                C3D_TexBind(0, &atlasTex);
+                C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); 
+                C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+                C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
+                C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
+                C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
+                C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
+            }
         }
-        
-        // Draw Entity Colored
-        env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
-        C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
-        C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-        if (ent_colored_size > 0) C3D_DrawArrays(GPU_TRIANGLES, colored_size + textured_size, ent_colored_size);
-        
-        // Draw Entity Textured
-        if (hasAtlas && ent_textured_size > 0) {
-            C3D_TexBind(0, &atlasTex);
-            C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); 
-            C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
-            C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
-            C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
-            C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
-            C3D_DrawArrays(GPU_TRIANGLES, colored_size + textured_size + ent_colored_size, ent_textured_size);
+
+        // --- DRAW PASS 2: ENTITIES (Isolated Memory) ---
+        if (ent_colored_size + ent_textured_size > 0) {
+            memcpy(vbo_entities, entity_mesh_colored.data(), ent_colored_size * sizeof(vertex));
+            if (ent_textured_size > 0) memcpy((vertex*)vbo_entities + ent_colored_size, entity_mesh_textured.data(), ent_textured_size * sizeof(vertex));
+            GSPGPU_FlushDataCache(vbo_entities, (ent_colored_size + ent_textured_size) * sizeof(vertex));
+
+            C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
+            BufInfo_Add(bufInfo, vbo_entities, sizeof(vertex), 3, 0x210);
+
+            // Draw Entity Colored (Offset is now 0 because it's a completely new buffer!)
+            C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+            if (ent_colored_size > 0) C3D_DrawArrays(GPU_TRIANGLES, 0, ent_colored_size);
+            
+            // Draw Entity Textured
+            if (hasAtlas && ent_textured_size > 0) {
+                C3D_TexBind(0, &atlasTex);
+                C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); 
+                C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+                C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
+                C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
+                C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
+                C3D_DrawArrays(GPU_TRIANGLES, ent_colored_size, ent_textured_size);
+            }
         }
 
         C3D_FrameEnd(0);
     }
 
-    linearFree(vbo_main);
+    linearFree(vbo_world);
+    linearFree(vbo_entities);
     if (audio_ok) ndspExit();
     if (hasAtlas) C3D_TexDelete(&atlasTex);
     shaderProgramFree(&program); DVLB_Free(vshader_dvlb);
