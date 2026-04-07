@@ -236,7 +236,10 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     if(!rD){ addTiledSurface(1.4f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(1.4f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(1.4f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
-    auto bb = [&](float bx, float bw) { addBox(bx, 0.0f, z-0.02f, bw, 0.12f, 0.05f, 0.12f, 0.06f, 0.03f, false, 0, L); };
+    auto bb = [&](float bx, float bw) { 
+        addBox(bx, 0.0f, z, bw, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
+        addBox(bx, 0.0f, z-0.2f, bw, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
+    };
     bb(-3.0f, 0.4f); if(!lD) bb(-2.6f, 1.2f); bb(-1.4f, 0.8f); if(!cD) bb(-0.6f, 1.2f); bb(0.6f, 0.8f); if(!rD) bb(1.4f, 1.2f); bb(2.6f, 0.4f);
 
     auto dr = [&](float dx, bool o) {
@@ -297,6 +300,14 @@ void buildWorld(int cChunk, int pRm) {
         addBox(-6,0,-7,3.5f,0.8f,-0.8f,0.3f,0.15f,0.1f,true); addBox(-3.3f,0,-7.8f,0.8f,0.8f,-1.0f,0.3f,0.15f,0.1f,true); addBox(-2.5f,0.1f,-8.6f,1,0.05f,-1.4f,0.8f,0.7f,0.2f,false); addBox(-2.5f,0.15f,-8.6f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); 
         addBox(-1.55f,0.15f,-8.6f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); addBox(-2.5f,0.15f,-9.95f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); addBox(-1.55f,0.15f,-9.95f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); addBox(-2.5f,0.6f,-8.6f,1,0.05f,-1.4f,0.8f,0.7f,0.2f,true); 
         if(!lobbyKeyPickedUp){ addBox(-4.8f,0.9f,-9.9f,0.2f,0.2f,0.05f,0.3f,0.2f,0.1f,false); addBox(-4.72f,0.75f,-9.86f,0.035f,0.1f,0.035f,1.0f,0.84f,0.0f,false); }
+        
+        // Lobby Baseboards
+        addBox(-5.9f, 0.0f, 5.0f, 0.04f, 0.12f, -15.0f, 0.12f, 0.06f, 0.03f, false);
+        addBox(5.86f, 0.0f, 5.0f, 0.04f, 0.12f, -15.0f, 0.12f, 0.06f, 0.03f, false);
+        addBox(-6.0f, 0.0f, 5.0f, 4.0f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false);
+        addBox(2.0f, 0.0f, 5.0f, 4.0f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false);
+        addBox(-6.0f, 0.0f, -10.0f, 3.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false);
+        addBox(3.0f, 0.0f, -10.0f, 3.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false);
     }
 
     if (st < 0) st = 0; 
@@ -335,6 +346,12 @@ void buildWorld(int cChunk, int pRm) {
                 buildLamp(-1.2f, z-7.5f, cL); buildLamp(1.2f, z-7.5f, cL);
                 addTiledSurface(-2.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
                 addTiledSurface(1.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
+                
+                // Library Baseboards
+                addBox(-6.0f, 0.0f, z, 0.04f, 0.12f, -20.0f, 0.12f, 0.06f, 0.03f, false, 0, cL);
+                addBox(5.96f, 0.0f, z, 0.04f, 0.12f, -20.0f, 0.12f, 0.06f, 0.03f, false, 0, cL);
+                addBox(-6.0f, 0.0f, z, 4.6f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, cL);
+                addBox(1.4f, 0.0f, z, 4.6f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, cL);
             }
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; continue; 
         }
@@ -365,8 +382,10 @@ void buildWorld(int cChunk, int pRm) {
         
         auto drawSide = [&](bool isL) {
             float dZ=z+(isL?rooms[i].leftDoorOffset:rooms[i].rightDoorOffset), bL=fabsf(dZ-z), aL=fabsf((z-10.0f)-(dZ-1.2f)), m=(isL?-1.0f:1.0f), bX=isL?-3.0f:2.9f, dO=isL?rooms[i].leftDoorOpen:rooms[i].rightDoorOpen;
-            if(bL>0.05f) { addTiledSurface(bX, 0.4f, z, 0.1f, 1.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, z, 0.12f, 0.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(isL?-2.98f:2.94f, 0.0f, z, 0.04f, 0.12f, -bL, 0.12f, 0.06f, 0.03f, false, 0, L); }
-            if(aL>0.05f) { addTiledSurface(bX, 0.4f, dZ-1.2f, 0.1f, 1.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, dZ-1.2f, 0.12f, 0.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(isL?-2.98f:2.94f, 0.0f, dZ-1.2f, 0.04f, 0.12f, -aL, 0.12f, 0.06f, 0.03f, false, 0, L); }
+            
+            float bbX = isL ? -2.90f : 2.86f; 
+            if(bL>0.05f) { addTiledSurface(bX, 0.4f, z, 0.1f, 1.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, z, 0.12f, 0.4f, -bL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(bbX, 0.0f, z, 0.04f, 0.12f, -bL, 0.12f, 0.06f, 0.03f, false, 0, L); }
+            if(aL>0.05f) { addTiledSurface(bX, 0.4f, dZ-1.2f, 0.1f, 1.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(isL?-3.02f:2.92f, 0.0f, dZ-1.2f, 0.12f, 0.4f, -aL, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(bbX, 0.0f, dZ-1.2f, 0.04f, 0.12f, -aL, 0.12f, 0.06f, 0.03f, false, 0, L); }
             addTiledSurface(bX, 1.4f, dZ, 0.1f, 0.4f, -1.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
             addBox(bX-(isL?-0.05f:0.0f),0,dZ,0.05f,1.4f,-0.05f,0.15f,0.1f,0.05f,false,0,L); addBox(bX-(isL?-0.05f:0.0f),0,dZ-1.15f,0.05f,1.4f,-0.05f,0.15f,0.1f,0.05f,false,0,L); addBox(bX-(isL?-0.05f:0.0f),1.35f,dZ,0.05f,0.05f,-1.2f,0.15f,0.1f,0.05f,false,0,L); 
             
@@ -375,12 +394,19 @@ void buildWorld(int cChunk, int pRm) {
             float srZ=dZ+2.5f, sW=isL?-9.0f:3.0f; 
             addTiledSurface(sW,0,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
             addTiledSurface(sW,1.8f,srZ,6.0f,0.01f,-5.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
-            addTiledSurface(isL?-9.0f:8.9f,0.4f,srZ,0.1f,1.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); addBox(isL?-8.98f:8.94f, 0.0f, srZ, 0.04f, 0.12f, -5.0f, 0.12f, 0.06f, 0.03f, false, 0, L);
+            
+            addTiledSurface(isL?-9.0f:8.9f,0.4f,srZ,0.1f,1.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); 
             addTiledSurface(isL?-9.02f:8.88f,0.0f,srZ,0.12f,0.4f,-5.0f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
-            addTiledSurface(sW,0.4f,srZ,6.0f,1.4f,0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); addBox(sW, 0.0f, srZ-0.05f, 6.0f, 0.12f, 0.05f, 0.12f, 0.06f, 0.03f, false, 0, L);
+            float bbFarX = isL ? -8.88f : 8.84f;
+            addBox(bbFarX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, 0.12f, 0.06f, 0.03f, false, 0, L);
+            
+            addTiledSurface(sW,0.4f,srZ,6.0f,1.4f,0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); 
             addTiledSurface(sW,0.0f,srZ,6.0f,0.4f,0.12f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
-            addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); addBox(sW, 0.0f, srZ-4.95f, 6.0f, 0.12f, 0.05f, 0.12f, 0.06f, 0.03f, false, 0, L);
+            addBox(sW, 0.0f, srZ, 6.0f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L);
+            
+            addTiledSurface(sW,0.4f,srZ-5.0f,6.0f,1.4f,-0.1f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,true); 
             addTiledSurface(sW,0.0f,srZ-5.0f,6.0f,0.4f,-0.12f,wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L,false);
+            addBox(sW, 0.0f, srZ-5.0f, 6.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L);
             
             if (i == pRm && dO) {
                 srand(i*(isL?123:321)); 
@@ -401,8 +427,8 @@ void buildWorld(int cChunk, int pRm) {
             }
         };
         
-        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(-2.98f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); }
-        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(2.94f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); } 
+        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(-2.90f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); }
+        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(2.86f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); } 
         addBox(-0.4f,1.78f,z-5.4f,0.8f,0.02f,0.8f,(L>0.5f?0.9f:0.2f),(L>0.5f?0.9f:0.2f),(L>0.5f?0.8f:0.2f),false);
         
         if(isInteriorVisible && !tAN){
