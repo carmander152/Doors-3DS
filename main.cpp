@@ -220,7 +220,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(2.6f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(2.6f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     auto dr = [&](float dx, bool o) {
         if(!o){ addBox(dx,0,z,1.2f,1.4f,-0.1f,0.15f,0.08f,0.05f,true,0,L); addBox(dx+0.4f,1.1f,z+0.02f,0.4f,0.12f,0.02f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+1.05f,0.7f,z+0.02f,0.05f,0.15f,0.03f,0.6f,0.6f,0.6f,false,0,L); if(rooms[rm].isLocked) addBox(dx+0.9f,0.6f,z+0.05f,0.2f,0.2f,0.05f,0.8f,0.8f,0.8f,false,0,L); } 
-        else { addBox(dx,0,z,0.1f,1.4f,-1.2f,0.3f,0.15f,0.08f,true,0,L); addBox(dx+0.1f,1.1f,z-0.8f,0.02f,0.12f,0.4f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+0.1f,0.7f,z-1.05f,0.03f,0.15f,0.05f,0.6f,0.6f,0.6f,false,0,L); }
+        else { addBox(dx,0,z,0.1f,1.4f,-1.2f,0.3f,0.15f,0.08f,false,0,L); addBox(dx+0.1f,1.1f,z-0.8f,0.02f,0.12f,0.4f,0.8f,0.7f,0.2f,false,0,L); addBox(dx+0.1f,0.7f,z-1.05f,0.03f,0.15f,0.05f,0.6f,0.6f,0.6f,false,0,L); }
     }; if(lD)dr(-2.6f,lO); if(cD)dr(-0.6f,cO); if(rD)dr(1.4f,rO);
 }
 
@@ -243,23 +243,23 @@ void buildWorld(int cChunk, int pRm) {
     }
 
     // =========================================================================
-    // DYNAMIC OCCLUSION CULLING: Only render strictly visible rooms
+    // DYNAMIC OCCLUSION CULLING: Fixed far-wall void issue
     // =========================================================================
     int st = pRm;
-    int en = pRm;
+    int en = pRm + 1; 
     
     if (pRm == -1) {
         st = -1;
-        en = doorOpen[0] ? 0 : -1;
+        en = doorOpen[0] ? 1 : 0;
     } else {
         if (pRm > 0 && doorOpen[pRm]) st = pRm - 1;
         if (pRm == 0 && doorOpen[0]) st = -1;
-        if (pRm + 1 < TOTAL_ROOMS && doorOpen[pRm + 1]) en = pRm + 1;
+        if (pRm + 1 < TOTAL_ROOMS && doorOpen[pRm + 1]) en = pRm + 2;
     }
 
     if (pRm >= seekStartRoom - 1 && pRm <= seekStartRoom + 3) {
         st = seekStartRoom - 1;
-        en = seekStartRoom + 3;
+        en = seekStartRoom + 4;
     }
     
     if (st < -1) st = -1;
@@ -533,12 +533,12 @@ int main() {
                 if(rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
                 float dZ = -10.0f - (i * 10.0f);
                 float dX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                bool isClose = (fabsf(camZ - dZ) < 2.5f && fabsf(camX - dX) < 2.0f); 
+                bool isClose = (fabsf(camZ - dZ) < 1.5f && fabsf(camX - dX) < 1.5f); 
                 if (rooms[i].isLocked || rooms[i].isJammed) isClose = false; 
                 if (doorOpen[i] != isClose) {
                     doorOpen[i] = isClose;
                     needsVBOUpdate = true;
-                    if (audio_ok && sDoor.data_vaddr) {
+                    if (isClose && audio_ok && sDoor.data_vaddr) {
                         ndspChnWaveBufClear(1);
                         sDoor.status = NDSP_WBUF_FREE;
                         ndspChnWaveBufAdd(1, &sDoor);
