@@ -577,22 +577,31 @@ int main() {
         }
 
         if(!isDead){
+            // === FIGURE LOGIC ===
             if(playerCurrentRoom == 49 && !figureActive) { figureActive = true; figureZ = -10.0f - (49 * 10.0f) - 5.0f; sprintf(uiMessage, "Shh... He can hear you."); messageTimer = 150; }
             if(figureActive) { float distSq = (camX - figureX)*(camX - figureX) + (camZ - figureZ)*(camZ - figureZ); if(figureState == 0) { if(!isCrouching && distSq < 16.0f) figureState = 2; } else if(figureState == 2) { if(camX > figureX) figureX += figureSpeed; else figureX -= figureSpeed; if(camZ > figureZ) figureZ += figureSpeed; else figureZ -= figureSpeed; if(distSq < 0.64f) { playerHealth = 0; isDead = true; flashRedFrames = 15; sprintf(uiMessage, "The Figure found you..."); messageTimer = 120; } } }
+            
+            // === SEEK LOGIC ===
             if(playerCurrentRoom>=seekStartRoom&&playerCurrentRoom<=seekStartRoom+2){ if(camZ<-10.0f-((seekStartRoom+2)*10.0f)-8.0f&&seekState==0){seekState=1;seekActive=true;seekTimer=0;seekSpeed=0.0f;seekZ=-10.0f-(seekStartRoom*10.0f);needsVBOUpdate=true;if(audio_ok&&sSeekRise.data_vaddr){ndspChnWaveBufClear(7);sSeekRise.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekRise);}} }
             if(seekState==1){ seekTimer++; if(seekTimer>=180&&seekTimer<230){if(seekSpeed<0.12f)seekSpeed+=0.005f;seekZ-=seekSpeed;} if(seekTimer>=230){seekState=2;seekSpeed=0;sprintf(uiMessage,"RUN!");messageTimer=90;flashRedFrames=10;if(audio_ok&&sSeekChase.data_vaddr){ndspChnWaveBufClear(7);sSeekChase.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekChase);}} } else if(seekState==2){ seekSpeed=(seekZ>-10.0f-((seekStartRoom+2)*10.0f))?0.065f:seekMaxSpeed; seekZ-=seekSpeed; if(audio_ok && sSeekChase.data_vaddr) { float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; ndspChnSetMix(7, mix); } if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;flashRedFrames=15;sprintf(uiMessage,"Seek caught you...");messageTimer=120;if(audio_ok)ndspChnWaveBufClear(7);} if(playerCurrentRoom>=0&&rooms[playerCurrentRoom].isSeekFinale){for(int h=0;h<6;h++){if(fabsf(camX-rooms[playerCurrentRoom].pW[h])<0.6f&&fabsf(camZ-rooms[playerCurrentRoom].pZ[h])<0.6f){if(rooms[playerCurrentRoom].pSide[h]==0&&!isDead&&messageTimer<=0){playerHealth-=40;flashRedFrames=10;camZ+=1.5f;sprintf(uiMessage,"Burned! (-40 HP)");messageTimer=60;if(playerHealth<=0){isDead=true;if(audio_ok)ndspChnWaveBufClear(7);}}else if(rooms[playerCurrentRoom].pSide[h]==1&&!isDead&&!isCrouching){playerHealth=0;isDead=true;flashRedFrames=15;sprintf(uiMessage,"The hands grabbed you!");messageTimer=120;if(audio_ok)ndspChnWaveBufClear(7);}}}} if(seekActive){ float fLZ=-10.0f-((seekStartRoom+8)*10.0f)-10.0f; int sR=seekStartRoom+9; bool pS=(camZ<fLZ-1.5f); if(pS||seekZ<fLZ+3.0f){ if(!rooms[sR].isJammed){doorOpen[sR]=false;rooms[sR].isLocked=false;rooms[sR].isJammed=true;needsVBOUpdate=true;if(audio_ok){if(sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}ndspChnWaveBufClear(7);if(sSeekEscaped.data_vaddr){sSeekEscaped.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekEscaped);}}} if(pS){seekActive=false;seekState=0;sprintf(uiMessage,"You escaped!");messageTimer=150;needsVBOUpdate=true;} else{playerHealth=0;isDead=true;flashRedFrames=15;sprintf(uiMessage,"The door slammed shut!");messageTimer=120;seekActive=false;seekState=0;needsVBOUpdate=true;if(audio_ok)ndspChnWaveBufClear(7);} } } }
+            
+            // === EYES LOGIC ===
             bool inE=(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS&&rooms[playerCurrentRoom].hasEyes); if(inE&&!inEyesRoom){ inEyesRoom=true;eyesGraceTimer=60; if(audio_ok){ndspChnWaveBufClear(4);if(sEyesAppear.data_vaddr){sEyesAppear.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAppear);}ndspChnWaveBufClear(5);if(sEyesGarble.data_vaddr){float m[12]={0};m[0]=1.8f;m[1]=1.8f;ndspChnSetMix(5,m);sEyesGarble.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(5,&sEyesGarble);}} } else if(!inE&&inEyesRoom){inEyesRoom=false;if(audio_ok)ndspChnWaveBufClear(5);} if(inE)if(eyesGraceTimer>0)eyesGraceTimer--;
             if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0){float dist=sqrtf(distSq); vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=5;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=90;} eyesDamageTimer++; if(eyesDamageTimer>=6){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=2;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=120;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
+            
+            // === SCREECH LOGIC ===
             bool iSE=(playerCurrentRoom>=seekStartRoom-5&&playerCurrentRoom<=seekStartRoom+9); int sC=(playerCurrentRoom>=0 && rooms[playerCurrentRoom].lightLevel<0.5f && !iSE && playerCurrentRoom>2 && !seekActive && !rushActive && !figureActive && !inElevator && hideState==NOT_HIDING) ? 1 : 0;
             if(sC && screechCooldown<=0 && rand()%1000<3){ screechActive=true; screechTimer=180; screechCooldown=1800; float rA=(rand()%360)*3.14159f/180.0f; screechX=camX+sinf(rA)*1.5f; screechY=(isCrouching?0.4f:0.9f)+(rand()%100)/100.0f-0.5f; screechZ=camZ+cosf(rA)*1.5f; screechOffsetX=0; screechOffsetY=0; screechOffsetZ=0; if(audio_ok&&sPsst.data_vaddr){ndspChnWaveBufClear(2);sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sPsst);} }
             if(screechActive){
                 screechTimer--; 
                 float tX=camX-screechX, tY=(isCrouching?0.4f:0.9f)-screechY, tZ=camZ-screechZ, distSq=tX*tX+tY*tY+tZ*tZ; if(distSq>0){float dist=sqrtf(distSq);tX/=dist;tY/=dist;tZ/=dist;} float fX=-sinf(camYaw)*cosf(camPitch), fY=sinf(camPitch), fZ=-cosf(camYaw)*cosf(camPitch), dP=(fX*tX)+(fY*tY)+(fZ*tZ);
+                // IF DOT PRODUCT > 0.7f (Looking at Screech), Screech leaves!
                 if(dP>0.7f && checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,screechX,screechY,screechZ)){ screechActive=false; screechCooldown=1800; if(audio_ok&&sCaught.data_vaddr){ndspChnWaveBufClear(2);sCaught.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sCaught);} needsVBOUpdate=true; }
                 else if(screechTimer<=0){ screechActive=false; playerHealth-=40; flashRedFrames=10; sprintf(uiMessage,"Screech bit you! (-40 HP)"); messageTimer=90; screechCooldown=1800; if(audio_ok&&sAttack.data_vaddr){ndspChnWaveBufClear(2);sAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sAttack);} needsVBOUpdate=true; if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You were killed by Screech.");messageTimer=120;} }
                 else{ screechX+=screechOffsetX; screechY+=screechOffsetY; screechZ+=screechOffsetZ; screechOffsetX=(rand()%11-5)*0.005f; screechOffsetY=(rand()%11-5)*0.005f; screechOffsetZ=(rand()%11-5)*0.005f; needsVBOUpdate=true; }
             }
 
+            // === RUSH LOGIC ===
             if(playerCurrentRoom>3 && !iSE && !rushActive && !seekActive && !figureActive && hideState==NOT_HIDING && rand()%2000<2){ rushActive=true; rushState=1; rushTimer=120; rushZ=camZ-30.0f; rushTargetZ=camZ+20.0f; if(audio_ok&&sLightsFlicker.data_vaddr){ndspChnWaveBufClear(3);sLightsFlicker.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(3,&sLightsFlicker);} }
             if(rushActive){
                 if(rushState==1){ rushTimer--; if(rushTimer<=0){rushState=2;if(audio_ok&&sRushScream.data_vaddr){ndspChnWaveBufClear(3);sRushScream.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(3,&sRushScream);}} }
@@ -693,57 +702,61 @@ int main() {
         }
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, (flashRedFrames>0)?0xFF0000FF:0x000000FF, 0xFFFFFFFF);
+        
+        // Clear depth to 0 instead of 0xFFFFFFFF for the 3DS's reversed depth buffer!
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, (flashRedFrames>0)?0xFF0000FF:0x000000FF, 0);
         
         C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
         BufInfo_Add(bufInfo, vbo_main, sizeof(vertex), 3, 0x210);
 
-        float pMtx[16];
-        float fov = 60.0f * 3.14159f / 180.0f; float nearClip = 0.01f; float farClip = 100.0f; float aspect = 240.0f / 400.0f;
-        float f = 1.0f / tanf(fov / 2.0f); memset(pMtx, 0, sizeof(pMtx));
-        pMtx[0] = f / aspect; pMtx[5] = f; pMtx[10] = (farClip + nearClip) / (nearClip - farClip); pMtx[11] = -1.0f; pMtx[14] = (2.0f * farClip * nearClip) / (nearClip - farClip);
+        // Built-in matrix math
+        C3D_Mtx pMtx;
+        Mtx_PerspTilt(&pMtx, 60.0f * 3.14159f / 180.0f, 400.0f / 240.0f, 0.01f, 100.0f, false);
 
-        float vMtx[16]; memset(vMtx, 0, sizeof(vMtx));
-        float cx = cosf(camPitch), sx = sinf(camPitch), cy = cosf(camYaw), sy = sinf(camYaw);
-        float fx = -sy * cx, fy = sx, fz = -cy * cx; float upx = sy * sx, upy = cx, upz = cy * sx;
-        float rx = fy * upz - fz * upy, ry = fz * upx - fx * upz, rz = fx * upy - fy * upx;
-        float len = sqrtf(rx * rx + ry * ry + rz * rz); rx /= len; ry /= len; rz /= len;
-        vMtx[0] = rx; vMtx[4] = ry; vMtx[8] = rz; vMtx[1] = upx; vMtx[5] = upy; vMtx[9] = upz; vMtx[2] = -fx; vMtx[6] = -fy; vMtx[10] = -fz; vMtx[15] = 1.0f;
+        C3D_Mtx vMtx;
+        Mtx_Identity(&vMtx);
+        Mtx_RotateX(&vMtx, camPitch, true);
+        Mtx_RotateY(&vMtx, camYaw, true);
         
         float cY = isCrouching ? 0.4f : 0.9f;
-        vMtx[12] = -(vMtx[0] * camX + vMtx[4] * cY + vMtx[8] * camZ);
-        vMtx[13] = -(vMtx[1] * camX + vMtx[5] * cY + vMtx[9] * camZ);
-        vMtx[14] = -(vMtx[2] * camX + vMtx[6] * cY + vMtx[10] * camZ);
+        Mtx_Translate(&vMtx, -camX, -cY, -camZ, true);
 
-        float mvp[16]; memset(mvp, 0, sizeof(mvp));
-        for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) for (int k = 0; k < 4; k++) mvp[i * 4 + j] += pMtx[k * 4 + j] * vMtx[i * 4 + k];
-        
-        float mvp_t[16];
-        mvp_t[0] = mvp[0]; mvp_t[1] = mvp[4]; mvp_t[2] = mvp[8]; mvp_t[3] = mvp[12]; mvp_t[4] = mvp[1]; mvp_t[5] = mvp[5]; mvp_t[6] = mvp[9]; mvp_t[7] = mvp[13]; mvp_t[8] = mvp[2]; mvp_t[9] = mvp[6]; mvp_t[10] = mvp[10]; mvp_t[11] = mvp[14]; mvp_t[12] = mvp[3]; mvp_t[13] = mvp[7]; mvp_t[14] = mvp[11]; mvp_t[15] = mvp[15];
-        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj, mvp_t[0], mvp_t[1], mvp_t[2], mvp_t[3]);
-        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 1, mvp_t[4], mvp_t[5], mvp_t[6], mvp_t[7]);
-        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 2, mvp_t[8], mvp_t[9], mvp_t[10], mvp_t[11]);
-        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 3, mvp_t[12], mvp_t[13], mvp_t[14], mvp_t[15]);
+        C3D_Mtx mvp;
+        Mtx_Multiply(&mvp, &pMtx, &vMtx);
+
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &mvp);
 
         // Draw World Colored
-        C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+        C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
+        C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+        C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
         if (colored_size > 0) C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
         
         // Draw World Textured
         if (hasAtlas && textured_size > 0) {
             C3D_TexBind(0, &atlasTex);
-            C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
+            C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); 
+            C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
+            C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
+            C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
             C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
         }
         
         // Draw Entity Colored
-        env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+        env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
+        C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+        C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
         if (ent_colored_size > 0) C3D_DrawArrays(GPU_TRIANGLES, colored_size + textured_size, ent_colored_size);
         
         // Draw Entity Textured
         if (hasAtlas && ent_textured_size > 0) {
             C3D_TexBind(0, &atlasTex);
-            C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
+            C3D_TexEnv* envTex = C3D_GetTexEnv(0); C3D_TexEnvInit(envTex); 
+            C3D_TexEnvSrc(envTex, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvOpRgb(envTex, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
+            C3D_TexEnvOpAlpha(envTex, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
+            C3D_TexEnvFunc(envTex, C3D_RGB, GPU_MODULATE); C3D_TexEnvFunc(envTex, C3D_Alpha, GPU_REPLACE);
             C3D_DrawArrays(GPU_TRIANGLES, colored_size + textured_size + ent_colored_size, ent_textured_size);
         }
 
