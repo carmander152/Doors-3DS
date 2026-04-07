@@ -703,28 +703,40 @@ int main() {
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         
-        // Clear depth to 0 instead of 0xFFFFFFFF for the 3DS's reversed depth buffer!
+        // This MUST be 0 so the 3DS reversed depth buffer doesn't clip your walls!
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, (flashRedFrames>0)?0xFF0000FF:0x000000FF, 0);
         
         C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
         BufInfo_Add(bufInfo, vbo_main, sizeof(vertex), 3, 0x210);
 
-        // Built-in matrix math
-        C3D_Mtx pMtx;
-        Mtx_PerspTilt(&pMtx, 60.0f * 3.14159f / 180.0f, 400.0f / 240.0f, 0.01f, 100.0f, false);
+        // --- RESTORED ORIGINAL MANUAL MATRICES ---
+        float pMtx[16];
+        float fov = 60.0f * 3.14159f / 180.0f; float nearClip = 0.01f; float farClip = 100.0f; float aspect = 240.0f / 400.0f;
+        float f = 1.0f / tanf(fov / 2.0f); memset(pMtx, 0, sizeof(pMtx));
+        pMtx[0] = f / aspect; pMtx[5] = f; pMtx[10] = (farClip + nearClip) / (nearClip - farClip); pMtx[11] = -1.0f; pMtx[14] = (2.0f * farClip * nearClip) / (nearClip - farClip);
 
-        C3D_Mtx vMtx;
-        Mtx_Identity(&vMtx);
-        Mtx_RotateX(&vMtx, camPitch, true);
-        Mtx_RotateY(&vMtx, camYaw, true);
+        float vMtx[16]; memset(vMtx, 0, sizeof(vMtx));
+        float cx = cosf(camPitch), sx = sinf(camPitch), cy = cosf(camYaw), sy = sinf(camYaw);
+        float fx = -sy * cx, fy = sx, fz = -cy * cx; float upx = sy * sx, upy = cx, upz = cy * sx;
+        float rx = fy * upz - fz * upy, ry = fz * upx - fx * upz, rz = fx * upy - fy * upx;
+        float len = sqrtf(rx * rx + ry * ry + rz * rz); rx /= len; ry /= len; rz /= len;
+        vMtx[0] = rx; vMtx[4] = ry; vMtx[8] = rz; vMtx[1] = upx; vMtx[5] = upy; vMtx[9] = upz; vMtx[2] = -fx; vMtx[6] = -fy; vMtx[10] = -fz; vMtx[15] = 1.0f;
         
         float cY = isCrouching ? 0.4f : 0.9f;
-        Mtx_Translate(&vMtx, -camX, -cY, -camZ, true);
+        vMtx[12] = -(vMtx[0] * camX + vMtx[4] * cY + vMtx[8] * camZ);
+        vMtx[13] = -(vMtx[1] * camX + vMtx[5] * cY + vMtx[9] * camZ);
+        vMtx[14] = -(vMtx[2] * camX + vMtx[6] * cY + vMtx[10] * camZ);
 
-        C3D_Mtx mvp;
-        Mtx_Multiply(&mvp, &pMtx, &vMtx);
-
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &mvp);
+        float mvp[16]; memset(mvp, 0, sizeof(mvp));
+        for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) for (int k = 0; k < 4; k++) mvp[i * 4 + j] += pMtx[k * 4 + j] * vMtx[i * 4 + k];
+        
+        float mvp_t[16];
+        mvp_t[0] = mvp[0]; mvp_t[1] = mvp[4]; mvp_t[2] = mvp[8]; mvp_t[3] = mvp[12]; mvp_t[4] = mvp[1]; mvp_t[5] = mvp[5]; mvp_t[6] = mvp[9]; mvp_t[7] = mvp[13]; mvp_t[8] = mvp[2]; mvp_t[9] = mvp[6]; mvp_t[10] = mvp[10]; mvp_t[11] = mvp[14]; mvp_t[12] = mvp[3]; mvp_t[13] = mvp[7]; mvp_t[14] = mvp[11]; mvp_t[15] = mvp[15];
+        
+        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj, mvp_t[0], mvp_t[1], mvp_t[2], mvp_t[3]);
+        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 1, mvp_t[4], mvp_t[5], mvp_t[6], mvp_t[7]);
+        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 2, mvp_t[8], mvp_t[9], mvp_t[10], mvp_t[11]);
+        C3D_FVUnifSet(GPU_VERTEX_SHADER, uLoc_proj + 3, mvp_t[12], mvp_t[13], mvp_t[14], mvp_t[15]);
 
         // Draw World Colored
         C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
