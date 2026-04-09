@@ -634,19 +634,6 @@ int main() {
                 memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
             }
 
-            // --- 2. APPEND ENTITIES TO THE END OF THE WORLD VBO ---
-            buildEntities();
-            int world_total = colored_size + textured_size;
-            int ent_col_size = entity_mesh_colored.size();
-            int ent_tex_size = entity_mesh_textured.size();
-            if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
-            
-            if (ent_col_size > 0) memcpy((vertex*)vbo_main + world_total, entity_mesh_colored.data(), ent_col_size * sizeof(vertex));
-            if (ent_tex_size > 0) memcpy((vertex*)vbo_main + world_total + ent_col_size, entity_mesh_textured.data(), ent_tex_size * sizeof(vertex));
-            
-            // Flush all the memory we just updated to the GPU
-            if ((world_total + ent_col_size + ent_tex_size) > 0) GSPGPU_FlushDataCache(vbo_main, (world_total + ent_col_size + ent_tex_size) * sizeof(vertex));
-
             float pH=isCrouching?0.5f:1.1f; circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
             if((hideState==NOT_HIDING||hideState==BEHIND_DOOR)&&seekState!=1){
                 if(abs(cS.dx)>10)camYaw-=cS.dx/1560.0f*0.8f; if(abs(cS.dy)>10)camPitch+=cS.dy/1560.0f*0.8f;
@@ -656,6 +643,20 @@ int main() {
             }
             if(hideState==NOT_HIDING||hideState==BEHIND_DOOR){ bool iDZ=false; for(auto& b:collisions)if(b.type==4&&camX>b.minX&&camX<b.maxX&&camZ>b.minZ&&camZ<b.maxZ){iDZ=true;break;} if(iDZ&&hideState==NOT_HIDING)hideState=BEHIND_DOOR; else if(!iDZ&&hideState==BEHIND_DOOR)hideState=NOT_HIDING; }
         }
+
+        // --- 2. APPEND ENTITIES TO THE END OF THE WORLD VBO ---
+        buildEntities();
+        int world_total = colored_size + textured_size;
+        int ent_col_size = entity_mesh_colored.size();
+        int ent_tex_size = entity_mesh_textured.size();
+        if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
+        
+        if (ent_col_size > 0) memcpy((vertex*)vbo_main + world_total, entity_mesh_colored.data(), ent_col_size * sizeof(vertex));
+        if (ent_tex_size > 0) memcpy((vertex*)vbo_main + world_total + ent_col_size, entity_mesh_textured.data(), ent_tex_size * sizeof(vertex));
+        
+        // Flush all the memory we just updated to the GPU
+        if ((world_total + ent_col_size + ent_tex_size) > 0) GSPGPU_FlushDataCache(vbo_main, (world_total + ent_col_size + ent_tex_size) * sizeof(vertex));
+
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
         
