@@ -34,7 +34,7 @@ char texErrorMessage[100] = "";
 struct RoomSetup {
     int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
     bool drawerOpen[3], isLocked, isJammed, hasLeftRoom, leftDoorOpen, hasRightRoom, rightDoorOpen, isDupeRoom, hasEyes, hasSeekEyes, isSeekHallway, isSeekChase, isSeekFinale;
-    float animMain[3], animLL[3], animLR[3], animRL[3], animRR[3]; 
+    float animMain[3], animLL[3], animLR[3], animRL[3], animRL3[3], animRR[3]; 
     float lightLevel, leftDoorOffset, rightDoorOffset, eyesX, eyesY, eyesZ; 
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10]; int pSide[10];   
     int leftRoomSlotTypeL[3], leftRoomSlotItemL[3], leftRoomSlotTypeR[3], leftRoomSlotItemR[3]; bool leftRoomDrawerOpenL[3], leftRoomDrawerOpenR[3];
@@ -135,51 +135,62 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     float minZ = fminf(z, z+d), maxZ = fmaxf(z, z+d);
     float width = maxX - minX, height = maxY - minY, depth = maxZ - minZ;
     
+    float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     auto getP = [](float val, float s) { float p = fmodf(val, s); if(p < 0) p += s; if(s - p < 0.001f) p = 0.0f; return p; };
     
     bool isFloor = (height <= 0.05f);
     
     if (isFloor) {
-        float scaleU = texScale * 1.5f; 
-        float scaleV = texScale * 1.5f; 
+        float scaleU = texScale * 1.5f, scaleV = texScale * 1.5f; 
         float currX = minX;
         while(currX < maxX - 0.0001f) {
-            float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
+            float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
             if (segW < 0.001f) segW = 0.001f; 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleV), segD = fminf(scaleV - pZ, maxZ - currZ), vOffFloor = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
+                float pZ = getP(currZ, scaleV), segD = fminf(scaleV - pZ, maxZ - currZ), v1 = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
                 if (segD < 0.001f) segD = 0.001f; 
-                addBoxTextured(currX, minY, currZ, segW, height, segD, uOff, vOffFloor, uw, vh, repX, repZ, r, g, b, light);
+                float u2 = u1 + (uw * repX), v2 = v1 + (vh * repZ);
+                float x2 = currX + segW, z2 = currZ + segD;
+                // ONLY draw the top and bottom planes, saving ~83% of geometry!
+                addFaceTextured({{currX,maxY,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,maxY,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,maxY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,maxY,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,maxY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,maxY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}); 
+                addFaceTextured({{currX,minY,currZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,minY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,minY,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,minY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,minY,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,minY,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
                 currZ += segD;
             } currX += segW;
         }
     } else {
-        float scaleU = texScale; 
-        float scaleV = texScale * 2.0f; 
+        float scaleU = texScale, scaleV = texScale * 2.0f; 
         if (width >= depth) { 
             float currX = minX;
             while(currX < maxX - 0.0001f) {
-                float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), uOff = u + (pX / scaleU) * uw, repX = segW / scaleU;
+                float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
                 if (segW < 0.001f) segW = 0.001f; 
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
+                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     if (segH < 0.001f) segH = 0.001f;
-                    addBoxTextured(currX, currY, minZ, segW, segH, depth, uOff, vOffWall, uw, vh, repX, repY, r, g, b, light);
+                    float u2 = u1 + (uw * repX), v2 = v1 + (vh * repY);
+                    float x2 = currX + segW, y2 = currY + segH;
+                    // Front and Back planes only
+                    addFaceTextured({{currX,currY,maxZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,maxZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
+                    addFaceTextured({{currX,currY,minZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{currX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,minZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{currX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
                     currY += segH;
                 } currX += segW;
             }
         } else { 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleU), segD = fminf(scaleU - pZ, maxZ - currZ), uOff = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
+                float pZ = getP(currZ, scaleU), segD = fminf(scaleU - pZ, maxZ - currZ), u1 = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
                 if (segD < 0.001f) segD = 0.001f; 
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), vOffWall = v + (pY / scaleV) * vh, repY = segH / scaleV;
+                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     if (segH < 0.001f) segH = 0.001f;
-                    addBoxTextured(minX, currY, currZ, width, segH, segD, uOff, vOffWall, uw, vh, repZ, repY, r, g, b, light);
+                    float u2 = u1 + (uw * repZ), v2 = v1 + (vh * repY);
+                    float z2 = currZ + segD, y2 = currY + segH;
+                    // Left and Right planes only
+                    addFaceTextured({{maxX,currY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{maxX,currY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{maxX,currY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{maxX,y2,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
+                    addFaceTextured({{minX,currY,currZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{minX,currY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{minX,currY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{minX,y2,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
                     currY += segH;
                 } currZ += segD;
             }
@@ -559,12 +570,25 @@ int main() {
         if(elevatorDoorsOpen&&!elevatorClosing&&elevatorDoorOffset<2.0f){elevatorDoorOffset+=0.06f;needsVBOUpdate=true;} if(elevatorDoorsOpen&&!elevatorClosing&&camZ<2.0f){inElevator=false;elevatorClosing=true;needsVBOUpdate=true;} if(elevatorClosing&&elevatorDoorOffset>0.0f){elevatorDoorOffset-=0.08f;if(elevatorDoorOffset<=0.0f)elevatorDoorOffset=0.0f;needsVBOUpdate=true;}
 
         bool animActive = false;
-        if(totalFrames % 2 == 0) {
-            if(playerCurrentRoom>=0 && playerCurrentRoom<TOTAL_ROOMS) {
-                auto stepAnim = [&](bool target, float& val) { if(target && val < 1.0f) { val += 0.20f; if(val>1.0f) val=1.0f; return true; } if(!target && val > 0.0f) { val -= 0.20f; if(val<0.0f) val=0.0f; return true; } return false; };
-                for(int s=0; s<3; s++) { if(stepAnim(rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].animMain[s])) animActive = true; if(rooms[playerCurrentRoom].hasLeftRoom) { if(stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenL[s], rooms[playerCurrentRoom].animLL[s])) animActive = true; if(stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenR[s], rooms[playerCurrentRoom].animLR[s])) animActive = true; } if(rooms[playerCurrentRoom].hasRightRoom) { if(stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].animRL[s])) animActive = true; if(stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenR[s], rooms[playerCurrentRoom].animRR[s])) animActive = true; } }
+        if(playerCurrentRoom>=0 && playerCurrentRoom<TOTAL_ROOMS) {
+            auto stepAnim = [&](bool target, float& val) { 
+                if(target && val < 1.0f) { val += 0.15f; if(val>1.0f) val=1.0f; return true; } 
+                if(!target && val > 0.0f) { val -= 0.15f; if(val<0.0f) val=0.0f; return true; } 
+                return false; 
+            };
+            for(int s=0; s<3; s++) { 
+                if(stepAnim(rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].animMain[s])) animActive = true; 
+                if(rooms[playerCurrentRoom].hasLeftRoom) { 
+                    if(stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenL[s], rooms[playerCurrentRoom].animLL[s])) animActive = true; 
+                    if(stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenR[s], rooms[playerCurrentRoom].animLR[s])) animActive = true; 
+                } 
+                if(rooms[playerCurrentRoom].hasRightRoom) { 
+                    if(stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].animRL[s])) animActive = true; 
+                    if(stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenR[s], rooms[playerCurrentRoom].animRR[s])) animActive = true; 
+                } 
             }
-        } if(animActive) needsVBOUpdate = true;
+        } 
+        if(animActive) needsVBOUpdate = true;
 
         static bool prevScreech=false; if(screechActive!=prevScreech){consoleClear();prevScreech=screechActive;}
         printf("\x1b[1;1H==============================\n");
@@ -580,7 +604,12 @@ int main() {
             if(playerCurrentRoom == 49 && !figureActive) { figureActive = true; figureZ = -10.0f - (49 * 10.0f) - 5.0f; sprintf(uiMessage, "Shh... He can hear you."); messageTimer = 75; }
             if(figureActive) { float distSq = (camX - figureX)*(camX - figureX) + (camZ - figureZ)*(camZ - figureZ); if(figureState == 0) { if(!isCrouching && distSq < 16.0f) figureState = 2; } else if(figureState == 2) { if(camX > figureX) figureX += figureSpeed; else figureX -= figureSpeed; if(camZ > figureZ) figureZ += figureSpeed; else figureZ -= figureSpeed; if(distSq < 0.64f) { playerHealth = 0; isDead = true; flashRedFrames = 15; sprintf(uiMessage, "The Figure found you..."); messageTimer = 60; } } }
             if(playerCurrentRoom>=seekStartRoom&&playerCurrentRoom<=seekStartRoom+2){ if(camZ<-10.0f-((seekStartRoom+2)*10.0f)-8.0f&&seekState==0){seekState=1;seekActive=true;seekTimer=0;seekSpeed=0.0f;seekZ=-10.0f-(seekStartRoom*10.0f);needsVBOUpdate=true;if(audio_ok&&sSeekRise.data_vaddr){ndspChnWaveBufClear(7);sSeekRise.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekRise);}} }
-            if(seekState==1){ seekTimer++; if(seekTimer>=90&&seekTimer<115){if(seekSpeed<0.24f)seekSpeed+=0.01f;seekZ-=seekSpeed;} if(seekTimer>=115){seekState=2;seekSpeed=0;sprintf(uiMessage,"RUN!");messageTimer=45;flashRedFrames=5;if(audio_ok&&sSeekChase.data_vaddr){ndspChnWaveBufClear(7);sSeekChase.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekChase);}} } else if(seekState==2){ seekSpeed=(seekZ>-10.0f-((seekStartRoom+2)*10.0f))?0.13f:seekMaxSpeed; seekZ-=seekSpeed; if(audio_ok && sSeekChase.data_vaddr) { float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; ndspChnSetMix(7, mix); } if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;flashRedFrames=15;sprintf(uiMessage,"Seek caught you...");messageTimer=60;if(audio_ok)ndspChnWaveBufClear(7);} if(playerCurrentRoom>=0&&rooms[playerCurrentRoom].isSeekFinale){for(int h=0;h<6;h++){if(fabsf(camX-rooms[playerCurrentRoom].pW[h])<0.6f&&fabsf(camZ-rooms[playerCurrentRoom].pZ[h])<0.6f){if(rooms[playerCurrentRoom].pSide[h]==0&&!isDead&&messageTimer<=0){playerHealth-=40;flashRedFrames=8;camZ+=1.5f;sprintf(uiMessage,"Burned! (-40 HP)");messageTimer=30;if(playerHealth<=0){isDead=true;if(audio_ok)ndspChnWaveBufClear(7);}}else if(rooms[playerCurrentRoom].pSide[h]==1&&!isDead&&!isCrouching){playerHealth=0;isDead=true;flashRedFrames=15;sprintf(uiMessage,"The hands grabbed you!");messageTimer=60;if(audio_ok)ndspChnWaveBufClear(7);}}}} if(seekActive){ float fLZ=-10.0f-((seekStartRoom+8)*10.0f)-10.0f; int sR=seekStartRoom+9; bool pS=(camZ<fLZ-1.5f); if(pS||seekZ<fLZ+3.0f){ if(!rooms[sR].isJammed){doorOpen[sR]=false;rooms[sR].isLocked=false;rooms[sR].isJammed=true;needsVBOUpdate=true;if(audio_ok){if(sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}ndspChnWaveBufClear(7);if(sSeekEscaped.data_vaddr){sSeekEscaped.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekEscaped);}}} if(pS){seekActive=false;seekState=0;sprintf(uiMessage,"You escaped!");messageTimer=75;needsVBOUpdate=true;} else{playerHealth=0;isDead=true;flashRedFrames=15;sprintf(uiMessage,"The door slammed shut!");messageTimer=60;seekActive=false;seekState=0;needsVBOUpdate=true;if(audio_ok)ndspChnWaveBufClear(7);} } } }
+            if(seekState==1){ seekTimer++; if(seekTimer>=90&&seekTimer<115){if(seekSpeed<0.24f)seekSpeed+=0.01f;seekZ-=seekSpeed;} if(seekTimer>=115){seekState=2;seekSpeed=0;sprintf(uiMessage,"RUN!");messageTimer=45;if(audio_ok&&sSeekChase.data_vaddr){ndspChnWaveBufClear(7);sSeekChase.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekChase);}} } 
+            else if(seekState==2){ seekSpeed=(seekZ>-10.0f-((seekStartRoom+2)*10.0f))?0.13f:seekMaxSpeed; seekZ-=seekSpeed; if(audio_ok && sSeekChase.data_vaddr) { float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; ndspChnSetMix(7, mix); } 
+                if(fabsf(seekZ-camZ)<1.2f){playerHealth=0;isDead=true;sprintf(uiMessage,"Seek caught you...");messageTimer=60;if(audio_ok)ndspChnWaveBufClear(7);} 
+                if(playerCurrentRoom>=0&&rooms[playerCurrentRoom].isSeekFinale){for(int h=0;h<6;h++){if(fabsf(camX-rooms[playerCurrentRoom].pW[h])<0.6f&&fabsf(camZ-rooms[playerCurrentRoom].pZ[h])<0.6f){if(rooms[playerCurrentRoom].pSide[h]==0&&!isDead&&messageTimer<=0){playerHealth-=40;camZ+=1.5f;sprintf(uiMessage,"Burned! (-40 HP)");messageTimer=30;if(playerHealth<=0){isDead=true;if(audio_ok)ndspChnWaveBufClear(7);}}else if(rooms[playerCurrentRoom].pSide[h]==1&&!isDead&&!isCrouching){playerHealth=0;isDead=true;sprintf(uiMessage,"The hands grabbed you!");messageTimer=60;if(audio_ok)ndspChnWaveBufClear(7);}}}} 
+                if(seekActive){ float fLZ=-10.0f-((seekStartRoom+8)*10.0f)-10.0f; int sR=seekStartRoom+9; bool pS=(camZ<fLZ-1.5f); if(pS||seekZ<fLZ+3.0f){ if(!rooms[sR].isJammed){doorOpen[sR]=false;rooms[sR].isLocked=false;rooms[sR].isJammed=true;needsVBOUpdate=true;if(audio_ok){if(sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}ndspChnWaveBufClear(7);if(sSeekEscaped.data_vaddr){sSeekEscaped.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(7,&sSeekEscaped);}}} if(pS){seekActive=false;seekState=0;sprintf(uiMessage,"You escaped!");messageTimer=75;needsVBOUpdate=true;} else{playerHealth=0;isDead=true;sprintf(uiMessage,"The door slammed shut!");messageTimer=60;seekActive=false;seekState=0;needsVBOUpdate=true;if(audio_ok)ndspChnWaveBufClear(7);} } } 
+            }
             bool inE=(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS&&rooms[playerCurrentRoom].hasEyes); if(inE&&!inEyesRoom){ inEyesRoom=true;eyesGraceTimer=30; if(audio_ok){ndspChnWaveBufClear(4);if(sEyesAppear.data_vaddr){sEyesAppear.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAppear);}ndspChnWaveBufClear(5);if(sEyesGarble.data_vaddr){float m[12]={0};m[0]=1.8f;m[1]=1.8f;ndspChnSetMix(5,m);sEyesGarble.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(5,&sEyesGarble);}} } else if(!inE&&inEyesRoom){inEyesRoom=false;if(audio_ok)ndspChnWaveBufClear(5);} if(inE)if(eyesGraceTimer>0)eyesGraceTimer--;
             if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0){float dist=sqrtf(distSq); vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=2;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=45;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=45;} eyesDamageTimer++; if(eyesDamageTimer>=3){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=1;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=60;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
             bool iSE=(playerCurrentRoom>=seekStartRoom-5&&playerCurrentRoom<=seekStartRoom+9); int sC=(playerCurrentRoom>0&&rooms[playerCurrentRoom].lightLevel<0.5f)?400:12000;
