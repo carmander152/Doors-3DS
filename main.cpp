@@ -124,9 +124,7 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
     
-    // UPSIDE DOWN FIX: 
-    // We swapped 'v' and 'v+vh' on the Y-axis coordinates!
-    // Now the top of the image renders on the bottom vertices, flipping them perfectly.
+    // UPSIDE DOWN FIX: v and v+vh swapped
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}},
                     {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
                     {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}},
@@ -188,7 +186,8 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
             } currX += segW;
         }
     } else {
-        float scaleU = texScale, scaleV = texScale * 2.0f; 
+        // WALL SQUISH FIX: Changed scaleV from (texScale * 2.0f) to (texScale)
+        float scaleU = texScale, scaleV = texScale; 
         if (width >= depth) { 
             float currX = minX;
             while(currX < maxX - 0.0001f) {
@@ -323,12 +322,11 @@ void buildEntities() {
     isBuildingEntities = true;
     
     if(screechActive){ 
-        // Screech now uses Rush's Texture UVs
         addBillboard(screechX, screechY+0.2f, screechZ, 0.6f, 0.6f, 0.6f, 0.0f, 0.4f, 0.33f); 
     }
     if(rushActive && rushState==2){ 
-        // Rush now uses Screech's Texture UVs
-        addBillboard(0.0f, 1.2f, rushZ, 2.0f, 2.0f, 0.6f, 0.66f, 0.4f, 0.34f); 
+        // RUSH SIZE FIX: Shrunk him from 2.0x2.0 to 1.4x1.4
+        addBillboard(0.0f, 1.2f, rushZ, 1.4f, 1.4f, 0.6f, 0.66f, 0.4f, 0.34f); 
     }
     
     if(seekActive){
@@ -346,7 +344,8 @@ void buildEntities() {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    float floorU = 0.01f, floorV = 0.01f, floorUW = 0.58f, floorVH = 0.48f;
+    // TEXTURE BLEEDING FIX: We shrunk the coordinates inward significantly!
+    float floorU = 0.05f, floorV = 0.05f, floorUW = 0.42f, floorVH = 0.42f;
     float wallU = 0.01f, wallV = 0.51f, wallUW = 0.58f, wallVH = 0.48f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
@@ -373,7 +372,9 @@ void buildWorld(int cChunk, int pRm) {
     if(st <= -1){
         globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f;
         addTiledSurface(-2,0,5,4,0.01f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
-        addTiledSurface(-2,2,5,4,0.1f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
+        // ELEVATOR CEILING FIX: Kept the height at 0.01f so the engine knows it's a ceiling!
+        addTiledSurface(-2,2,5,4,0.01f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
+        
         addBox(-2,0,9,4,2,0.1f,0.4f,0.3f,0.2f,true); addBox(-2,0,5,0.1f,2,4,0.4f,0.3f,0.2f,true); addBox(1.9f,0,5,0.1f,2,4,0.4f,0.3f,0.2f,true);   
         addBox(1.8f,0.6f,6.5f,0.15f,0.3f,0.2f,0.1f,0.1f,0.1f,false); addBox(1.75f,0.7f,6.55f,0.05f,0.1f,0.1f,0,0.8f,0,false,0,1.5f); addBox(-2.0f-elevatorDoorOffset,0,5.05f,2,2,0.1f,0.6f,0.6f,0.6f,true); addBox(0.0f+elevatorDoorOffset,0,5.05f,2,2,0.1f,0.6f,0.6f,0.6f,true);  
         if(elevatorDoorOffset<0.05f) addBox(-0.02f,0,5.04f,0.04f,2,0.12f,0,0,0,false); if(elevatorClosing) collisions.push_back({-2.0f,0.0f,4.8f,2.0f,2.0f,5.1f,0});
@@ -456,9 +457,8 @@ void buildWorld(int cChunk, int pRm) {
             
             if(rooms[i].hasEyes && rE){ 
                 float ex=rooms[i].eyesX, ey=rooms[i].eyesY, ez=rooms[i].eyesZ; 
-                // UV INSET FIX: Shrunk the UV coordinates very slightly (0.01) to stop black pixel bleeding!
-                // SIZE BUMP: Changed 0.8f x 0.8f to a massive 1.4f x 1.4f. Raised Y so he doesn't clip.
-                addBillboard(ex, ey+0.3f, ez, 1.4f, 1.4f, 0.61f, 0.34f, 0.38f, 0.31f, L); 
+                // EYES OUTLINE FIX: Cropped his UV coordinates by tightening u, v, uw, vh.
+                addBillboard(ex, ey+0.3f, ez, 1.4f, 1.4f, 0.65f, 0.38f, 0.30f, 0.23f, L); 
             } 
         }
 
@@ -615,7 +615,10 @@ int main() {
 
     if(audio_ok){ 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); for(int i=0;i<=12;i++){ndspChnSetInterp(i,NDSP_INTERP_LINEAR);ndspChnSetRate(i,44100);ndspChnSetFormat(i,NDSP_FORMAT_MONO_PCM16);} 
-        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
+        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); 
+        
+        // AUDIO FIX: Changed romfs:/Wardrobe_Enter.wav to romfs:/Lights_Flicker.wav
+        sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Lights_Flicker.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
@@ -717,10 +720,14 @@ int main() {
             bool inE=(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS&&rooms[playerCurrentRoom].hasEyes); if(inE&&!inEyesRoom){ inEyesRoom=true;eyesGraceTimer=30; if(audio_ok){ndspChnWaveBufClear(4);if(sEyesAppear.data_vaddr){sEyesAppear.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAppear);}ndspChnWaveBufClear(5);if(sEyesGarble.data_vaddr){float m[12]={0};m[0]=1.8f;m[1]=1.8f;ndspChnSetMix(5,m);sEyesGarble.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(5,&sEyesGarble);}} } else if(!inE&&inEyesRoom){inEyesRoom=false;if(audio_ok)ndspChnWaveBufClear(5);} if(inE)if(eyesGraceTimer>0)eyesGraceTimer--;
             if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0){float dist=sqrtf(distSq); vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=2;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=45;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=45;} eyesDamageTimer++; if(eyesDamageTimer>=3){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=1;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=60;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
             bool iSE=(playerCurrentRoom>=seekStartRoom-5&&playerCurrentRoom<=seekStartRoom+9); int sC=(playerCurrentRoom>0&&rooms[playerCurrentRoom].lightLevel<0.5f)?400:12000;
-            if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true; screechTimer=120; float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; screechOffsetX=-sinf(sY)*2.0f; screechOffsetZ=-cosf(sY)*2.0f; screechOffsetY=(rand()%8)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
+            if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true; screechTimer=120; float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; 
+            
+            // SCREECH DISTANCE FIX: Changed from 2.0f to 1.2f to move him much closer
+            screechOffsetX=-sinf(sY)*1.2f; screechOffsetZ=-cosf(sY)*1.2f; screechOffsetY=(rand()%8)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
+            
             if(screechActive){ 
                 screechTimer--; float cOX = screechOffsetX, cOZ = screechOffsetZ; float pY = isCrouching ? 0.4f : 0.9f; float nSX = camX + cOX, nSZ = camZ + cOZ, nSY = 0.8f + screechOffsetY;
-                int att = 0; float currentDist = 2.0f; while( (!checkLineOfSight(camX, pY, camZ, nSX, nSY, nSZ) || checkCollision(nSX, nSY, nSZ, 0.4f)) && att < 10 && currentDist > 1.2f) { cOX *= 0.72f; cOZ *= 0.72f; currentDist *= 0.72f; nSX = camX + cOX; nSZ = camZ + cOZ; att++; }
+                int att = 0; float currentDist = 1.2f; while( (!checkLineOfSight(camX, pY, camZ, nSX, nSY, nSZ) || checkCollision(nSX, nSY, nSZ, 0.4f)) && att < 10 && currentDist > 1.2f) { cOX *= 0.72f; cOZ *= 0.72f; currentDist *= 0.72f; nSX = camX + cOX; nSZ = camZ + cOZ; att++; }
                 if(screechX!=nSX || screechZ!=nSZ){screechX=nSX; screechZ=nSZ; screechY=nSY; } 
                 float vx=screechX-camX, vy=screechY-(isCrouching?0.4f:0.9f), vz=screechZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0.0f){float dist=sqrtf(distSq);vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); 
                 if(dP>0.85f){ screechActive=false; screechCooldown=900; sprintf(uiMessage,"Dodged Screech!"); messageTimer=45; if(audio_ok){ndspChnWaveBufClear(0); if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sCaught);}} } else if(screechTimer<=0){ screechActive=false; screechCooldown=900; playerHealth-=20; flashRedFrames=8; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=45; if(playerHealth<=0)isDead=true; if(audio_ok){ndspChnWaveBufClear(0); if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sAttack);}} } 
