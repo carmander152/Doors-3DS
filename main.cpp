@@ -124,7 +124,6 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
     
-    // UPSIDE DOWN FIX: v and v+vh swapped
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}},
                     {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
                     {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}},
@@ -186,7 +185,6 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
             } currX += segW;
         }
     } else {
-        // WALL SQUISH FIX: Changed scaleV from (texScale * 2.0f) to (texScale)
         float scaleU = texScale, scaleV = texScale; 
         if (width >= depth) { 
             float currX = minX;
@@ -284,7 +282,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.01f, wallV = 0.51f, wallUW = 0.58f, wallVH = 0.48f, texScale = 1.2f, r = 1.0f, g = 1.0f, b = 1.0f; 
+    float wallU = 0.03f, wallV = 0.53f, wallUW = 0.44f, wallVH = 0.44f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
@@ -322,11 +320,12 @@ void buildEntities() {
     isBuildingEntities = true;
     
     if(screechActive){ 
-        addBillboard(screechX, screechY+0.2f, screechZ, 0.6f, 0.6f, 0.6f, 0.0f, 0.4f, 0.33f); 
+        // SCREECH HUGE FIX: Made Screech 1.5f x 1.5f!
+        addBillboard(screechX, screechY+0.2f, screechZ, 1.5f, 1.5f, 0.6f, 0.0f, 0.4f, 0.33f); 
     }
     if(rushActive && rushState==2){ 
-        // RUSH SIZE FIX: Shrunk him from 2.0x2.0 to 1.4x1.4
-        addBillboard(0.0f, 1.2f, rushZ, 1.4f, 1.4f, 0.6f, 0.66f, 0.4f, 0.34f); 
+        // RUSH Y-AXIS FIX: Moved Y pos down to 0.7f!
+        addBillboard(0.0f, 0.7f, rushZ, 1.4f, 1.4f, 0.6f, 0.66f, 0.4f, 0.34f); 
     }
     
     if(seekActive){
@@ -344,9 +343,8 @@ void buildEntities() {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    // TEXTURE BLEEDING FIX: We shrunk the coordinates inward significantly!
-    float floorU = 0.05f, floorV = 0.05f, floorUW = 0.42f, floorVH = 0.42f;
-    float wallU = 0.01f, wallV = 0.51f, wallUW = 0.58f, wallVH = 0.48f;     
+    float floorU = 0.03f, floorV = 0.03f, floorUW = 0.44f, floorVH = 0.44f;
+    float wallU = 0.03f, wallV = 0.53f, wallUW = 0.44f, wallVH = 0.44f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm;
@@ -372,7 +370,6 @@ void buildWorld(int cChunk, int pRm) {
     if(st <= -1){
         globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f;
         addTiledSurface(-2,0,5,4,0.01f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
-        // ELEVATOR CEILING FIX: Kept the height at 0.01f so the engine knows it's a ceiling!
         addTiledSurface(-2,2,5,4,0.01f,4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f,false); 
         
         addBox(-2,0,9,4,2,0.1f,0.4f,0.3f,0.2f,true); addBox(-2,0,5,0.1f,2,4,0.4f,0.3f,0.2f,true); addBox(1.9f,0,5,0.1f,2,4,0.4f,0.3f,0.2f,true);   
@@ -457,8 +454,8 @@ void buildWorld(int cChunk, int pRm) {
             
             if(rooms[i].hasEyes && rE){ 
                 float ex=rooms[i].eyesX, ey=rooms[i].eyesY, ez=rooms[i].eyesZ; 
-                // EYES OUTLINE FIX: Cropped his UV coordinates by tightening u, v, uw, vh.
-                addBillboard(ex, ey+0.3f, ez, 1.4f, 1.4f, 0.65f, 0.38f, 0.30f, 0.23f, L); 
+                // EYES UV RESTORED FIX: Changed back to original UVs without cropping
+                addBillboard(ex, ey+0.3f, ez, 1.4f, 1.4f, 0.6f, 0.33f, 0.4f, 0.33f, L); 
             } 
         }
 
@@ -615,10 +612,7 @@ int main() {
 
     if(audio_ok){ 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); for(int i=0;i<=12;i++){ndspChnSetInterp(i,NDSP_INTERP_LINEAR);ndspChnSetRate(i,44100);ndspChnSetFormat(i,NDSP_FORMAT_MONO_PCM16);} 
-        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); 
-        
-        // AUDIO FIX: Changed romfs:/Wardrobe_Enter.wav to romfs:/Lights_Flicker.wav
-        sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Lights_Flicker.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
+        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Lights_Flicker.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
@@ -647,7 +641,9 @@ int main() {
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
     
     C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
-    C3D_AlphaTest(true, GPU_GREATER, 0);
+    
+    // ALPHA TEST FIX: Discards transparent fringes before they write to the depth buffer!
+    C3D_AlphaTest(true, GPU_GREATER, 128);
 
     const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false; static int lastRoomForDarkCheck = -1; u64 lastTime = osGetTime(); int frames = 0; float currentFps = 0.0f;
 
@@ -720,10 +716,7 @@ int main() {
             bool inE=(playerCurrentRoom>=0&&playerCurrentRoom<TOTAL_ROOMS&&rooms[playerCurrentRoom].hasEyes); if(inE&&!inEyesRoom){ inEyesRoom=true;eyesGraceTimer=30; if(audio_ok){ndspChnWaveBufClear(4);if(sEyesAppear.data_vaddr){sEyesAppear.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAppear);}ndspChnWaveBufClear(5);if(sEyesGarble.data_vaddr){float m[12]={0};m[0]=1.8f;m[1]=1.8f;ndspChnSetMix(5,m);sEyesGarble.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(5,&sEyesGarble);}} } else if(!inE&&inEyesRoom){inEyesRoom=false;if(audio_ok)ndspChnWaveBufClear(5);} if(inE)if(eyesGraceTimer>0)eyesGraceTimer--;
             if(inE&&hideState==NOT_HIDING){ float vx=rooms[playerCurrentRoom].eyesX-camX, vy=rooms[playerCurrentRoom].eyesY-(isCrouching?0.4f:0.9f), vz=rooms[playerCurrentRoom].eyesZ-camZ, distSq=vx*vx+vy*vy+vz*vz; if(distSq>0){float dist=sqrtf(distSq); vx/=dist;vy/=dist;vz/=dist;} float fx=-sinf(camYaw)*cosf(camPitch), fy=sinf(camPitch), fz=-cosf(camYaw)*cosf(camPitch), dP=(fx*vx)+(fy*vy)+(fz*vz); if(dP>0.85f&&checkLineOfSight(camX,(isCrouching?0.4f:0.9f),camZ,rooms[playerCurrentRoom].eyesX,rooms[playerCurrentRoom].eyesY,rooms[playerCurrentRoom].eyesZ)){ if(eyesGraceTimer<=0){ if(!isLookingAtEyes){isLookingAtEyes=true;eyesDamageTimer=2;eyesDamageAccumulator=4;if(audio_ok&&sEyesAttack.data_vaddr&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=45;}} if(audio_ok&&sEyesAttack.data_vaddr&&(sEyesAttack.status==NDSP_WBUF_DONE||sEyesAttack.status==NDSP_WBUF_FREE)&&eyesSoundCooldown<=0){ndspChnWaveBufClear(4);sEyesAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(4,&sEyesAttack);eyesSoundCooldown=45;} eyesDamageTimer++; if(eyesDamageTimer>=3){playerHealth-=1;eyesDamageTimer=0;flashRedFrames=1;eyesDamageAccumulator++;if(eyesDamageAccumulator>=5){eyesDamageAccumulator=0;if(audio_ok&&sEyesHit.data_vaddr){ndspChnWaveBufClear(6);sEyesHit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(6,&sEyesHit);}}} if(playerHealth<=0){isDead=true;sprintf(uiMessage,"You stared at Eyes!");messageTimer=60;} } }else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;} } else{isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;}
             bool iSE=(playerCurrentRoom>=seekStartRoom-5&&playerCurrentRoom<=seekStartRoom+9); int sC=(playerCurrentRoom>0&&rooms[playerCurrentRoom].lightLevel<0.5f)?400:12000;
-            if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true; screechTimer=120; float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; 
-            
-            // SCREECH DISTANCE FIX: Changed from 2.0f to 1.2f to move him much closer
-            screechOffsetX=-sinf(sY)*1.2f; screechOffsetZ=-cosf(sY)*1.2f; screechOffsetY=(rand()%8)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
+            if(!screechActive&&screechCooldown<=0&&hideState==NOT_HIDING&&playerCurrentRoom>0&&!iSE&&(rand()%sC==0)){ screechActive=true; screechTimer=120; float aO=1.57f+((rand()%200)/100.0f)*1.57f, sY=camYaw+aO; screechOffsetX=-sinf(sY)*1.2f; screechOffsetZ=-cosf(sY)*1.2f; screechOffsetY=(rand()%8)/10.0f; if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} }
             
             if(screechActive){ 
                 screechTimer--; float cOX = screechOffsetX, cOZ = screechOffsetZ; float pY = isCrouching ? 0.4f : 0.9f; float nSX = camX + cOX, nSZ = camZ + cOZ, nSY = 0.8f + screechOffsetY;
