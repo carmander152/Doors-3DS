@@ -42,9 +42,11 @@ struct RoomSetup {
     int correctDupePos, dupeNumbers[3]; 
 } rooms[TOTAL_ROOMS];
 
+// === GLOBALS (Moved camera vars here so Billboards can read them!) ===
 int playerHealth = 100, flashRedFrames = 0, seekStartRoom = 0, playerCoins = 0, elevatorTimer = 796, messageTimer = 0;
 bool hasKey = false, lobbyKeyPickedUp = false, isCrouching = false, isDead = false, inElevator = true, elevatorDoorsOpen = false, elevatorClosing = false, elevatorJamFinished = false;
 bool doorOpen[TOTAL_ROOMS] = {false}; HideState hideState = NOT_HIDING; 
+float camX=0.0f, camZ=7.5f, camYaw=0.0f, camPitch=0.0f; // <-- Camera is now global
 float elevatorDoorOffset = 0.0f; char uiMessage[50] = "";
 bool screechActive = false, rushActive = false, seekActive = false, inEyesRoom = false, isLookingAtEyes = false;
 int screechTimer = 0, screechCooldown = 0, rushState = 0, rushTimer = 0, rushCooldown = 0, seekState = 0, seekTimer = 0, eyesDamageTimer = 0, eyesDamageAccumulator = 0, eyesGraceTimer = 0, eyesSoundCooldown = 0;
@@ -111,6 +113,33 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     addFaceTextured({{x,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v2},{r_c,g_c,b_c,1}}); 
     addFaceTextured({{x,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
 }
+
+// === NEW BILLBOARD FUNCTION ===
+// Creates a flat plane that dynamically twists to always face the camera's yaw
+void addBillboard(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light = 1.0f) {
+    float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
+    float hw = w / 2.0f, hh = h / 2.0f;
+    
+    // Calculate the billboard's local Right vector based on the player's camera yaw
+    float cosY = cosf(camYaw);
+    float sinY = sinf(camYaw);
+    float rx = hw * cosY;
+    float rz = -hw * sinY;
+    
+    // Generate the 4 corners of the plane rotating around the center (cx, cy, cz)
+    float bl_x = cx - rx, bl_y = cy - hh, bl_z = cz - rz;
+    float br_x = cx + rx, br_y = cy - hh, br_z = cz + rz;
+    float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
+    float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
+    
+    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{br_x, br_y, br_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{tl_x, tl_y, tl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}},
+                    {{br_x, br_y, br_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{tr_x, tr_y, tr_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
+                    {{tl_x, tl_y, tl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}});
+}
+// =================================
 
 void addBoxColored(float x, float y, float z, float w, float h, float d, float r, float g, float b, float light = 1.0f) {
     float r_c=r*light*globalTintR, g_c=g*light*globalTintG, b_c=b*light*globalTintB;
@@ -265,7 +294,8 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f, texScale = 1.2f, r = 1.0f, g = 1.0f, b = 1.0f; 
+    // NEW ATLAS: Wallpaper is u=0.0, v=0.0, w=0.6, h=0.5
+    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.6f, wallVH = 0.5f, texScale = 1.2f, r = 1.0f, g = 1.0f, b = 1.0f; 
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
@@ -303,8 +333,16 @@ void buildEntities() {
     entity_mesh_colored.clear(); entity_mesh_textured.clear();
     isBuildingEntities = true;
     
-    if(screechActive){ addBox(screechX-0.2f,screechY,screechZ-0.2f,0.4f,0.4f,0.4f,0.05f,0.05f,0.05f,false); addBox(screechX-0.22f,screechY+0.1f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); addBox(screechX-0.22f,screechY+0.25f,screechZ-0.22f,0.44f,0.05f,0.44f,0.9f,0.9f,0.9f,false); }
-    if(rushActive && rushState==2){ addBox(-1.2f,0.2f,rushZ-0.5f,2.4f,2.0f,1.0f,0.05f,0.05f,0.05f,false); addBox(-0.8f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(0.4f,1.4f,rushZ-0.55f,0.4f,0.4f,0.1f,0.9f,0.9f,0.9f,false); addBox(-0.6f,0.5f,rushZ-0.55f,1.2f,0.6f,0.1f,0.8f,0.8f,0.8f,false); }
+    // NEW TEXTURED BILLBOARDS FOR ENTITIES
+    if(screechActive){ 
+        // Screech Texture: u=0.6, v=0.66, uw=0.4, vh=0.34
+        addBillboard(screechX, screechY+0.2f, screechZ, 0.6f, 0.6f, 0.6f, 0.66f, 0.4f, 0.34f); 
+    }
+    if(rushActive && rushState==2){ 
+        // Rush Texture: u=0.6, v=0.0, uw=0.4, vh=0.33
+        addBillboard(0.0f, 1.2f, rushZ, 2.0f, 2.0f, 0.6f, 0.0f, 0.4f, 0.33f); 
+    }
+    
     if(seekActive){
         float sY=0.0f,sH=1.1f; if(seekState==1){ if(seekTimer<=65)sY=-1.1f+(seekTimer/65.0f)*1.1f; else{sY=0;sH=1.1f;} srand(seekTimer); for(int d=0;d<8;d++){ float dx=-1.5f+(rand()%30)/10.0f, dz=seekZ-0.5f-(rand()%30)/10.0f, dy=1.8f-fmodf((seekTimer+d*10)*0.10f,1.8f); addBox(dx,dy,dz,0.08f,0.2f,0.08f,0.05f,0.05f,0.05f,false); } srand(time(NULL)); } else if(seekState==2){sY=0;sH=1.1f;}
         addBox(-0.3f,sY,seekZ-0.3f,0.6f,sH,0.6f,0.05f,0.05f,0.05f,false); addBox(-0.15f,sY+0.8f,seekZ-0.35f,0.3f,0.2f,0.06f,0.9f,0.9f,0.9f,false,0,1.5f); addBox(-0.05f,sY+0.8f,seekZ-0.38f,0.1f,0.2f,0.04f,0,0,0,false,0,1.5f); if(seekState==1) addBox(-1.0f,0.01f,seekZ-1.0f,2.0f,0.01f,2.0f,0.02f,0.02f,0.02f,false);
@@ -320,8 +358,10 @@ void buildEntities() {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    float floorU = 0.52f, floorV = 0.0f, floorUW = 0.48f, floorVH = 1.0f, wallU = 0.0f, wallV = 0.0f, wallUW = 0.48f, wallVH = 1.0f;     
-    // LARGE TEXTURE SCALING TO SAVE GPU MEMORY
+    // NEW ATLAS: Wood Floor is u=0.0, v=0.5, w=0.6, h=0.5
+    // NEW ATLAS: Wallpaper is u=0.0, v=0.0, w=0.6, h=0.5
+    float floorU = 0.0f, floorV = 0.5f, floorUW = 0.6f, floorVH = 0.5f;
+    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.6f, wallVH = 0.5f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm;
@@ -428,41 +468,34 @@ void buildWorld(int cChunk, int pRm) {
 
         if (isInteriorVisible) {
             if(rE && (rooms[i].hasSeekEyes||rooms[i].isSeekChase)){ srand(i*12345); int wC=rooms[i].hasSeekEyes?rooms[i].seekEyeCount:15; for(int e=0;e<wC;e++){ bool iL=(rand()%2==0); float eZ=z-0.5f-(rand()%90)/10.0f, eY=0.2f+(rand()%160)/100.0f; if(iL){ addBox(-2.95f,eY,eZ,0.1f,0.3f,0.4f,0.05f,0.05f,0.05f,false,0,L); addBox(-2.88f,eY+0.05f,eZ+0.05f,0.06f,0.2f,0.3f,0.95f,0.95f,0.95f,false,0,L); addBox(-2.84f,eY+0.1f,eZ+0.12f,0.04f,0.1f,0.16f,0,0,0,false,0,1.5f); } else{ addBox(2.85f,eY,eZ,0.1f,0.3f,0.4f,0.05f,0.05f,0.05f,false,0,L); addBox(2.82f,eY+0.05f,eZ+0.05f,0.06f,0.2f,0.3f,0.95f,0.95f,0.95f,false,0,L); addBox(2.80f,eY+0.1f,eZ+0.12f,0.04f,0.1f,0.16f,0,0,0,false,0,1.5f); } } srand(time(NULL)); }
-            if(rooms[i].hasEyes && rE){ float ex=rooms[i].eyesX, ey=rooms[i].eyesY, ez=rooms[i].eyesZ; addBox(ex-0.2f,ey-0.2f,ez-0.2f,0.4f,0.4f,0.4f,0.6f,0.1f,0.8f,false,0,L); addBox(ex-0.25f,ey-0.1f,ez-0.1f,0.5f,0.2f,0.2f,0.9f,0.9f,0.9f,false,0,L); addBox(ex-0.1f,ey-0.25f,ez-0.1f,0.2f,0.5f,0.2f,0.9f,0.9f,0.9f,false,0,L); addBox(ex-0.26f,ey-0.05f,ez-0.05f,0.02f,0.1f,0.1f,0,0,0,false,0,1.5f); addBox(ex+0.24f,ey-0.05f,ez-0.05f,0.02f,0.1f,0.1f,0,0,0,false,0,1.5f); } 
+            
+            // NEW TEXTURED BILLBOARDS FOR EYES
+            if(rooms[i].hasEyes && rE){ 
+                float ex=rooms[i].eyesX, ey=rooms[i].eyesY, ez=rooms[i].eyesZ; 
+                // Eyes Texture: u=0.6, v=0.33, uw=0.4, vh=0.33
+                addBillboard(ex, ey, ez, 0.8f, 0.8f, 0.6f, 0.33f, 0.4f, 0.33f, L); 
+            } 
         }
 
         if(rooms[i].isSeekChase){ srand(i*777); int oT=rand()%3; float oZ=z-5.0f; if(oT==0) addBox(-3,0.7f,oZ,6,1.1f,0.4f,0.2f,0.15f,0.1f,true,0,L); else if(oT==1){addBox(-3,0,oZ,3,1.8f,0.4f,0.2f,0.15f,0.1f,true,0,L); addBox(0,0.7f,oZ,3,1.1f,0.4f,0.2f,0.15f,0.1f,true,0,L);} else{addBox(0,0,oZ,3,1.8f,0.4f,0.2f,0.15f,0.1f,true,0,L); addBox(-3,0.7f,oZ,3,1.1f,0.4f,0.2f,0.15f,0.1f,true,0,L);} srand(time(NULL)); } 
         else if(rooms[i].isSeekFinale){ 
-            // Finale side walls
             addBox(-2.95f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); 
             addBox(2.85f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); 
-            
-            // Obstacle 1: Black Wall (left) & Debris (right)
             addBox(-3,0,z-2,3.5f,1.8f,0.4f,0.05f,0.05f,0.05f,true,0,L); 
             rooms[i].pW[0]=2.6f; rooms[i].pZ[0]=z-2.0f; rooms[i].pSide[0]=1; 
             addBox(2,0.8f,z-2.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); 
-            
-            // Fire Obstacle 1
             rooms[i].pW[1]=1.8f; rooms[i].pZ[1]=z-3.5f; rooms[i].pSide[1]=0; 
             addBox(1.4f,0,z-3.9f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); 
             addBox(1.6f,0.3f,z-3.7f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
-
-            // Obstacle 2: Black Wall (middle) & Debris (left)
             addBox(-0.5f,0,z-5,3.5f,1.8f,0.4f,0.05f,0.05f,0.05f,true,0,L); 
             rooms[i].pW[2]=-2.6f; rooms[i].pZ[2]=z-5.0f; rooms[i].pSide[2]=1; 
             addBox(-3,0.8f,z-5.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); 
-            
-            // Fire Obstacle 2
             rooms[i].pW[3]=-1.8f; rooms[i].pZ[3]=z-6.5f; rooms[i].pSide[3]=0; 
             addBox(-2.2f,0,z-6.9f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); 
             addBox(-2.0f,0.3f,z-6.7f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
-
-            // Obstacle 3: Black Wall (left) & Debris (right)
             addBox(-3,0,z-8,3.5f,1.8f,0.4f,0.05f,0.05f,0.05f,true,0,L); 
             rooms[i].pW[4]=2.6f; rooms[i].pZ[4]=z-8.0f; rooms[i].pSide[4]=1; 
             addBox(2,0.8f,z-8.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); 
-            
-            // Fire Obstacle 3
             rooms[i].pW[5]=0.8f; rooms[i].pZ[5]=z-9.0f; rooms[i].pSide[5]=0; 
             addBox(0.4f,0,z-9.4f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); 
             addBox(0.6f,0.3f,z-9.2f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
@@ -489,7 +522,6 @@ void buildWorld(int cChunk, int pRm) {
                 addBox(isL?-4.05f:3.95f, 0.7f, dZ-1.05f, 0.05f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); 
                 collisions.push_back({isL?-4.1f:3.0f, 0.0f, dZ-1.15f, isL?-3.0f:4.1f, 1.8f, dZ-1.05f, 4}); 
             } else { 
-                // Closed door geometry (Main door style: thick dark wood, vertical silver handle)
                 addBox(isL?-3.0f:2.9f, 0, dZ-0.05f, 0.1f, 1.4f, -1.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
                 float handleX = isL ? -2.95f : 2.85f;
                 addBox(handleX, 0.7f, dZ-0.15f, 0.1f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); 
@@ -622,8 +654,15 @@ int main() {
     memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex)); 
     GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
     
+    // ====== ALPHA BLENDING & DEPTH SETTINGS ======
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
-    float camX=0, camZ=7.5f, camYaw=0, camPitch=0; const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false; static int lastRoomForDarkCheck = -1; u64 lastTime = osGetTime(); int frames = 0; float currentFps = 0.0f;
+    
+    // NEW: Enable Transparency and fix the invisible depth-blocking!
+    C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
+    C3D_AlphaTest(true, GPU_GREATER, 0);
+    // =============================================
+
+    const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false; static int lastRoomForDarkCheck = -1; u64 lastTime = osGetTime(); int frames = 0; float currentFps = 0.0f;
 
     while (aptMainLoop()) {
         u64 currTime = osGetTime(); frames++; if (currTime - lastTime >= 1000) { currentFps = frames / ((currTime - lastTime) / 1000.0f); frames = 0; lastTime = currTime; }
