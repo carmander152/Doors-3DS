@@ -42,11 +42,11 @@ struct RoomSetup {
     int correctDupePos, dupeNumbers[3]; 
 } rooms[TOTAL_ROOMS];
 
-// === GLOBALS (Moved camera vars here so Billboards can read them!) ===
+// === GLOBALS ===
 int playerHealth = 100, flashRedFrames = 0, seekStartRoom = 0, playerCoins = 0, elevatorTimer = 796, messageTimer = 0;
 bool hasKey = false, lobbyKeyPickedUp = false, isCrouching = false, isDead = false, inElevator = true, elevatorDoorsOpen = false, elevatorClosing = false, elevatorJamFinished = false;
 bool doorOpen[TOTAL_ROOMS] = {false}; HideState hideState = NOT_HIDING; 
-float camX=0.0f, camZ=7.5f, camYaw=0.0f, camPitch=0.0f; // <-- Camera is now global
+float camX=0.0f, camZ=7.5f, camYaw=0.0f, camPitch=0.0f; 
 float elevatorDoorOffset = 0.0f; char uiMessage[50] = "";
 bool screechActive = false, rushActive = false, seekActive = false, inEyesRoom = false, isLookingAtEyes = false;
 int screechTimer = 0, screechCooldown = 0, rushState = 0, rushTimer = 0, rushCooldown = 0, seekState = 0, seekTimer = 0, eyesDamageTimer = 0, eyesDamageAccumulator = 0, eyesGraceTimer = 0, eyesSoundCooldown = 0;
@@ -114,32 +114,26 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     addFaceTextured({{x,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
 }
 
-// === NEW BILLBOARD FUNCTION ===
-// Creates a flat plane that dynamically twists to always face the camera's yaw
 void addBillboard(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light = 1.0f) {
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f;
-    
-    // Calculate the billboard's local Right vector based on the player's camera yaw
-    float cosY = cosf(camYaw);
-    float sinY = sinf(camYaw);
-    float rx = hw * cosY;
-    float rz = -hw * sinY;
-    
-    // Generate the 4 corners of the plane rotating around the center (cx, cy, cz)
+    float cosY = cosf(camYaw), sinY = sinf(camYaw);
+    float rx = hw * cosY, rz = -hw * sinY;
     float bl_x = cx - rx, bl_y = cy - hh, bl_z = cz - rz;
     float br_x = cx + rx, br_y = cy - hh, br_z = cz + rz;
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
     
-    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}},
-                    {{br_x, br_y, br_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}},
-                    {{tl_x, tl_y, tl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}},
-                    {{br_x, br_y, br_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}},
-                    {{tr_x, tr_y, tr_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
-                    {{tl_x, tl_y, tl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}});
+    // UPSIDE DOWN FIX: 
+    // We swapped 'v' and 'v+vh' on the Y-axis coordinates!
+    // Now the top of the image renders on the bottom vertices, flipping them perfectly.
+    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}},
+                    {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
+                    {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
+                    {{tr_x, tr_y, tr_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}});
 }
-// =================================
 
 void addBoxColored(float x, float y, float z, float w, float h, float d, float r, float g, float b, float light = 1.0f) {
     float r_c=r*light*globalTintR, g_c=g*light*globalTintG, b_c=b*light*globalTintB;
@@ -167,7 +161,6 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     
-    // FAST MATH: Avoids the horrific CPU slow-down of software fmodf!
     auto getP = [](float val, float s) { 
         float p = val - (float)((int)(val / s)) * s; 
         if (p < 0) p += s; 
@@ -232,7 +225,6 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     }
 }
 
-// FAST COLLISION REJECTION: Skips laggy AABB math for far away objects
 bool checkCollision(float x, float y, float z, float h) {
     if(isDead) return true; 
     float r = 0.2f; 
@@ -244,7 +236,6 @@ bool checkCollision(float x, float y, float z, float h) {
     return false;
 }
 
-// FAST LOS REJECTION
 bool checkLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2) {
     float minVX = fminf(x1, x2) - 1.0f; float maxVX = fmaxf(x1, x2) + 1.0f;
     float minVZ = fminf(z1, z2) - 1.0f; float maxVZ = fmaxf(z1, z2) + 1.0f;
@@ -294,8 +285,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    // NEW ATLAS: Wallpaper is u=0.0, v=0.0, w=0.6, h=0.5
-    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.6f, wallVH = 0.5f, texScale = 1.2f, r = 1.0f, g = 1.0f, b = 1.0f; 
+    float wallU = 0.01f, wallV = 0.51f, wallUW = 0.58f, wallVH = 0.48f, texScale = 1.2f, r = 1.0f, g = 1.0f, b = 1.0f; 
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
@@ -311,7 +301,6 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     bb(-3.0f, 0.4f); if(!lD) bb(-2.6f, 1.2f); bb(-1.4f, 0.8f); if(!cD) bb(-0.6f, 1.2f); bb(0.6f, 0.8f); if(!rD) bb(1.4f, 1.2f); bb(2.6f, 0.4f);
 
     auto dr = [&](float dx, bool o) {
-        // DOOR FRAMES
         addBox(dx, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         addBox(dx + 1.15f, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         addBox(dx + 0.05f, 1.35f, z, 1.1f, 0.05f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
@@ -333,14 +322,13 @@ void buildEntities() {
     entity_mesh_colored.clear(); entity_mesh_textured.clear();
     isBuildingEntities = true;
     
-    // NEW TEXTURED BILLBOARDS FOR ENTITIES
     if(screechActive){ 
-        // Screech Texture: u=0.6, v=0.66, uw=0.4, vh=0.34
-        addBillboard(screechX, screechY+0.2f, screechZ, 0.6f, 0.6f, 0.6f, 0.66f, 0.4f, 0.34f); 
+        // Screech now uses Rush's Texture UVs
+        addBillboard(screechX, screechY+0.2f, screechZ, 0.6f, 0.6f, 0.6f, 0.0f, 0.4f, 0.33f); 
     }
     if(rushActive && rushState==2){ 
-        // Rush Texture: u=0.6, v=0.0, uw=0.4, vh=0.33
-        addBillboard(0.0f, 1.2f, rushZ, 2.0f, 2.0f, 0.6f, 0.0f, 0.4f, 0.33f); 
+        // Rush now uses Screech's Texture UVs
+        addBillboard(0.0f, 1.2f, rushZ, 2.0f, 2.0f, 0.6f, 0.66f, 0.4f, 0.34f); 
     }
     
     if(seekActive){
@@ -358,10 +346,8 @@ void buildEntities() {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    // NEW ATLAS: Wood Floor is u=0.0, v=0.5, w=0.6, h=0.5
-    // NEW ATLAS: Wallpaper is u=0.0, v=0.0, w=0.6, h=0.5
-    float floorU = 0.0f, floorV = 0.5f, floorUW = 0.6f, floorVH = 0.5f;
-    float wallU = 0.0f, wallV = 0.0f, wallUW = 0.6f, wallVH = 0.5f;     
+    float floorU = 0.01f, floorV = 0.01f, floorUW = 0.58f, floorVH = 0.48f;
+    float wallU = 0.01f, wallV = 0.51f, wallUW = 0.58f, wallVH = 0.48f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm;
@@ -399,7 +385,6 @@ void buildWorld(int cChunk, int pRm) {
         addBox(-1.55f,0.15f,-8.6f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); addBox(-2.5f,0.15f,-9.95f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); addBox(-1.55f,0.15f,-9.95f,0.05f,0.45f,-0.05f,0.8f,0.7f,0.2f,false); addBox(-2.5f,0.6f,-8.6f,1,0.05f,-1.4f,0.8f,0.7f,0.2f,true); 
         if(!lobbyKeyPickedUp){ addBox(-4.8f,0.9f,-9.9f,0.2f,0.2f,0.05f,0.3f,0.2f,0.1f,false); addBox(-4.72f,0.75f,-9.86f,0.035f,0.1f,0.035f,1.0f,0.84f,0.0f,false); }
         
-        // Lobby Baseboards
         addBox(-5.9f, 0.0f, 5.0f, 0.04f, 0.12f, -15.0f, 0.12f, 0.06f, 0.03f, false);
         addBox(5.86f, 0.0f, 5.0f, 0.04f, 0.12f, -15.0f, 0.12f, 0.06f, 0.03f, false);
         addBox(-6.0f, 0.0f, 5.0f, 4.0f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false);
@@ -445,7 +430,6 @@ void buildWorld(int cChunk, int pRm) {
                 addTiledSurface(-2.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
                 addTiledSurface(1.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
                 
-                // Library Baseboards
                 addBox(-6.0f, 0.0f, z, 0.04f, 0.12f, -20.0f, 0.12f, 0.06f, 0.03f, false, 0, cL);
                 addBox(5.96f, 0.0f, z, 0.04f, 0.12f, -20.0f, 0.12f, 0.06f, 0.03f, false, 0, cL);
                 addBox(-6.0f, 0.0f, z, 4.6f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, cL);
@@ -458,6 +442,7 @@ void buildWorld(int cChunk, int pRm) {
         else{globalTintR=1.0f;globalTintG=1.0f;globalTintB=1.0f;}
 
         if(i==seekStartRoom+9 && rooms[i].isLocked) addBox(-3.0f,0,z+0.2f,6.0f,1.8f,0.1f,0.4f,0.7f,1.0f,true,0,1.5f);
+        
         if(!(i==seekStartRoom+1 || i==seekStartRoom+2)){ if(rooms[i].isDupeRoom){ if(pRm>=i) addWallWithDoors(z,(rooms[i].correctDupePos==0),((rooms[i].correctDupePos==0)&&doorOpen[i]),(rooms[i].correctDupePos==1),((rooms[i].correctDupePos==1)&&doorOpen[i]),(rooms[i].correctDupePos==2),((rooms[i].correctDupePos==2)&&doorOpen[i]),i,wL); else addWallWithDoors(z,true,(rooms[i].correctDupePos==0&&doorOpen[i]),true,(rooms[i].correctDupePos==1&&doorOpen[i]),true,(rooms[i].correctDupePos==2&&doorOpen[i]),i,wL); } else addWallWithDoors(z,(rooms[i].doorPos==0),((rooms[i].doorPos==0)&&doorOpen[i]),(rooms[i].doorPos==1),((rooms[i].doorPos==1)&&doorOpen[i]),(rooms[i].doorPos==2),((rooms[i].doorPos==2)&&doorOpen[i]),i,wL); }
         
         if(seekState==1){globalTintR=1.0f;globalTintG=0.2f;globalTintB=0.2f;} 
@@ -469,11 +454,11 @@ void buildWorld(int cChunk, int pRm) {
         if (isInteriorVisible) {
             if(rE && (rooms[i].hasSeekEyes||rooms[i].isSeekChase)){ srand(i*12345); int wC=rooms[i].hasSeekEyes?rooms[i].seekEyeCount:15; for(int e=0;e<wC;e++){ bool iL=(rand()%2==0); float eZ=z-0.5f-(rand()%90)/10.0f, eY=0.2f+(rand()%160)/100.0f; if(iL){ addBox(-2.95f,eY,eZ,0.1f,0.3f,0.4f,0.05f,0.05f,0.05f,false,0,L); addBox(-2.88f,eY+0.05f,eZ+0.05f,0.06f,0.2f,0.3f,0.95f,0.95f,0.95f,false,0,L); addBox(-2.84f,eY+0.1f,eZ+0.12f,0.04f,0.1f,0.16f,0,0,0,false,0,1.5f); } else{ addBox(2.85f,eY,eZ,0.1f,0.3f,0.4f,0.05f,0.05f,0.05f,false,0,L); addBox(2.82f,eY+0.05f,eZ+0.05f,0.06f,0.2f,0.3f,0.95f,0.95f,0.95f,false,0,L); addBox(2.80f,eY+0.1f,eZ+0.12f,0.04f,0.1f,0.16f,0,0,0,false,0,1.5f); } } srand(time(NULL)); }
             
-            // NEW TEXTURED BILLBOARDS FOR EYES
             if(rooms[i].hasEyes && rE){ 
                 float ex=rooms[i].eyesX, ey=rooms[i].eyesY, ez=rooms[i].eyesZ; 
-                // Eyes Texture: u=0.6, v=0.33, uw=0.4, vh=0.33
-                addBillboard(ex, ey, ez, 0.8f, 0.8f, 0.6f, 0.33f, 0.4f, 0.33f, L); 
+                // UV INSET FIX: Shrunk the UV coordinates very slightly (0.01) to stop black pixel bleeding!
+                // SIZE BUMP: Changed 0.8f x 0.8f to a massive 1.4f x 1.4f. Raised Y so he doesn't clip.
+                addBillboard(ex, ey+0.3f, ez, 1.4f, 1.4f, 0.61f, 0.34f, 0.38f, 0.31f, L); 
             } 
         }
 
@@ -501,9 +486,6 @@ void buildWorld(int cChunk, int pRm) {
             addBox(0.6f,0.3f,z-9.2f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
         } 
         else if(rooms[i].isSeekHallway){ addBox(-2.95f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); addBox(2.85f,0.4f,z-8.5f,0.1f,1.0f,7.0f,0.4f,0.7f,1.0f,false,0,L); } 
-        
-        addTiledSurface(-3, 0, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
-        addTiledSurface(-3, 1.8f, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
         
         auto drawSide = [&](bool isL) {
             float dZ=z+(isL?rooms[i].leftDoorOffset:rooms[i].rightDoorOffset), bL=fabsf(dZ-z), aL=fabsf((z-10.0f)-(dZ-1.2f)), m=(isL?-1.0f:1.0f), bX=isL?-3.0f:2.9f, dO=isL?rooms[i].leftDoorOpen:rooms[i].rightDoorOpen;
@@ -563,17 +545,22 @@ void buildWorld(int cChunk, int pRm) {
             }
         };
         
-        if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(-2.90f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); }
-        if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(2.86f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); } 
-        addBox(-0.4f,1.78f,z-5.4f,0.8f,0.02f,0.8f,(L>0.5f?0.9f:0.2f),(L>0.5f?0.9f:0.2f),(L>0.5f?0.8f:0.2f),false);
-        
-        if(isInteriorVisible && !tAN){
-            for(int s=0;s<3;s++){ float zC=z-2.5f-(s*2.5f); int t=rooms[i].slotType[s]; if(t==1)buildCabinet(zC,true,L); else if(t==2)buildCabinet(zC,false,L); else if(t==5)buildDresser(zC,true,rooms[i].animMain[s],rooms[i].slotItem[s],L); else if(t==6)buildDresser(zC,false,rooms[i].animMain[s],rooms[i].slotItem[s],L); }
-            for(int p=0;p<rooms[i].pCount;p++){ 
-                float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p]; 
-                float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.88f:2.82f; 
-                float pR=rooms[i].pR[p], pG=rooms[i].pG[p], pB=rooms[i].pB[p];
-                addBox(wX, pY-0.05f, z-pZ+0.05f, 0.06f, pH+0.1f, -pW-0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(cX, pY, z-pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+        if (isInteriorVisible) {
+            addTiledSurface(-3, 0, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
+            addTiledSurface(-3, 1.8f, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
+            
+            if(rooms[i].hasLeftRoom) drawSide(true); else { addTiledSurface(-3.0f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(-3.02f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(-2.90f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); }
+            if(rooms[i].hasRightRoom) drawSide(false); else { addTiledSurface(2.9f, 0.4f, z, 0.1f, 1.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); addTiledSurface(2.88f, 0.0f, z, 0.12f, 0.4f, -10.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false); addBox(2.86f, 0.0f, z, 0.04f, 0.12f, -10.0f, 0.12f, 0.06f, 0.03f, false, 0, L); } 
+            addBox(-0.4f,1.78f,z-5.4f,0.8f,0.02f,0.8f,(L>0.5f?0.9f:0.2f),(L>0.5f?0.9f:0.2f),(L>0.5f?0.8f:0.2f),false);
+            
+            if (!tAN) {
+                for(int s=0;s<3;s++){ float zC=z-2.5f-(s*2.5f); int t=rooms[i].slotType[s]; if(t==1)buildCabinet(zC,true,L); else if(t==2)buildCabinet(zC,false,L); else if(t==5)buildDresser(zC,true,rooms[i].animMain[s],rooms[i].slotItem[s],L); else if(t==6)buildDresser(zC,false,rooms[i].animMain[s],rooms[i].slotItem[s],L); }
+                for(int p=0;p<rooms[i].pCount;p++){ 
+                    float pZ=rooms[i].pZ[p],pH=rooms[i].pH[p],pW=rooms[i].pW[p],pY=rooms[i].pY[p]; 
+                    float wX=rooms[i].pSide[p]==0?-2.95f:2.89f, cX=rooms[i].pSide[p]==0?-2.88f:2.82f; 
+                    float pR=rooms[i].pR[p], pG=rooms[i].pG[p], pB=rooms[i].pB[p];
+                    addBox(wX, pY-0.05f, z-pZ+0.05f, 0.06f, pH+0.1f, -pW-0.1f, 0.15f, 0.1f, 0.05f, false, 0, L); addBox(cX, pY, z-pZ, 0.07f, pH, -pW, pR, pG, pB, false, 0, L); 
+                }
             }
         }
         
@@ -628,7 +615,7 @@ int main() {
 
     if(audio_ok){ 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); for(int i=0;i<=12;i++){ndspChnSetInterp(i,NDSP_INTERP_LINEAR);ndspChnSetRate(i,44100);ndspChnSetFormat(i,NDSP_FORMAT_MONO_PCM16);} 
-        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Lights_Flicker.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
+        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
@@ -654,13 +641,10 @@ int main() {
     memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex)); 
     GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
     
-    // ====== ALPHA BLENDING & DEPTH SETTINGS ======
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); C3D_CullFace(GPU_CULL_NONE); 
     
-    // NEW: Enable Transparency and fix the invisible depth-blocking!
     C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
     C3D_AlphaTest(true, GPU_GREATER, 0);
-    // =============================================
 
     const char symbols[] = "@!$#&*%?"; static float startTouchX=0, startTouchY=0; static bool wasTouching=false; static int lastRoomForDarkCheck = -1; u64 lastTime = osGetTime(); int frames = 0; float currentFps = 0.0f;
 
@@ -753,7 +737,6 @@ int main() {
                         if(b.type==1){
                             hideState=IN_CABINET;camZ=rCZ;camPitch=0;
                             camX=(cCX-tOX<0)?-2.5f+tOX:2.5f+tOX;
-                            // Face straight out the crack into the room
                             camYaw=(cCX-tOX<0)?-1.57f:1.57f; 
                         }else{
                             hideState=UNDER_BED;camZ=rCZ;camPitch=0;
@@ -762,7 +745,7 @@ int main() {
                         } 
                         
                         isCrouching=false;
-                        needsVBOUpdate=true; // Rebuild the room so the black box vanishes!
+                        needsVBOUpdate=true; 
                         if(audio_ok&&sWardrobeEnter.data_vaddr){ndspChnWaveBufClear(10);sWardrobeEnter.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeEnter);}
                         break; 
                     } 
@@ -772,14 +755,11 @@ int main() {
                 if(hideState==IN_CABINET||hideState==UNDER_BED){
                     float tOX=(camX<-4.0f)?-6.0f:((camX>4.0f)?6.0f:0.0f);
                     
-                    // Step out directly in front of the furniture
                     camX = (camX - tOX < 0) ? -1.4f + tOX : 1.4f + tOX; 
-                    
-                    // Face away from the furniture across the room
                     camYaw = (camX - tOX < 0) ? -1.57f : 1.57f;
                     
                     hideState=NOT_HIDING;
-                    needsVBOUpdate=true; // Rebuild the room so the black box comes back!
+                    needsVBOUpdate=true; 
                     
                     if(audio_ok&&sWardrobeExit.data_vaddr){ndspChnWaveBufClear(10);sWardrobeExit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeExit);}
                 } 
@@ -887,8 +867,6 @@ int main() {
         }
 
         C3D_FrameEnd(0);
-        
-        // PERFECT 30 FPS LOCK: Force the CPU to wait for one extra screen refresh cycle
         gspWaitForVBlank(); 
     }
     
