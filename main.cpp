@@ -442,7 +442,7 @@ void buildWorld(int cChunk, int pRm) {
             rooms[i].pW[0]=2.6f; rooms[i].pZ[0]=z-2.0f; rooms[i].pSide[0]=1; 
             addBox(2,0.8f,z-2.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); 
             
-            // Fire Obstacle 1 (RESTORED)
+            // Fire Obstacle 1
             rooms[i].pW[1]=1.8f; rooms[i].pZ[1]=z-3.5f; rooms[i].pSide[1]=0; 
             addBox(1.4f,0,z-3.9f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); 
             addBox(1.6f,0.3f,z-3.7f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
@@ -452,7 +452,7 @@ void buildWorld(int cChunk, int pRm) {
             rooms[i].pW[2]=-2.6f; rooms[i].pZ[2]=z-5.0f; rooms[i].pSide[2]=1; 
             addBox(-3,0.8f,z-5.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); 
             
-            // Fire Obstacle 2 (RESTORED)
+            // Fire Obstacle 2
             rooms[i].pW[3]=-1.8f; rooms[i].pZ[3]=z-6.5f; rooms[i].pSide[3]=0; 
             addBox(-2.2f,0,z-6.9f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); 
             addBox(-2.0f,0.3f,z-6.7f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
@@ -462,7 +462,7 @@ void buildWorld(int cChunk, int pRm) {
             rooms[i].pW[4]=2.6f; rooms[i].pZ[4]=z-8.0f; rooms[i].pSide[4]=1; 
             addBox(2,0.8f,z-8.2f,1.0f,0.2f,0.4f,0.05f,0.05f,0.05f,false,0,L); 
             
-            // Fire Obstacle 3 (RESTORED)
+            // Fire Obstacle 3
             rooms[i].pW[5]=0.8f; rooms[i].pZ[5]=z-9.0f; rooms[i].pSide[5]=0; 
             addBox(0.4f,0,z-9.4f,0.8f,0.3f,0.8f,1,0.4f,0,false,0,L); 
             addBox(0.6f,0.3f,z-9.2f,0.4f,0.4f,0.4f,1,0.8f,0,false,0,L); 
@@ -489,8 +489,10 @@ void buildWorld(int cChunk, int pRm) {
                 addBox(isL?-4.05f:3.95f, 0.7f, dZ-1.05f, 0.05f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); 
                 collisions.push_back({isL?-4.1f:3.0f, 0.0f, dZ-1.15f, isL?-3.0f:4.1f, 1.8f, dZ-1.05f, 4}); 
             } else { 
+                // Closed door geometry (Main door style: thick dark wood, vertical silver handle)
                 addBox(isL?-3.0f:2.9f, 0, dZ-0.05f, 0.1f, 1.4f, -1.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
-                addBox(isL?-2.95f:2.85f, 0.7f, dZ-1.05f, 0.1f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); 
+                float handleX = isL ? -2.95f : 2.85f;
+                addBox(handleX, 0.7f, dZ-0.15f, 0.1f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L); 
             }
             
             float srZ=dZ+2.5f, sW=isL?-9.0f:3.0f; 
@@ -712,22 +714,37 @@ int main() {
                         if(b.type==1){
                             hideState=IN_CABINET;camZ=rCZ;camPitch=0;
                             camX=(cCX-tOX<0)?-2.5f+tOX:2.5f+tOX;
-                            // FIXED YAW: Looks perfectly out the crack of the cabinet doors
-                            camYaw=(cCX-tOX<0)?-1.57f:1.57f;
+                            // Face straight out the crack into the room
+                            camYaw=(cCX-tOX<0)?-1.57f:1.57f; 
                         }else{
                             hideState=UNDER_BED;camZ=rCZ;camPitch=0;
                             camX=(cCX-tOX<0)?-2.2f+tOX:2.2f+tOX;
-                            // FIXED YAW: Looks out from under the bed into the room
                             camYaw=(cCX-tOX<0)?-1.57f:1.57f;
                         } 
                         
                         isCrouching=false;
+                        needsVBOUpdate=true; // Rebuild the room so the black box vanishes!
                         if(audio_ok&&sWardrobeEnter.data_vaddr){ndspChnWaveBufClear(10);sWardrobeEnter.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeEnter);}
                         break; 
                     } 
                 } 
             }
-            else if(kDown&KEY_X){ if(hideState==IN_CABINET||hideState==UNDER_BED){camX=(camX<-4.0f)?-6.0f:((camX>4.0f)?6.0f:0.0f);hideState=NOT_HIDING;camYaw=0;if(audio_ok&&sWardrobeExit.data_vaddr){ndspChnWaveBufClear(10);sWardrobeExit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeExit);}} }
+            else if(kDown&KEY_X){ 
+                if(hideState==IN_CABINET||hideState==UNDER_BED){
+                    float tOX=(camX<-4.0f)?-6.0f:((camX>4.0f)?6.0f:0.0f);
+                    
+                    // Step out directly in front of the furniture
+                    camX = (camX - tOX < 0) ? -1.4f + tOX : 1.4f + tOX; 
+                    
+                    // Face away from the furniture across the room
+                    camYaw = (camX - tOX < 0) ? -1.57f : 1.57f;
+                    
+                    hideState=NOT_HIDING;
+                    needsVBOUpdate=true; // Rebuild the room so the black box comes back!
+                    
+                    if(audio_ok&&sWardrobeExit.data_vaddr){ndspChnWaveBufClear(10);sWardrobeExit.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(10,&sWardrobeExit);}
+                } 
+            }
             
             bool iA=false;
             if(!iA && (kDown&KEY_A)){ int nI=getNextDoorIndex(playerCurrentRoom); if(nI>=0&&nI<TOTAL_ROOMS&&rooms[nI].isDupeRoom){ float dZ=-10.0f-(nI*10.0f); if(fabsf(camZ-dZ)<2.5f){ float fx=-sinf(camYaw), fz=-cosf(camYaw); int tD=-1; float bD=0.85f; for(int d=0;d<3;d++){ float dx=(-2.0f+d*2.0f)-camX, dz=dZ-camZ, distSq=dx*dx+dz*dz; if(distSq>0&&distSq<9.0f){ float dist=sqrtf(distSq); float dot=(fx*(dx/dist))+(fz*(dz/dist)); if(dot>bD){bD=dot;tD=d;} } } if(tD!=-1){ if(tD==rooms[nI].correctDupePos){ if(!doorOpen[nI]){if(audio_ok&&sDoor.data_vaddr){ndspChnWaveBufClear(1);sDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sDoor);}doorOpen[nI]=true;needsVBOUpdate=true;} } else { if(audio_ok&&sDupeAttack.data_vaddr){ndspChnWaveBufClear(2);sDupeAttack.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(2,&sDupeAttack);}playerHealth-=34;flashRedFrames=8;camZ+=2.0f;if(playerHealth<=0)isDead=true; } iA=true; } } } }
