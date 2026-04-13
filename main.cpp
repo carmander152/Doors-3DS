@@ -306,7 +306,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
+    float wallU = 0.002f, wallV = 0.502f, wallUW = 0.496f, wallVH = 0.496f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
@@ -375,8 +375,8 @@ void buildEntities(int pRm) {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    float floorU = 0.032f, floorV = 0.032f, floorUW = 0.436f, floorVH = 0.436f;
-    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f;     
+    float floorU = 0.002f, floorV = 0.002f, floorUW = 0.492f, floorVH = 0.496f;
+    float wallU = 0.002f, wallV = 0.502f, wallUW = 0.496f, wallVH = 0.496f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm;
