@@ -204,7 +204,7 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                 float u2 = u1 + (uw * repX), v2 = v1 + (vh * repZ);
                 float x2 = currX + segW, z2 = currZ + segD;
                 
-                // PADDING STITCH: Expand the polygon slightly to seal visual cracks!
+                // Left/Right (X) and Forward/Back (Z) expansion only! NO Y-axis expansion.
                 float p_cX = currX - 0.002f, p_cZ = currZ - 0.002f;
                 float p_x2 = x2 + 0.002f, p_z2 = z2 + 0.002f;
                 
@@ -227,12 +227,12 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                     float u2 = u1 + (uw * repX), v2 = v1 + (vh * repY);
                     float x2 = currX + segW, y2 = currY + segH;
                     
-                    // PADDING STITCH
-                    float p_cX = currX - 0.002f, p_cY = currY - 0.002f;
-                    float p_x2 = x2 + 0.002f, p_y2 = y2 + 0.002f;
+                    // Left/Right (X) expansion only! Keep Y exactly as it is.
+                    float p_cX = currX - 0.002f;
+                    float p_x2 = x2 + 0.002f;
                     
-                    addFaceTextured({{p_cX,p_cY,maxZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{p_x2,p_cY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{p_cX,p_y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{p_x2,p_cY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{p_x2,p_y2,maxZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{p_cX,p_y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
-                    addFaceTextured({{p_cX,p_cY,minZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{p_x2,p_cY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{p_cX,p_y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{p_x2,p_cY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{p_x2,p_y2,minZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{p_cX,p_y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
+                    addFaceTextured({{p_cX,currY,maxZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{p_x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{p_cX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{p_x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{p_x2,y2,maxZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{p_cX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
+                    addFaceTextured({{p_cX,currY,minZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{p_x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{p_cX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{p_x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{p_x2,y2,minZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{p_cX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
                     currY += segH;
                 } currX += segW;
             }
@@ -248,12 +248,12 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                     float u2 = u1 + (uw * repZ), v2 = v1 + (vh * repY);
                     float z2 = currZ + segD, y2 = currY + segH;
                     
-                    // PADDING STITCH
-                    float p_cZ = currZ - 0.002f, p_cY = currY - 0.002f;
-                    float p_z2 = z2 + 0.002f, p_y2 = y2 + 0.002f;
+                    // Left/Right (Z) expansion only! Keep Y exactly as it is.
+                    float p_cZ = currZ - 0.002f;
+                    float p_z2 = z2 + 0.002f;
                     
-                    addFaceTextured({{maxX,p_cY,p_cZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{maxX,p_cY,p_z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,p_y2,p_cZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{maxX,p_cY,p_z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,p_y2,p_z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{maxX,p_y2,p_cZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
-                    addFaceTextured({{minX,p_cY,p_cZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{minX,p_cY,p_z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,p_y2,p_cZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{minX,p_cY,p_z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,p_y2,p_z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{minX,p_y2,p_cZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
+                    addFaceTextured({{maxX,currY,p_cZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{maxX,currY,p_z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,p_cZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{maxX,currY,p_z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,p_z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{maxX,y2,p_cZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
+                    addFaceTextured({{minX,currY,p_cZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{minX,currY,p_z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,p_cZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{minX,currY,p_z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,p_z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{minX,y2,p_cZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
                     currY += segH;
                 } currZ += segD;
             }
