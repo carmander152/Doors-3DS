@@ -133,7 +133,6 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
                     {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}});
 }
 
-// SPHERICAL BILLBOARD FIX: Eyes will now perfectly tilt UP and DOWN with your camera Pitch!
 void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light = 1.0f) {
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f;
@@ -307,7 +306,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.03f, wallV = 0.53f, wallUW = 0.44f, wallVH = 0.44f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
+    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
@@ -356,7 +355,6 @@ void buildEntities(int pRm) {
         if(i >= 0 && i < TOTAL_ROOMS && rooms[i].hasEyes) {
             bool rE=!(rooms[i].isSeekChase||rooms[i].hasSeekEyes)||(i>=pRm && i<=pRm+1);
             if (rE) {
-                // FIXED EYES: Calls the new spherical function!
                 addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY+0.3f, rooms[i].eyesZ, 1.4f, 1.4f, 0.6f, 0.33f, 0.4f, 0.33f, rooms[i].lightLevel);
             }
         }
@@ -377,8 +375,8 @@ void buildEntities(int pRm) {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    float floorU = 0.03f, floorV = 0.03f, floorUW = 0.44f, floorVH = 0.44f;
-    float wallU = 0.03f, wallV = 0.53f, wallUW = 0.44f, wallVH = 0.44f;     
+    float floorU = 0.032f, floorV = 0.032f, floorUW = 0.436f, floorVH = 0.436f;
+    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm;
@@ -762,7 +760,6 @@ int main() {
                         screechState=2; screechTimer=15; sprintf(uiMessage,"Dodged Screech!"); messageTimer=45; 
                         if(audio_ok){ndspChnWaveBufClear(0); if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sCaught);}} 
                     } else if(screechTimer<=0){ 
-                        // FIXED: State 3 transition now triggers the 24-frame animation!
                         screechState=3; screechTimer=24; playerHealth-=20; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=45; 
                         if(playerHealth<=0)isDead=true; 
                         if(audio_ok){ndspChnWaveBufClear(0); if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sAttack);}} 
@@ -770,7 +767,6 @@ int main() {
                 } else if(screechState == 2) {
                     screechTimer--; 
                     
-                    // FIXED: Flies radially AWAY from you, not strictly based on your camera angle!
                     float escX = screechOffsetX; 
                     float escZ = screechOffsetZ;
                     float escDist = sqrtf(escX*escX + escZ*escZ);
@@ -778,7 +774,7 @@ int main() {
                     
                     screechOffsetX += escX * 0.3f;
                     screechOffsetZ += escZ * 0.3f;
-                    screechY += 0.05f; 
+                    screechY += 0.18f; 
                     screechX = camX + screechOffsetX; 
                     screechZ = camZ + screechOffsetZ;
                     
@@ -788,7 +784,6 @@ int main() {
                     screechOffsetX = -sinf(camYaw) * 0.4f; screechOffsetZ = -cosf(camYaw) * 0.4f; 
                     screechX = camX + screechOffsetX; screechZ = camZ + screechOffsetZ; screechY = (isCrouching ? 0.4f : 0.9f) - 0.2f;
                     
-                    // FIXED: Attack Animation sequenced between Screech and Red Flashes!
                     if (screechTimer > 18) { flashRedFrames = 0; }
                     else if (screechTimer > 12) { flashRedFrames = 2; }
                     else if (screechTimer > 6) { flashRedFrames = 0; }
