@@ -133,6 +133,30 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
                     {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}});
 }
 
+// SPHERICAL BILLBOARD FIX: Eyes will now perfectly tilt UP and DOWN with your camera Pitch!
+void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light = 1.0f) {
+    float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
+    float hw = w / 2.0f, hh = h / 2.0f;
+    
+    float cosY = cosf(camYaw), sinY = sinf(camYaw);
+    float cosP = cosf(camPitch), sinP = sinf(camPitch);
+    
+    float rx = hw * cosY, rz = -hw * sinY;
+    float ux = hh * sinY * sinP, uy = hh * cosP, uz = hh * cosY * sinP;
+    
+    float bl_x = cx - rx - ux, bl_y = cy - uy, bl_z = cz - rz - uz;
+    float br_x = cx + rx - ux, br_y = cy - uy, br_z = cz + rz - uz;
+    float tl_x = cx - rx + ux, tl_y = cy + uy, tl_z = cz - rz + uz;
+    float tr_x = cx + rx + ux, tr_y = cy + uy, tr_z = cz + rz + uz;
+    
+    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}},
+                    {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
+                    {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}},
+                    {{tr_x, tr_y, tr_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}},
+                    {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}});
+}
+
 void addBoxColored(float x, float y, float z, float w, float h, float d, float r, float g, float b, float light = 1.0f) {
     float r_c=r*light*globalTintR, g_c=g*light*globalTintG, b_c=b*light*globalTintB;
     if(r_c>1.0f) r_c=1.0f; if(g_c>1.0f) g_c=1.0f; if(b_c>1.0f) b_c=1.0f;
@@ -316,13 +340,11 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     }; if(lD)dr(-2.6f,lO); if(cD)dr(-0.6f,cO); if(rD)dr(1.4f,rO);
 }
 
-// FIX: Passed playerCurrentRoom into buildEntities so Eyes can spawn dynamically!
 void buildEntities(int pRm) {
     entity_mesh_colored.clear(); entity_mesh_textured.clear();
     isBuildingEntities = true;
     
     if(screechActive){ 
-        // SCREECH JUMPSCARE SCALE FIX: Scales to 2.5f to cover screen!
         float scale = (screechState == 3) ? 2.5f : 1.5f;
         addBillboard(screechX, screechY+0.2f, screechZ, scale, scale, 0.6f, 0.0f, 0.4f, 0.33f); 
     }
@@ -330,12 +352,12 @@ void buildEntities(int pRm) {
         addBillboard(0.0f, 0.7f, rushZ, 1.4f, 1.4f, 0.6f, 0.66f, 0.4f, 0.34f); 
     }
     
-    // EYES DYNAMIC BILLBOARD FIX: Rendered dynamically each frame so he is never stuck!
     for(int i = pRm - 1; i <= pRm + 2; i++) {
         if(i >= 0 && i < TOTAL_ROOMS && rooms[i].hasEyes) {
             bool rE=!(rooms[i].isSeekChase||rooms[i].hasSeekEyes)||(i>=pRm && i<=pRm+1);
             if (rE) {
-                addBillboard(rooms[i].eyesX, rooms[i].eyesY+0.3f, rooms[i].eyesZ, 1.4f, 1.4f, 0.6f, 0.33f, 0.4f, 0.33f, rooms[i].lightLevel);
+                // FIXED EYES: Calls the new spherical function!
+                addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY+0.3f, rooms[i].eyesZ, 1.4f, 1.4f, 0.6f, 0.33f, 0.4f, 0.33f, rooms[i].lightLevel);
             }
         }
     }
@@ -618,7 +640,7 @@ int main() {
 
     if(audio_ok){ 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); for(int i=0;i<=12;i++){ndspChnSetInterp(i,NDSP_INTERP_LINEAR);ndspChnSetRate(i,44100);ndspChnSetFormat(i,NDSP_FORMAT_MONO_PCM16);} 
-        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Lights_Flicker.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
+        sPsst=loadWav("romfs:/Screech_Psst.wav"); sAttack=loadWav("romfs:/Screech_Attack.wav"); sCaught=loadWav("romfs:/Screech_Caught.wav"); sDoor=loadWav("romfs:/Door_Open.wav"); sLockedDoor=loadWav("romfs:/Locked_Door.wav"); sDupeAttack=loadWav("romfs:/Dupe_Attack.wav"); sRushScream=loadWav("romfs:/Rush_Scream.wav"); sEyesAppear=loadWav("romfs:/Eyes_Appear.wav"); sEyesGarble=loadWav("romfs:/Eyes_Garble.wav"); sEyesGarble.looping=true; sEyesAttack=loadWav("romfs:/Eyes_Attack.wav"); sEyesHit=loadWav("romfs:/Eyes_Hit.wav"); sSeekRise=loadWav("romfs:/Seek_Rise.wav"); sSeekChase=loadWav("romfs:/Seek_Chase.wav"); sSeekChase.looping=true; sSeekEscaped=loadWav("romfs:/Seek_Escaped.wav"); sDeath=loadWav("romfs:/Player_Death.wav"); sElevatorJam=loadWav("romfs:/Elevator_Jam.wav"); sElevatorJamEnd=loadWav("romfs:/Elevator_Jam_End.wav"); sCoinsCollect=loadWav("romfs:/Coins_Collect.wav"); sDarkRoomEnter=loadWav("romfs:/Dark_Room_Enter.wav"); sDrawerClose=loadWav("romfs:/Drawer_Close.wav"); sDrawerOpen=loadWav("romfs:/Drawer_Open.wav"); sLightsFlicker=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeEnter=loadWav("romfs:/Wardrobe_Enter.wav"); sWardrobeExit=loadWav("romfs:/Wardrobe_Exit.wav");
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
@@ -659,7 +681,6 @@ int main() {
 
         if(isDead){ if(!deathSoundPlayed){ if(audio_ok){ ndspChnWaveBufClear(3); ndspChnWaveBufClear(5); ndspChnWaveBufClear(7); ndspChnWaveBufClear(9); bool wAA=(sAttack.status==NDSP_WBUF_PLAYING||sAttack.status==NDSP_WBUF_QUEUED||sDupeAttack.status==NDSP_WBUF_PLAYING||sDupeAttack.status==NDSP_WBUF_QUEUED); if(!wAA){ ndspChnWaveBufClear(8); if(sDeath.data_vaddr){sDeath.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(8,&sDeath);} deathSoundPlayed=true; } } else deathSoundPlayed=true; } } else deathSoundPlayed=false;
         
-        // RESET FIX: Made sure screechState resets to 0 here!
         if(kDown&KEY_START){ if(isDead){ isDead=false;hasKey=false;lobbyKeyPickedUp=false;isCrouching=false;hideState=NOT_HIDING;playerHealth=100;screechActive=false;screechState=0;flashRedFrames=0;playerCoins=0;screechCooldown=900;rushActive=false;rushState=0;rushCooldown=0;messageTimer=0;inElevator=true;elevatorTimer=796;elevatorDoorsOpen=false;elevatorClosing=false;elevatorDoorOffset=0;elevatorJamFinished=false;camX=0;camZ=7.5f;camYaw=0;camPitch=0;currentChunk=0;playerCurrentRoom=-1;lastRoomForDarkCheck=-1;for(int i=0;i<TOTAL_ROOMS;i++)doorOpen[i]=false;seekActive=false;seekState=0;seekTimer=0;eyesSoundCooldown=0;generateRooms();buildWorld(currentChunk,playerCurrentRoom); colored_size=world_mesh_colored.size(); textured_size=world_mesh_textured.size(); if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; memcpy(vbo_main,world_mesh_colored.data(),colored_size*sizeof(vertex)); memcpy((vertex*)vbo_main+colored_size,world_mesh_textured.data(),textured_size*sizeof(vertex)); GSPGPU_FlushDataCache(vbo_main,(colored_size+textured_size)*sizeof(vertex)); if(audio_ok)for(int i=3;i<=12;i++)ndspChnWaveBufClear(i);inEyesRoom=false;isLookingAtEyes=false;eyesDamageTimer=0;eyesDamageAccumulator=0;eyesGraceTimer=0;consoleClear();continue; } }
         
         if(!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) { if(kDown & KEY_DDOWN) { camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; needsVBOUpdate = true; sprintf(uiMessage, "Teleported to Seek!"); messageTimer = 45; } if(kDown & KEY_DLEFT) { camZ = -10.0f - (48 * 10.0f) + 5.0f; camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; needsVBOUpdate = true; sprintf(uiMessage, "Teleported near Library!"); messageTimer = 45; } }
@@ -730,7 +751,6 @@ int main() {
                 if(audio_ok){ndspChnWaveBufClear(0);if(sPsst.data_vaddr){sPsst.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(0,&sPsst);}} 
             }
             
-            // SCREECH ANIMATION FIX: Fully integrated the state machine
             if(screechActive){ 
                 if(screechState == 1) {
                     screechTimer--; float cOX = screechOffsetX, cOZ = screechOffsetZ; float pY = isCrouching ? 0.4f : 0.9f; float nSX = camX + cOX, nSZ = camZ + cOZ, nSY = 0.8f + screechOffsetY;
@@ -742,18 +762,39 @@ int main() {
                         screechState=2; screechTimer=15; sprintf(uiMessage,"Dodged Screech!"); messageTimer=45; 
                         if(audio_ok){ndspChnWaveBufClear(0); if(sCaught.data_vaddr){sCaught.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sCaught);}} 
                     } else if(screechTimer<=0){ 
-                        screechState=3; screechTimer=25; playerHealth-=20; flashRedFrames=25; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=45; 
+                        // FIXED: State 3 transition now triggers the 24-frame animation!
+                        screechState=3; screechTimer=24; playerHealth-=20; sprintf(uiMessage,"Screech bit you! (-20 HP)"); messageTimer=45; 
                         if(playerHealth<=0)isDead=true; 
                         if(audio_ok){ndspChnWaveBufClear(0); if(sAttack.data_vaddr){sAttack.status=NDSP_WBUF_FREE; ndspChnWaveBufAdd(0,&sAttack);}} 
                     } 
                 } else if(screechState == 2) {
-                    screechTimer--; screechOffsetX += sinf(camYaw) * 0.3f; screechOffsetZ += cosf(camYaw) * 0.3f; screechY += 0.05f; 
-                    screechX = camX + screechOffsetX; screechZ = camZ + screechOffsetZ;
+                    screechTimer--; 
+                    
+                    // FIXED: Flies radially AWAY from you, not strictly based on your camera angle!
+                    float escX = screechOffsetX; 
+                    float escZ = screechOffsetZ;
+                    float escDist = sqrtf(escX*escX + escZ*escZ);
+                    if(escDist > 0.001f) { escX /= escDist; escZ /= escDist; }
+                    
+                    screechOffsetX += escX * 0.3f;
+                    screechOffsetZ += escZ * 0.3f;
+                    screechY += 0.05f; 
+                    screechX = camX + screechOffsetX; 
+                    screechZ = camZ + screechOffsetZ;
+                    
                     if(screechTimer <= 0) { screechActive = false; screechState = 0; screechCooldown = 900; }
                 } else if(screechState == 3) {
-                    screechTimer--; screechOffsetX = -sinf(camYaw) * 0.4f; screechOffsetZ = -cosf(camYaw) * 0.4f; 
+                    screechTimer--; 
+                    screechOffsetX = -sinf(camYaw) * 0.4f; screechOffsetZ = -cosf(camYaw) * 0.4f; 
                     screechX = camX + screechOffsetX; screechZ = camZ + screechOffsetZ; screechY = (isCrouching ? 0.4f : 0.9f) - 0.2f;
-                    if(screechTimer <= 0) { screechActive = false; screechState = 0; screechCooldown = 900; }
+                    
+                    // FIXED: Attack Animation sequenced between Screech and Red Flashes!
+                    if (screechTimer > 18) { flashRedFrames = 0; }
+                    else if (screechTimer > 12) { flashRedFrames = 2; }
+                    else if (screechTimer > 6) { flashRedFrames = 0; }
+                    else { flashRedFrames = 2; }
+                    
+                    if(screechTimer <= 0) { screechActive = false; screechState = 0; screechCooldown = 900; flashRedFrames = 0; }
                 }
             }
 
