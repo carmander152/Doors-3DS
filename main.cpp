@@ -49,7 +49,6 @@ bool doorOpen[TOTAL_ROOMS] = {false}; HideState hideState = NOT_HIDING;
 float camX=0.0f, camZ=7.5f, camYaw=0.0f, camPitch=0.0f; 
 float elevatorDoorOffset = 0.0f; char uiMessage[50] = "";
 
-// SCREECH STATE FIX: Added screechState variable
 bool screechActive = false, rushActive = false, seekActive = false, inEyesRoom = false, isLookingAtEyes = false;
 int screechState = 0, screechTimer = 0, screechCooldown = 0, rushState = 0, rushTimer = 0, rushCooldown = 0, seekState = 0, seekTimer = 0, eyesDamageTimer = 0, eyesDamageAccumulator = 0, eyesGraceTimer = 0, eyesSoundCooldown = 0;
 
@@ -325,7 +324,7 @@ void buildEntities(int pRm) {
     if(screechActive){ 
         // SCREECH JUMPSCARE SCALE FIX: Scales to 2.5f to cover screen!
         float scale = (screechState == 3) ? 2.5f : 1.5f;
-        addBillboard(screechX, screechY+0.2f, screechZ, scale, scale, 0.0f, 0.4f, 0.33f); 
+        addBillboard(screechX, screechY+0.2f, screechZ, scale, scale, 0.6f, 0.0f, 0.4f, 0.33f); 
     }
     if(rushActive && rushState==2){ 
         addBillboard(0.0f, 0.7f, rushZ, 1.4f, 1.4f, 0.6f, 0.66f, 0.4f, 0.34f); 
