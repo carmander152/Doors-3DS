@@ -150,6 +150,9 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     if(collide && !isBuildingEntities) collisions.push_back({fminf(x,x+w),fminf(y,y+h),fminf(z,z+d),fmaxf(x,x+w),fmaxf(y,y+h),fmaxf(z,z+d),colType});
 }
 
+// ==========================================
+// THE TILE/SEAM RENDERING FIX
+// ==========================================
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     if(collide && !isBuildingEntities) collisions.push_back({fminf(x,x+w),fminf(y,y+h),fminf(z,z+d),fmaxf(x,x+w),fmaxf(y,y+h),fmaxf(z,z+d),0});
     float minX = fminf(x, x+w), maxX = fmaxf(x, x+w);
@@ -159,9 +162,8 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     
     auto getP = [](float val, float s) { 
-        float p = val - (float)((int)(val / s)) * s; 
+        float p = fmodf(val, s);
         if (p < 0) p += s; 
-        if (s - p < 0.001f) p = 0.0f; 
         return p; 
     };
     
@@ -170,14 +172,23 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         float scaleU = texScale * 1.5f, scaleV = texScale * 1.5f; 
         float currX = minX;
         while(currX < maxX - 0.0001f) {
-            float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
-            if (segW < 0.001f) segW = 0.001f; 
+            float pX = getP(currX, scaleU);
+            float segW = scaleU - pX;
+            if (currX + segW > maxX) segW = maxX - currX;
+            if (segW <= 0.0001f) break; // Reached exactly the end, stop drawing safely
+            
+            float u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleV), segD = fminf(scaleV - pZ, maxZ - currZ), v1 = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
-                if (segD < 0.001f) segD = 0.001f; 
+                float pZ = getP(currZ, scaleV);
+                float segD = scaleV - pZ;
+                if (currZ + segD > maxZ) segD = maxZ - currZ;
+                if (segD <= 0.0001f) break;
+                
+                float v1 = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
                 float u2 = u1 + (uw * repX), v2 = v1 + (vh * repZ);
                 float x2 = currX + segW, z2 = currZ + segD;
+                
                 addFaceTextured({{currX,maxY,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,maxY,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,maxY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,maxY,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,maxY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,maxY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}); 
                 addFaceTextured({{currX,minY,currZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,minY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,minY,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,minY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,minY,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,minY,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
                 currZ += segD;
@@ -188,14 +199,23 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         if (width >= depth) { 
             float currX = minX;
             while(currX < maxX - 0.0001f) {
-                float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX), u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
-                if (segW < 0.001f) segW = 0.001f; 
+                float pX = getP(currX, scaleU);
+                float segW = scaleU - pX;
+                if (currX + segW > maxX) segW = maxX - currX;
+                if (segW <= 0.0001f) break;
+                
+                float u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
-                    if (segH < 0.001f) segH = 0.001f;
+                    float pY = getP(currY, scaleV);
+                    float segH = scaleV - pY;
+                    if (currY + segH > maxY) segH = maxY - currY;
+                    if (segH <= 0.0001f) break;
+                    
+                    float v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     float u2 = u1 + (uw * repX), v2 = v1 + (vh * repY);
                     float x2 = currX + segW, y2 = currY + segH;
+                    
                     addFaceTextured({{currX,currY,maxZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,maxZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
                     addFaceTextured({{currX,currY,minZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{currX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,minZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{currX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
                     currY += segH;
@@ -204,14 +224,23 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         } else { 
             float currZ = minZ;
             while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleU), segD = fminf(scaleU - pZ, maxZ - currZ), u1 = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
-                if (segD < 0.001f) segD = 0.001f; 
+                float pZ = getP(currZ, scaleU);
+                float segD = scaleU - pZ;
+                if (currZ + segD > maxZ) segD = maxZ - currZ;
+                if (segD <= 0.0001f) break;
+                
+                float u1 = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
                 float currY = minY;
                 while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY), v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
-                    if (segH < 0.001f) segH = 0.001f;
+                    float pY = getP(currY, scaleV);
+                    float segH = scaleV - pY;
+                    if (currY + segH > maxY) segH = maxY - currY;
+                    if (segH <= 0.0001f) break;
+                    
+                    float v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
                     float u2 = u1 + (uw * repZ), v2 = v1 + (vh * repY);
                     float z2 = currZ + segD, y2 = currY + segH;
+                    
                     addFaceTextured({{maxX,currY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{maxX,currY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{maxX,currY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{maxX,y2,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
                     addFaceTextured({{minX,currY,currZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{minX,currY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{minX,currY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{minX,y2,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
                     currY += segH;
@@ -279,7 +308,7 @@ void buildChest(float x, float z, float openFactor, float L=1.0f) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L=1.0f) {
-    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
+    float wallU = 0.002f, wallV = 0.502f, wallUW = 0.496f, wallVH = 0.496f, texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     addTiledSurface(-3.0f,0.4f,z,0.4f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-3.0f,0.0f,z,0.4f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     if(!lD){ addTiledSurface(-2.6f,0.4f,z,1.2f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-2.6f,0.0f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); } else addTiledSurface(-2.6f,1.4f,z,1.2f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     addTiledSurface(-1.4f,0.4f,z,0.8f,1.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); addTiledSurface(-1.4f,0.0f,z,0.8f,0.4f,-0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
@@ -327,9 +356,9 @@ void buildEntities(int pRm) {
 void buildWorld(int cChunk, int pRm) {
     world_mesh_colored.clear(); world_mesh_textured.clear(); collisions.clear();
     
-    // THE PADDING FIX FOR THE FLOOR ATLAS BLEED:
-    float floorU = 0.032f, floorV = 0.032f, floorUW = 0.436f, floorVH = 0.436f;
-    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f;     
+    // THE PERFECT UV INSET (fixes atlas bleed without ruining tileability):
+    float floorU = 0.002f, floorV = 0.002f, floorUW = 0.496f, floorVH = 0.496f;
+    float wallU = 0.002f, wallV = 0.502f, wallUW = 0.496f, wallVH = 0.496f;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm; int en = pRm + 1; 
@@ -667,101 +696,85 @@ int main() {
                 if(!iA){ for(int i=0;i<TOTAL_ROOMS;i++){ if(i==seekStartRoom+1||i==seekStartRoom+2)continue; if(rooms[i].isLocked||rooms[i].isJammed){ float dZ=-10.0f-(i*10.0f), dX=(rooms[i].doorPos==0)?-2.0f:((rooms[i].doorPos==1)?0.0f:2.0f); if(fabsf(camZ-dZ)<2.5f&&fabsf(camX-dX)<2.0f){ if(rooms[i].isJammed){if(audio_ok&&sLockedDoor.data_vaddr){ndspChnWaveBufClear(1);sLockedDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sLockedDoor);}sprintf(uiMessage,"The door is jammed shut!");messageTimer=30;} else if(hasKey){rooms[i].isLocked=false;hasKey=false;needsVBOUpdate=true;sprintf(uiMessage,"Door Unlocked!");messageTimer=30;} else{if(audio_ok&&sLockedDoor.data_vaddr){ndspChnWaveBufClear(1);sLockedDoor.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(1,&sLockedDoor);}sprintf(uiMessage,"It's locked...");messageTimer=30;} iA=true;break; } } } }
             } 
             if((kDown&KEY_B)&&hideState==NOT_HIDING){ if(isCrouching){if(!checkCollision(camX,0,camZ,1.1f))isCrouching=false;} else isCrouching=true; }
-            if(playerCurrentRoom>1&&!rushActive&&rushCooldown<=0&&!iSE&&rand()%10000<2){rushActive=true;rushState=1;rushTimer=150+(rand()%60);rushStartTimer=(float)rushTimer;if(audio_ok){if(sLightsFlicker.data_vaddr){float m[12]={0};m[0]=2.5f;m[1]=2.5f;ndspChnSetMix(12,m);ndspChnWaveBufClear(12);sLightsFlicker.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(12,&sLightsFlicker);}if(sRushScream.data_vaddr){float m[12]={0};ndspChnSetMix(3,m);ndspChnWaveBufClear(3);sRushScream.status=NDSP_WBUF_FREE;ndspChnWaveBufAdd(3,&sRushScream);}}}
+            if(playerCurrentRoom>1&&!rushActive&&rushCooldown<=0&&!iSE&&rand()%10000<2){rushActive=true;rushState=1;rushTimer=150+(rand()%60);rushStartTimer=(float)rushTimer; }
             
-            if(hideState==NOT_HIDING||hideState==BEHIND_DOOR){ bool iDZ=false; for(auto& b:collisions)if(b.type==4&&camX>b.minX&&camX<b.maxX&&camZ>b.minZ&&camZ<b.maxZ){iDZ=true;break;} if(iDZ&&hideState==NOT_HIDING)hideState=BEHIND_DOOR; else if(!iDZ&&hideState==BEHIND_DOOR)hideState=NOT_HIDING; }
+            // --- PLAYER MOVEMENT & COLLISION ---
+            circlePosition circlePad; hidCircleRead(&circlePad);
+            float moveX = 0.0f, moveZ = 0.0f;
+            float pSpeed = (isCrouching) ? 0.035f : 0.07f;
             
-            float pH=isCrouching?0.5f:1.1f; circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
-            if((hideState==NOT_HIDING||hideState==BEHIND_DOOR)&&seekState!=1){
-                if(abs(cS.dx)>10)camYaw-=cS.dx/1560.0f*1.6f; if(abs(cS.dy)>10)camPitch+=cS.dy/1560.0f*1.6f;
-                if(kHeld&KEY_TOUCH){ if(!wasTouching){startTouchX=t.px;startTouchY=t.py;wasTouching=true;} else{float dx=(float)t.px-startTouchX,dy=(float)t.py-startTouchY;if(fabsf(dx)<10.0f)dx=0;if(fabsf(dy)<10.0f)dy=0;camYaw-=(dx/160.0f)*0.12f;camPitch-=(dy/120.0f)*0.12f;} } else wasTouching=false; 
-                if(camPitch>1.57f)camPitch=1.57f; if(camPitch<-1.57f)camPitch=-1.57f;
-                if(abs(cP.dy)>15||abs(cP.dx)>15){ float s=(seekState==2)?(isCrouching?0.50f:0.84f):(isCrouching?0.32f:0.56f), sy=cP.dy/1560.0f, sx=cP.dx/1560.0f, nX=camX-(sinf(camYaw)*sy-cosf(camYaw)*sx)*s, nZ=camZ-(cosf(camYaw)*sy+sinf(camYaw)*sx)*s; if(!checkCollision(nX,0,camZ,pH))camX=nX; if(!checkCollision(camX,0,nZ,pH))camZ=nZ; }
+            if(hideState == NOT_HIDING) {
+                if(abs(circlePad.dy) > 15) moveZ = (circlePad.dy > 0 ? 1.0f : -1.0f) * pSpeed;
+                if(abs(circlePad.dx) > 15) moveX = (circlePad.dx > 0 ? 1.0f : -1.0f) * pSpeed;
             }
-        } // End of if(!isDead)
+            
+            float nextX = camX - (sinf(camYaw) * moveZ) + (cosf(camYaw) * moveX);
+            float nextZ = camZ - (cosf(camYaw) * moveZ) - (sinf(camYaw) * moveX);
+            
+            if(!checkCollision(nextX, isCrouching ? 0.4f : 0.9f, camZ, 0.4f)) camX = nextX;
+            if(!checkCollision(camX, isCrouching ? 0.4f : 0.9f, nextZ, 0.4f)) camZ = nextZ;
 
-        // Door update check
-        for(int i=0; i<TOTAL_ROOMS; i++){ 
-            if(rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
-            float dZ = -10.0f - (i * 10.0f);
-            float dX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-            bool isClose = (fabsf(camZ - dZ) < 1.5f && fabsf(camX - dX) < 1.5f); 
-            if (rooms[i].isLocked || rooms[i].isJammed) isClose = false; 
-            if (doorOpen[i] != isClose) {
-                doorOpen[i] = isClose;
-                needsVBOUpdate = true;
-                if (isClose && audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+            // --- CAMERA CONTROLS ---
+            touchPosition touch; hidTouchRead(&touch);
+            circlePosition cStick; irrstCstickRead(&cStick);
+            
+            if(hideState == NOT_HIDING || hideState == UNDER_BED) {
+                if(kDown & KEY_TOUCH) { startTouchX = touch.px; startTouchY = touch.py; wasTouching = true; }
+                else if(kHeld & KEY_TOUCH && wasTouching) {
+                    float dx = touch.px - startTouchX; float dy = touch.py - startTouchY;
+                    camYaw -= dx * 0.01f; camPitch += dy * 0.01f;
+                    startTouchX = touch.px; startTouchY = touch.py;
+                } else wasTouching = false;
+                
+                if(abs(cStick.dx) > 15) camYaw += (cStick.dx > 0 ? 1.0f : -1.0f) * 0.05f;
+                if(abs(cStick.dy) > 15) camPitch += (cStick.dy > 0 ? 1.0f : -1.0f) * 0.05f;
+                
+                if(camPitch > 1.5f) camPitch = 1.5f;
+                if(camPitch < -1.5f) camPitch = -1.5f;
             }
         }
 
-        if(needsVBOUpdate){
-            buildWorld(currentChunk,playerCurrentRoom);
-            colored_size = world_mesh_colored.size();
-            textured_size = world_mesh_textured.size();
-            if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
+        // --- WORLD UPDATING ---
+        if(playerCurrentRoom >= 0 && playerCurrentRoom != currentChunk) { currentChunk = playerCurrentRoom; needsVBOUpdate = true; }
+        
+        if(needsVBOUpdate) {
+            buildWorld(currentChunk, playerCurrentRoom);
+            colored_size = world_mesh_colored.size(); textured_size = world_mesh_textured.size();
+            if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size;
             memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex));
             memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
+            GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
         }
-
         buildEntities(playerCurrentRoom);
-        int world_total = colored_size + textured_size;
-        int ent_col_size = entity_mesh_colored.size();
-        int ent_tex_size = entity_mesh_textured.size();
-        if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
-        
-        if (ent_col_size > 0) memcpy((vertex*)vbo_main + world_total, entity_mesh_colored.data(), ent_col_size * sizeof(vertex));
-        if (ent_tex_size > 0) memcpy((vertex*)vbo_main + world_total + ent_col_size, entity_mesh_textured.data(), ent_tex_size * sizeof(vertex));
-        
-        if (needsVBOUpdate) {
-            GSPGPU_FlushDataCache(vbo_main, (world_total + ent_col_size + ent_tex_size) * sizeof(vertex));
-        } else if ((ent_col_size + ent_tex_size) > 0) {
-            GSPGPU_FlushDataCache((vertex*)vbo_main + world_total, (ent_col_size + ent_tex_size) * sizeof(vertex));
-        }
 
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW); C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); C3D_FrameDrawOn(target);
+        // --- RENDERING ---
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW); 
+        C3D_RenderTargetClear(target, C3D_CLEAR_ALL, (flashRedFrames > 0) ? 0xFF0000FF : 0x000000FF, 0); 
+        C3D_FrameDrawOn(target);
         
-        float dCX=camX, dCZ=camZ, dCY=camYaw, dCP=camPitch; static float lCCZ=0.0f;
-        if(seekState==1){ if(seekTimer==1)lCCZ=seekZ-4.0f; if(seekTimer<=65){float t=seekTimer/65.0f;t=t*t*(3.0f-2.0f*t);dCZ=camZ+(lCCZ-camZ)*t;dCY=camYaw+(3.14159f-camYaw)*t;} else{dCZ=lCCZ;dCY=3.14159f;if(seekTimer>90)dCP=sinf(seekTimer*1.6f)*0.03f;} }
-        C3D_Mtx proj, view; Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); Mtx_Identity(&view); Mtx_RotateX(&view, -dCP, true); Mtx_RotateY(&view, -dCY, true); Mtx_Translate(&view, -dCX, isDead?-0.1f:(isCrouching?-0.4f:(hideState==NOT_HIDING||hideState==BEHIND_DOOR?-0.9f:(hideState==IN_CABINET?-0.7f:-0.15f))), -dCZ, true); Mtx_Multiply(&view, &proj, &view);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); 
-        
-        C3D_BufInfo* buf = C3D_GetBufInfo(); BufInfo_Init(buf); BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
-        
-        if (colored_size > 0) {
-            C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
-            if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-            } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
-            C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
-        }
-        if (textured_size > 0) {
-            C3D_TexBind(0, &atlasTex); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
-            if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-            } else if (hasAtlas) { C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
-            } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
-            C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
-        }
+        float pY = isCrouching ? 0.4f : 0.9f;
+        C3D_Mtx projX, viewX; Mtx_PerspTilt(&projX, 60.0f * M_PI / 180.0f, 400.0f / 240.0f, 0.01f, 100.0f, true);
+        Mtx_Identity(&viewX); Mtx_RotateX(&viewX, camPitch, true); Mtx_RotateY(&viewX, camYaw, true); Mtx_Translate(&viewX, -camX, -pY, -camZ, true);
+        Mtx_Multiply(&projX, &projX, &viewX); C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &projX);
 
-        if (ent_col_size > 0) {
-            C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
-            if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-            } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
-            C3D_DrawArrays(GPU_TRIANGLES, world_total, ent_col_size); 
-        }
-        if (ent_tex_size > 0) {
-            C3D_TexBind(0, &atlasTex); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
-            if (flashRedFrames > 0 && !isDead) { C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-            } else if (hasAtlas) { C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
-            } else { C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); }
-            C3D_DrawArrays(GPU_TRIANGLES, world_total + ent_col_size, ent_tex_size);
-        }
-
+        C3D_TexBind(0, &atlasTex);
+        C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
+        
+        if(colored_size > 0) { BufInfo_Add(bufInfo, vbo_main, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, 0, 0); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size); }
+        if(textured_size > 0) { BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_MODULATE); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE); C3D_DrawArrays(GPU_TRIANGLES, 0, textured_size); }
+        
+        int ent_col = entity_mesh_colored.size(), ent_tex = entity_mesh_textured.size();
+        if (ent_col > 0) { memcpy((vertex*)vbo_main + colored_size + textured_size, entity_mesh_colored.data(), ent_col * sizeof(vertex)); GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size, ent_col * sizeof(vertex)); BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size + textured_size, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, 0, 0); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); C3D_DrawArrays(GPU_TRIANGLES, 0, ent_col); }
+        if (ent_tex > 0) { memcpy((vertex*)vbo_main + colored_size + textured_size + ent_col, entity_mesh_textured.data(), ent_tex * sizeof(vertex)); GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size + ent_col, ent_tex * sizeof(vertex)); BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size + textured_size + ent_col, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_MODULATE); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE); C3D_DrawArrays(GPU_TRIANGLES, 0, ent_tex); }
+        
         C3D_FrameEnd(0);
-        gspWaitForVBlank(); 
     }
     
-    if(audio_ok){ 
-        if(sPsst.data_vaddr)linearFree((void*)sPsst.data_vaddr); if(sAttack.data_vaddr)linearFree((void*)sAttack.data_vaddr); if(sCaught.data_vaddr)linearFree((void*)sCaught.data_vaddr); if(sDoor.data_vaddr)linearFree((void*)sDoor.data_vaddr); if(sLockedDoor.data_vaddr)linearFree((void*)sLockedDoor.data_vaddr); if(sDupeAttack.data_vaddr)linearFree((void*)sDupeAttack.data_vaddr); if(sRushScream.data_vaddr)linearFree((void*)sRushScream.data_vaddr); if(sEyesAppear.data_vaddr)linearFree((void*)sEyesAppear.data_vaddr); if(sEyesGarble.data_vaddr)linearFree((void*)sEyesGarble.data_vaddr); if(sEyesAttack.data_vaddr)linearFree((void*)sEyesAttack.data_vaddr); if(sEyesHit.data_vaddr)linearFree((void*)sEyesHit.data_vaddr); if(sSeekRise.data_vaddr)linearFree((void*)sSeekRise.data_vaddr); if(sSeekChase.data_vaddr)linearFree((void*)sSeekChase.data_vaddr); if(sSeekEscaped.data_vaddr)linearFree((void*)sSeekEscaped.data_vaddr); if(sDeath.data_vaddr)linearFree((void*)sDeath.data_vaddr); if(sElevatorJam.data_vaddr)linearFree((void*)sElevatorJam.data_vaddr); if(sElevatorJamEnd.data_vaddr)linearFree((void*)sElevatorJamEnd.data_vaddr); if(sCoinsCollect.data_vaddr)linearFree((void*)sCoinsCollect.data_vaddr); if(sDarkRoomEnter.data_vaddr)linearFree((void*)sDarkRoomEnter.data_vaddr); if(sDrawerClose.data_vaddr)linearFree((void*)sDrawerClose.data_vaddr); if(sDrawerOpen.data_vaddr)linearFree((void*)sDrawerOpen.data_vaddr); if(sLightsFlicker.data_vaddr)linearFree((void*)sLightsFlicker.data_vaddr); if(sWardrobeEnter.data_vaddr)linearFree((void*)sWardrobeEnter.data_vaddr); if(sWardrobeExit.data_vaddr)linearFree((void*)sWardrobeExit.data_vaddr); 
-        ndspExit(); 
-    }
-    C3D_TexDelete(&atlasTex); linearFree(vbo_main); romfsExit(); C3D_Fini(); gfxExit(); return 0;
+    // --- CLEANUP ---
+    linearFree(vbo_main); 
+    C3D_TexDelete(&atlasTex); 
+    shaderProgramFree(&program); 
+    DVLB_Free(vshader_dvlb);
+    if(audio_ok) ndspExit();
+    C3D_Fini(); romfsExit(); gfxExit(); return 0;
 }
