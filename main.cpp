@@ -760,12 +760,47 @@ int main() {
         C3D_TexBind(0, &atlasTex);
         C3D_BufInfo* bufInfo = C3D_GetBufInfo(); BufInfo_Init(bufInfo);
         
-        if(colored_size > 0) { BufInfo_Add(bufInfo, vbo_main, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, 0, 0); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size); }
-        if(textured_size > 0) { BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_MODULATE); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE); C3D_DrawArrays(GPU_TRIANGLES, 0, textured_size); }
+        if (colored_size > 0) { 
+            BufInfo_Add(bufInfo, vbo_main, sizeof(vertex), 3, 0x210); 
+            C3D_TexEnv* env = C3D_GetTexEnv(0); 
+            C3D_TexEnvInit(env); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
+            C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size); 
+        }
+
+        if (textured_size > 0) { 
+            BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size, sizeof(vertex), 3, 0x210); 
+            C3D_TexEnv* env = C3D_GetTexEnv(0); 
+            C3D_TexEnvInit(env); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE); 
+            C3D_DrawArrays(GPU_TRIANGLES, 0, textured_size); 
+        }
         
         int ent_col = entity_mesh_colored.size(), ent_tex = entity_mesh_textured.size();
-        if (ent_col > 0) { memcpy((vertex*)vbo_main + colored_size + textured_size, entity_mesh_colored.data(), ent_col * sizeof(vertex)); GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size, ent_col * sizeof(vertex)); BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size + textured_size, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, 0, 0); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); C3D_DrawArrays(GPU_TRIANGLES, 0, ent_col); }
-        if (ent_tex > 0) { memcpy((vertex*)vbo_main + colored_size + textured_size + ent_col, entity_mesh_textured.data(), ent_tex * sizeof(vertex)); GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size + ent_col, ent_tex * sizeof(vertex)); BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size + textured_size + ent_col, sizeof(vertex), 3, 0x210); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, 0); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_MODULATE); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE); C3D_DrawArrays(GPU_TRIANGLES, 0, ent_tex); }
+
+        if (ent_col > 0) { 
+            memcpy((vertex*)vbo_main + colored_size + textured_size, entity_mesh_colored.data(), ent_col * sizeof(vertex)); 
+            GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size, ent_col * sizeof(vertex)); 
+            BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size + textured_size, sizeof(vertex), 3, 0x210); 
+            C3D_TexEnv* env = C3D_GetTexEnv(0); 
+            C3D_TexEnvInit(env); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
+            C3D_DrawArrays(GPU_TRIANGLES, 0, ent_col); 
+        }
+
+        if (ent_tex > 0) { 
+            memcpy((vertex*)vbo_main + colored_size + textured_size + ent_col, entity_mesh_textured.data(), ent_tex * sizeof(vertex)); 
+            GSPGPU_FlushDataCache((vertex*)vbo_main + colored_size + textured_size + ent_col, ent_tex * sizeof(vertex)); 
+            BufInfo_Add(bufInfo, (vertex*)vbo_main + colored_size + textured_size + ent_col, sizeof(vertex), 3, 0x210); 
+            C3D_TexEnv* env = C3D_GetTexEnv(0); 
+            C3D_TexEnvInit(env); 
+            C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); 
+            C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE); 
+            C3D_DrawArrays(GPU_TRIANGLES, 0, ent_tex); 
+        }
         
         C3D_FrameEnd(0);
     }
