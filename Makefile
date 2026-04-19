@@ -95,7 +95,7 @@ $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 
 # Generic rule to compile ANY .cpp file inside the source/ directory
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp vshader_shbin.h
-	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O3 -ffast-math -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/portlibs/3ds/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
+	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O3 -ffast-math -fno-exceptions -fno-rtti -I. -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/portlibs/3ds/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
 $(TARGET).elf: $(OBJS)
 	$(CXX) -specs=3dsx.specs -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -o $@ $^ $(LIBS)
