@@ -705,7 +705,7 @@ int main() {
                 for (auto& b : collisions) { 
                     if ((b.type == 1 || b.type == 2) && camX + r > b.minX && camX - r < b.maxX && camZ + r > b.minZ && camZ - r < b.maxZ) { 
                         float rCZ = (b.minZ + b.maxZ) / 2.0f, cCX = ((b.minX + b.maxX) / 2.0f);
-                        float tOX = (cCX < -4.0f) ? -6.0f : ((cCX > 4.0f) ? 6.0f : 0.0f); 
+                        float tOX = (cCX < -3.0f) ? -6.0f : ((cCX > 3.0f) ? 6.0f : 0.0f); 
                         
                         if (b.type == 1) { 
                             hideState = IN_CABINET; camZ = rCZ; camPitch = 0; 
@@ -724,7 +724,7 @@ int main() {
                 } 
             } else if (kDown & KEY_X) { 
                 if (hideState == IN_CABINET || hideState == UNDER_BED) {
-                    float tOX = (camX < -4.0f) ? -6.0f : ((camX > 4.0f) ? 6.0f : 0.0f);
+                    float tOX = (camX < -3.0f) ? -6.0f : ((camX > 3.0f) ? 6.0f : 0.0f);
                     camX = (camX - tOX < 0) ? -1.4f + tOX : 1.4f + tOX; 
                     camYaw = (camX - tOX < 0) ? -1.57f : 1.57f; 
                     hideState = NOT_HIDING; needsVBOUpdate = true; 
@@ -860,8 +860,8 @@ int main() {
                             float fZ = srZ - 0.9f - (s * 1.6f);
                             int tL = rooms[playerCurrentRoom].rightRoomSlotTypeL[s];
                             if (tL > 0 && tL != 99) {
-                                if (tL == 7 || tL == 8) { if (cC(8.4f, fZ, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])) { iA = true; break; } }
-                                else if (cI(tL, fZ, 8.4f, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].rightRoomSlotItemL[s])) { iA = true; break; }
+                                if (tL == 7 || tL == 8) { if (cC(3.6f, fZ, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])) { iA = true; break; } }
+                                else if (cI(tL, fZ, 3.6f, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].rightRoomSlotItemL[s])) { iA = true; break; }
                             } 
                             int tR = rooms[playerCurrentRoom].rightRoomSlotTypeR[s];
                             if (tR > 0 && tR != 99) {
