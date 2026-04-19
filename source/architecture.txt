@@ -1,0 +1,31 @@
+========================================
+DOORS 3DS - ENGINE ARCHITECTURE
+========================================
+
+1. game_state.h / game_state.cpp
+   - The "Memory Bank". 
+   - Contains all global variables, player health/inventory, camera coordinates, and the master array of `rooms`.
+   - Any file that needs to know "where is the player?" or "is the door open?" includes game_state.h.
+
+2. render_utils.h / render_utils.cpp
+   - The "Paintbrush".
+   - Handles the 3DS GPU (Citro3D) directly. 
+   - Contains the math for drawing 3D primitives (addBox, addBillboard, addFace) and loading textures/audio from the ROMFS.
+
+3. physics.h / physics.cpp
+   - The "Rules of the World".
+   - Handles AABB (Axis-Aligned Bounding Box) collision detection so the player doesn't walk through walls.
+   - Handles Line-Of-Sight (Raycasting) to check if the player is hiding behind a wall when Screech or Eyes attack.
+
+4. world_gen.h / world_gen.cpp
+   - The "Architect".
+   - Contains `generateRooms()` which randomly decides what rooms have closets, beds, or keys.
+   - Contains `buildWorld()` which physically reads the room data and calls `addBox()` to construct the 3D meshes for walls, floors, and furniture.
+
+5. entities.h / entities.cpp
+   - The "Actors".
+   - Contains `buildEntities()`, which handles drawing the 3D visual representations of the monsters (Screech, Rush, Seek, Figure, and Eyes).
+
+6. main.cpp
+   - The "Director".
+   - The core game loop. It handles controller inputs (joystick/C-stick), plays sound effects, updates monster AI logic, and pushes the final image to the screen.
