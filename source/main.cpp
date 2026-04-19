@@ -61,7 +61,7 @@ int main() {
         sDarkRoomEnter = loadWav("romfs:/Dark_Room_Enter.wav"); 
         sDrawerClose = loadWav("romfs:/Drawer_Close.wav"); 
         sDrawerOpen = loadWav("romfs:/Drawer_Open.wav"); 
-        sLightsFlicker = loadWav("romfs:/Wardrobe_Enter.wav"); 
+        sLightsFlicker = loadWav("romfs:/Lights_Flicker.wav"); 
         sWardrobeEnter = loadWav("romfs:/Wardrobe_Enter.wav"); 
         sWardrobeExit = loadWav("romfs:/Wardrobe_Exit.wav");
     }
@@ -957,6 +957,7 @@ int main() {
         } // End of if(!isDead)
 
         // --- Door Open/Close Checks ---
+        // 1. Check Main Forward Doors
         for (int i = 0; i < TOTAL_ROOMS; i++) { 
             if (rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
             float dZ = -10.0f - (i * 10.0f);
@@ -968,6 +969,26 @@ int main() {
                 doorOpen[i] = isClose;
                 needsVBOUpdate = true;
                 if (isClose && audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+            }
+        }
+
+        // 2. Check Side Doors
+        if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
+            if (rooms[playerCurrentRoom].hasLeftRoom && !rooms[playerCurrentRoom].leftDoorOpen) {
+                float lDoorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset - 0.6f;
+                if (fabsf(camZ - lDoorZ) < 2.0f && camX < -1.5f) {
+                    rooms[playerCurrentRoom].leftDoorOpen = true;
+                    needsVBOUpdate = true;
+                    if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+                }
+            }
+            if (rooms[playerCurrentRoom].hasRightRoom && !rooms[playerCurrentRoom].rightDoorOpen) {
+                float rDoorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset - 0.6f;
+                if (fabsf(camZ - rDoorZ) < 2.0f && camX > 1.5f) {
+                    rooms[playerCurrentRoom].rightDoorOpen = true;
+                    needsVBOUpdate = true;
+                    if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+                }
             }
         }
 
