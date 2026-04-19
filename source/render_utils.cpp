@@ -1,4 +1,5 @@
 #include "render_utils.h"
+#include <tex3ds.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
