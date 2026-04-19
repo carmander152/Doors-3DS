@@ -5,7 +5,11 @@ endif
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := Doors_3DS
-OBJS := vshader.shbin.o main.o
+SRC_DIR := source
+CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+CPP_OBJS := $(CPP_FILES:.cpp=.o)
+
+OBJS := vshader.shbin.o $(CPP_OBJS)
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/portlibs/3ds/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 ROMFS_DIR := romfs
 
@@ -89,7 +93,8 @@ $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
 	rm -f stripped_for_cia.elf
 
-main.o: main.cpp vshader_shbin.h
+# Generic rule to compile ANY .cpp file inside the source/ directory
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp vshader_shbin.h
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O3 -ffast-math -fno-exceptions -fno-rtti -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/portlibs/3ds/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
 $(TARGET).elf: $(OBJS)
