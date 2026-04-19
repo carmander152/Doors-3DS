@@ -16,18 +16,6 @@
 #include "world_gen.h"
 #include "entities.h"
 
-// Minor UI helper functions
-int getDisplayRoom(int idx) { 
-    return (idx < 0) ? 0 : idx + 1; 
-}
-
-int getNextDoorIndex(int currentIdx) { 
-    if (currentIdx >= seekStartRoom && currentIdx <= seekStartRoom + 2) {
-        return seekStartRoom + 3;
-    }
-    return currentIdx + 1; 
-}
-
 int main() {
     // --- System Initialization ---
     gfxInitDefault(); 
@@ -743,6 +731,177 @@ int main() {
                     if (audio_ok && sWardrobeExit.data_vaddr) { ndspChnWaveBufClear(10); sWardrobeExit.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sWardrobeExit); }
                 } 
             }
+            
+            // --- Interactions (Doors, Drawers, Chests, Items) ---
+            bool iA = false;
+            
+            // Dupe Door Logic
+            if (!iA && (kDown & KEY_A)) { 
+                int nI = getNextDoorIndex(playerCurrentRoom); 
+                if (nI >= 0 && nI < TOTAL_ROOMS && rooms[nI].isDupeRoom) { 
+                    float dZ = -10.0f - (nI * 10.0f); 
+                    if (fabsf(camZ - dZ) < 2.5f) { 
+                        float fx = -sinf(camYaw), fz = -cosf(camYaw); 
+                        int tD = -1; float bD = 0.85f; 
+                        for (int d = 0; d < 3; d++) { 
+                            float dx = (-2.0f + d * 2.0f) - camX, dz = dZ - camZ, distSq = dx*dx + dz*dz; 
+                            if (distSq > 0 && distSq < 9.0f) { 
+                                float dist = sqrtf(distSq); 
+                                float dot = (fx * (dx / dist)) + (fz * (dz / dist)); 
+                                if (dot > bD) { bD = dot; tD = d; } 
+                            } 
+                        } 
+                        if (tD != -1) { 
+                            if (tD == rooms[nI].correctDupePos) { 
+                                if (!doorOpen[nI]) {
+                                    if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+                                    doorOpen[nI] = true; needsVBOUpdate = true;
+                                } 
+                            } else { 
+                                if (audio_ok && sDupeAttack.data_vaddr) { ndspChnWaveBufClear(2); sDupeAttack.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(2, &sDupeAttack); }
+                                playerHealth -= 34; flashRedFrames = 8; camZ += 2.0f; 
+                                if (playerHealth <= 0) isDead = true; 
+                            } 
+                            iA = true; 
+                        } 
+                    } 
+                } 
+            }
+            
+            // Drawer & Chest Logic
+            if ((kDown & KEY_A) || (kDown & KEY_X && hideState == NOT_HIDING)) {
+                auto cI = [&](int ty, float zC, float sX, bool& iO, int& it) { 
+                    if (ty != 0) {
+                        float dx = sX - camX, dz = zC - camZ, distSq = dx*dx + dz*dz;
+                        if (distSq < 6.25f) {
+                            float dist = sqrtf(distSq);
+                            float fx = -sinf(camYaw), fz = -cosf(camYaw), dot = (fx*(dx/dist)) + (fz*(dz/dist));
+                            if (dot > 0.7f) {
+                                float aX = sX - (dx/dist)*0.5f, aZ = zC - (dz/dist)*0.5f; 
+                                float targetY = (ty == 3 || ty == 4) ? 0.7f : 0.5f; 
+                                if (checkLineOfSight(camX, (isCrouching ? 0.4f : 0.9f), camZ, aX, targetY, aZ)) {
+                                    if (kDown & KEY_X && (ty == 5 || ty == 6)) {
+                                        iO = !iO; needsVBOUpdate = true;
+                                        if (audio_ok) {
+                                            ndspChnWaveBufClear(10);
+                                            if (iO && sDrawerOpen.data_vaddr) { sDrawerOpen.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sDrawerOpen); }
+                                            else if (!iO && sDrawerClose.data_vaddr) { sDrawerClose.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sDrawerClose); }
+                                        }
+                                        return true;
+                                    } 
+                                    if (kDown & KEY_A) { 
+                                        if ((ty == 5 || ty == 6) && iO) {
+                                            if (it == 1) { hasKey = true; it = 0; needsVBOUpdate = true; sprintf(uiMessage, "Grabbed the Golden Key!"); messageTimer = 45; return true; }
+                                            else if (it == 2) { playerHealth += 10; if (playerHealth > 100) playerHealth = 100; it = 0; needsVBOUpdate = true; sprintf(uiMessage, "Used a Bandaid! (+10 HP)"); messageTimer = 45; return true; }
+                                            else if (it == 3) { playerCoins += (rand() % 15) + 5; it = 0; needsVBOUpdate = true; sprintf(uiMessage, "Looted some Coins!"); messageTimer = 45; if (audio_ok && sCoinsCollect.data_vaddr) { ndspChnWaveBufClear(10); sCoinsCollect.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sCoinsCollect); } return true; }
+                                            else { sprintf(uiMessage, "Drawer is empty..."); messageTimer = 30; return true; }
+                                        } else if ((ty == 3 || ty == 4)) {
+                                            if (it == 1) { hasKey = true; it = 0; needsVBOUpdate = true; sprintf(uiMessage, "Grabbed Key off the bed!"); messageTimer = 45; return true; }
+                                            else if (it == 3) { playerCoins += (rand() % 15) + 5; it = 0; needsVBOUpdate = true; sprintf(uiMessage, "Looted Coins off the bed!"); messageTimer = 45; if (audio_ok && sCoinsCollect.data_vaddr) { ndspChnWaveBufClear(10); sCoinsCollect.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sCoinsCollect); } return true; }
+                                        }
+                                    } 
+                                }
+                            }
+                        }
+                    } 
+                    return false; 
+                };
+                
+                auto cC = [&](float cX, float cZ, bool& iO) { 
+                    if ((kDown & KEY_X) && !iO) {
+                        float dx = cX - camX, dz = cZ - camZ, distSq = dx*dx + dz*dz;
+                        if (distSq < 6.25f) {
+                            float dist = sqrtf(distSq);
+                            float fx = -sinf(camYaw), fz = -cosf(camYaw), dot = (fx*(dx/dist)) + (fz*(dz/dist));
+                            if (dot > 0.7f) {
+                                float aX = cX - (dx/dist)*0.5f, aZ = cZ - (dz/dist)*0.5f;
+                                if (checkLineOfSight(camX, (isCrouching ? 0.4f : 0.9f), camZ, aX, 0.3f, aZ)) {
+                                    iO = true; needsVBOUpdate = true; playerCoins += 20; 
+                                    sprintf(uiMessage, "Opened Chest!"); messageTimer = 45;
+                                    if (audio_ok && sDrawerOpen.data_vaddr) { ndspChnWaveBufClear(10); sDrawerOpen.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sDrawerOpen); }
+                                    return true;
+                                }
+                            }
+                        }
+                    } 
+                    return false; 
+                };
+                
+                // Elevator Exit
+                if (inElevator && !elevatorDoorsOpen && camX > 0 && camZ > 5.0f && camZ < 8.0f) { 
+                    elevatorJamFinished = true; elevatorDoorsOpen = true; iA = true; needsVBOUpdate = true;
+                    if (audio_ok && sElevatorJamEnd.data_vaddr) { ndspChnWaveBufClear(9); sElevatorJamEnd.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(9, &sElevatorJamEnd); } 
+                }
+                
+                // Checking current room for interactables
+                if (!iA && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
+                    for (int s = 0; s < 3; s++) {
+                        if (cI(rooms[playerCurrentRoom].slotType[s], (-10.0f - (playerCurrentRoom * 10.0f)) - 2.5f - (s * 2.5f), ((rooms[playerCurrentRoom].slotType[s] % 2 != 0) ? -2.4f : 2.4f), rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].slotItem[s])) { iA = true; break; } 
+                    }
+                    if (!iA && rooms[playerCurrentRoom].hasLeftRoom) { 
+                        float srZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset + 2.5f; 
+                        for (int s = 0; s < 3; s++) {
+                            float fZ = srZ - 0.9f - (s * 1.6f);
+                            int tL = rooms[playerCurrentRoom].leftRoomSlotTypeL[s];
+                            if (tL > 0 && tL != 99) {
+                                if (tL == 7 || tL == 8) { if (cC(-8.4f, fZ, rooms[playerCurrentRoom].leftRoomDrawerOpenL[s])) { iA = true; break; } }
+                                else if (cI(tL, fZ, -8.4f, rooms[playerCurrentRoom].leftRoomDrawerOpenL[s], rooms[playerCurrentRoom].leftRoomSlotItemL[s])) { iA = true; break; }
+                            } 
+                            int tR = rooms[playerCurrentRoom].leftRoomSlotTypeR[s];
+                            if (tR > 0 && tR != 99) {
+                                if (tR == 7 || tR == 8) { if (cC(-3.6f, fZ, rooms[playerCurrentRoom].leftRoomDrawerOpenR[s])) { iA = true; break; } }
+                                else if (cI(tR, fZ, -3.6f, rooms[playerCurrentRoom].leftRoomDrawerOpenR[s], rooms[playerCurrentRoom].leftRoomSlotItemR[s])) { iA = true; break; }
+                            } 
+                        } 
+                    } 
+                    if (!iA && rooms[playerCurrentRoom].hasRightRoom) { 
+                        float srZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset + 2.5f; 
+                        for (int s = 0; s < 3; s++) {
+                            float fZ = srZ - 0.9f - (s * 1.6f);
+                            int tL = rooms[playerCurrentRoom].rightRoomSlotTypeL[s];
+                            if (tL > 0 && tL != 99) {
+                                if (tL == 7 || tL == 8) { if (cC(8.4f, fZ, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])) { iA = true; break; } }
+                                else if (cI(tL, fZ, 8.4f, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].rightRoomSlotItemL[s])) { iA = true; break; }
+                            } 
+                            int tR = rooms[playerCurrentRoom].rightRoomSlotTypeR[s];
+                            if (tR > 0 && tR != 99) {
+                                if (tR == 7 || tR == 8) { if (cC(8.4f, fZ, rooms[playerCurrentRoom].rightRoomDrawerOpenR[s])) { iA = true; break; } }
+                                else if (cI(tR, fZ, 8.4f, rooms[playerCurrentRoom].rightRoomDrawerOpenR[s], rooms[playerCurrentRoom].rightRoomSlotItemR[s])) { iA = true; break; }
+                            } 
+                        } 
+                    } 
+                }
+                
+                // Lobby Key Pickup
+                if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
+                    lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true; 
+                    sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 45; iA = true;
+                    if (audio_ok && sCoinsCollect.data_vaddr) { ndspChnWaveBufClear(10); sCoinsCollect.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sCoinsCollect); }
+                }
+                
+                // Unlocking Doors
+                if (!iA) { 
+                    for (int i = 0; i < TOTAL_ROOMS; i++) { 
+                        if (i == seekStartRoom + 1 || i == seekStartRoom + 2) continue; 
+                        if (rooms[i].isLocked || rooms[i].isJammed) { 
+                            float dZ = -10.0f - (i * 10.0f), dX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f); 
+                            if (fabsf(camZ - dZ) < 2.5f && fabsf(camX - dX) < 2.0f) { 
+                                if (rooms[i].isJammed) {
+                                    if (audio_ok && sLockedDoor.data_vaddr) { ndspChnWaveBufClear(1); sLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sLockedDoor); }
+                                    sprintf(uiMessage, "The door is jammed shut!"); messageTimer = 30;
+                                } else if (hasKey) {
+                                    rooms[i].isLocked = false; hasKey = false; needsVBOUpdate = true; 
+                                    sprintf(uiMessage, "Door Unlocked!"); messageTimer = 30;
+                                } else {
+                                    if (audio_ok && sLockedDoor.data_vaddr) { ndspChnWaveBufClear(1); sLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sLockedDoor); }
+                                    sprintf(uiMessage, "It's locked..."); messageTimer = 30;
+                                } 
+                                iA = true; break; 
+                            } 
+                        } 
+                    } 
+                }
+            } 
 
             // --- Movement & Input ---
             if ((kDown & KEY_B) && hideState == NOT_HIDING) { 
