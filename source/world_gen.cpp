@@ -641,8 +641,8 @@ void generateRooms() {
         
         // Regular Room Setup (Furniture & Side Rooms)
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale && !rooms[i].isDupeRoom) {
-            rooms[i].hasLeftRoom = (rand() % 100 < 30); 
-            rooms[i].hasRightRoom = (rand() % 100 < 30);
+            rooms[i].hasLeftRoom = (rand() % 100 < 60); 
+            rooms[i].hasRightRoom = (rand() % 100 < 60);
             
             // Left Side Room Layouts
             if (rooms[i].hasLeftRoom) { 
