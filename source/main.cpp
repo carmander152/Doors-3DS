@@ -134,8 +134,10 @@ int main() {
     int frames = 0; 
     float currentFps = 0.0f;
 
+    static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f;
+
     // ==========================================
-    //               MAIN GAME LOOP
+    //               GAMEPLAY LOGIC
     // ==========================================
     while (aptMainLoop()) {
         u64 currTime = osGetTime(); 
@@ -403,9 +405,6 @@ int main() {
             }
         }
 
-        // ==========================================
-        //               GAMEPLAY LOGIC
-        // ==========================================
         if (!isDead) {
             
             // --- The Figure ---
@@ -929,8 +928,14 @@ int main() {
             float pH = isCrouching ? 0.5f : 1.1f; 
             circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
             
+            float turnSpeed = 0.0f;
+            bool isMoving = false;
+            
             if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
-                if (abs(cS.dx) > 10) camYaw -= cS.dx / 1560.0f * 1.6f; 
+                if (abs(cS.dx) > 10) {
+                    turnSpeed = cS.dx / 1560.0f * 1.6f;
+                    camYaw -= turnSpeed; 
+                }
                 if (abs(cS.dy) > 10) camPitch += cS.dy / 1560.0f * 1.6f;
                 
                 if (kHeld & KEY_TOUCH) { 
@@ -938,7 +943,10 @@ int main() {
                     else {
                         float dx = (float)t.px - startTouchX, dy = (float)t.py - startTouchY;
                         if (fabsf(dx) < 10.0f) dx = 0; if (fabsf(dy) < 10.0f) dy = 0;
-                        camYaw -= (dx / 160.0f) * 0.12f; camPitch -= (dy / 120.0f) * 0.12f;
+                        float tTurn = (dx / 160.0f) * 0.12f;
+                        camYaw -= tTurn; 
+                        turnSpeed += tTurn; // Combine touch turning
+                        camPitch -= (dy / 120.0f) * 0.12f;
                     } 
                 } else { wasTouching = false; } 
                 
@@ -946,6 +954,7 @@ int main() {
                 if (camPitch < -1.57f) camPitch = -1.57f;
                 
                 if (abs(cP.dy) > 15 || abs(cP.dx) > 15) { 
+                    isMoving = true;
                     float s = (seekState == 2) ? (isCrouching ? 0.50f : 0.84f) : (isCrouching ? 0.32f : 0.56f);
                     float sy = cP.dy / 1560.0f, sx = cP.dx / 1560.0f;
                     float nX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
@@ -954,6 +963,23 @@ int main() {
                     if (!checkCollision(camX, 0, nZ, pH)) camZ = nZ; 
                 }
             }
+            
+            // --- Camera Effects Math ---
+            float chaseMultiplier = (seekState == 2) ? 2.5f : 1.0f; // Multiplies chaos during Seek
+            
+            float targetRoll = turnSpeed * 0.6f * chaseMultiplier; 
+            if (targetRoll > 0.08f * chaseMultiplier) targetRoll = 0.08f * chaseMultiplier; // Clamp max tilt
+            if (targetRoll < -0.08f * chaseMultiplier) targetRoll = -0.08f * chaseMultiplier;
+            currentRoll += (targetRoll - currentRoll) * 0.15f; // Smoothly lerp to tilt
+            
+            if (isMoving) {
+                bobTime += (isCrouching ? 0.12f : 0.22f) * chaseMultiplier; 
+            } else {
+                bobTime += (round(bobTime / 3.14159f) * 3.14159f - bobTime) * 0.1f; // Smoothly return to center
+            }
+            
+            camBobY = sinf(bobTime) * 0.05f * chaseMultiplier; // Vertical bounce
+            camBobX = cosf(bobTime / 2.0f) * 0.025f * chaseMultiplier; // Horizontal sway
         } // End of if(!isDead)
 
         // --- Door Open/Close Checks ---
@@ -1041,10 +1067,26 @@ int main() {
         C3D_Mtx proj, view; 
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); 
         Mtx_Identity(&view); 
+        
+        // 1. Apply Camera Roll (Tilt)
+        Mtx_RotateZ(&view, currentRoll, true);
+        
+        // 2. Apply Pitch and Yaw
         Mtx_RotateX(&view, -dCP, true); 
         Mtx_RotateY(&view, -dCY, true); 
+        
+        // 3. Apply Base Height + Bobbing
         float vY = isDead ? -0.1f : (isCrouching ? -0.4f : (hideState == NOT_HIDING || hideState == BEHIND_DOOR ? -0.9f : (hideState == IN_CABINET ? -0.7f : -0.15f)));
-        Mtx_Translate(&view, -dCX, vY, -dCZ, true); 
+        float finalX = -dCX;
+        float finalY = vY;
+        
+        // Only apply bobbing if you are walking/running (not dead or hiding)
+        if (!isDead && hideState == NOT_HIDING && seekState != 1) {
+            finalY -= camBobY; 
+            finalX -= camBobX; 
+        }
+        
+        Mtx_Translate(&view, finalX, finalY, -dCZ, true); 
         Mtx_Multiply(&view, &proj, &view);
         
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view); 
