@@ -271,8 +271,8 @@ void buildWorld(int cChunk, int pRm) {
         
         bool isInteriorVisible = true;
         if (!seekActive) {
-            if (i > pRm && i >= 0 && !doorOpen[i]) isInteriorVisible = false;
-            if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1]) isInteriorVisible = false;
+            if (i > pRm && i >= 0 && !doorOpen[i] && i != seekStartRoom + 1 && i != seekStartRoom + 2) isInteriorVisible = false;
+            if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1] && (i + 1) != seekStartRoom + 1 && (i + 1) != seekStartRoom + 2) isInteriorVisible = false;
         }
 
         // Room 49 (Library / Figure Room)
