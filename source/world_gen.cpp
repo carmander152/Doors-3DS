@@ -631,13 +631,8 @@ void generateRooms() {
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = dN;
         }
         
-        // Setup Eyes Entity Spawns
+        // Flag Eyes Spawns (Coordinates calculated later to avoid doors)
         rooms[i].hasEyes = (!iSE && i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8); 
-        if (rooms[i].hasEyes) {
-            rooms[i].eyesX = 0.0f;
-            rooms[i].eyesY = 0.9f;
-            rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f;
-        }
         
         // Regular Room Setup (Furniture & Side Rooms)
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale && !rooms[i].isDupeRoom) {
@@ -799,6 +794,39 @@ void generateRooms() {
             } 
         } else {
             rooms[i].pCount = 0; 
+        }
+        
+        // Setup Eyes Coordinates safely away from side doors
+        if (rooms[i].hasEyes) {
+            bool validPosition = false;
+            int attempts = 0;
+            
+            while (!validPosition && attempts < 20) {
+                int wallSide = rand() % 2; 
+                float randomZOffset = -1.5f - ((rand() % 70) / 10.0f); // -1.5 to -8.5
+                
+                if (wallSide == 0) { 
+                    if (rooms[i].hasLeftRoom && fabsf(randomZOffset - rooms[i].leftDoorOffset) < 1.8f) {
+                        attempts++; continue; 
+                    }
+                    rooms[i].eyesX = -2.85f; 
+                    rooms[i].eyesZ = (-10.0f - (i * 10.0f)) + randomZOffset;
+                    validPosition = true;
+                } else { 
+                    if (rooms[i].hasRightRoom && fabsf(randomZOffset - rooms[i].rightDoorOffset) < 1.8f) {
+                        attempts++; continue; 
+                    }
+                    rooms[i].eyesX = 2.85f; 
+                    rooms[i].eyesZ = (-10.0f - (i * 10.0f)) + randomZOffset;
+                    validPosition = true;
+                }
+            }
+            
+            if (!validPosition) { // Fallback just in case
+                rooms[i].eyesX = 0.0f; 
+                rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f;
+            }
+            rooms[i].eyesY = 1.0f + ((rand() % 10) / 10.0f);
         }
     }
     
