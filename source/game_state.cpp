@@ -32,7 +32,8 @@ float screechX = 0.0f, screechY = 0.0f, screechZ = 0.0f, screechOffsetX = 0.0f, 
 float rushStartTimer = 1.0f, rushZ = 0.0f, rushTargetZ = 0.0f;
 float seekZ = 0.0f, seekSpeed = 0.0f, seekMaxSpeed = 0.076f; 
 
-bool figureActive = false, figureState = 0; 
+bool figureActive = false;
+int figureState = 0; 
 float figureX = 0.0f, figureY = 0.0f, figureZ = 0.0f, figureSpeed = 0.06f; 
 int figureWaypoint = 0;
 
