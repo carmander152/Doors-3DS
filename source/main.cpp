@@ -408,29 +408,31 @@ int main() {
         if (!isDead) {
             
             // --- The Figure ---
-            if (playerCurrentRoom == 49 && !figureActive) { 
+            static int figureIntroTimer = 0;
+            
+            if (playerCurrentRoom == 50 && !figureActive) { 
                 figureActive = true; 
-                figureState = 0; // 0 = Patrol, 1 = Investigate/Chase
-                figureSpeed = 0.04f; 
+                figureState = 10; // STATE 10 = Intro Cutscene Charge
+                figureSpeed = 0.12f; // Sprinting speed!
                 
-                // Spawn him at the back of the library
-                figureX = -3.0f;
-                figureZ = -10.0f - (49 * 10.0f) - 15.0f; 
+                // Spawn him deep in the library, looking right at the door
+                figureX = 0.0f;
+                figureZ = -10.0f - (50 * 10.0f) - 18.0f; 
                 
-                sprintf(uiMessage, "Shh... He can hear you."); 
-                messageTimer = 75; 
+                figureIntroTimer = 0;
+                sprintf(uiMessage, "??!"); 
+                messageTimer = 30; 
             }
             
             if (figureActive) { 
                 float distSq = (camX - figureX)*(camX - figureX) + (camZ - figureZ)*(camZ - figureZ); 
-                float roomCenterZ = -10.0f - (49 * 10.0f) - 10.0f; 
+                float roomCenterZ = -10.0f - (50 * 10.0f) - 10.0f; 
                 
-                // Read circle pad just for the Figure's hearing check
                 circlePosition cP_fig; 
                 hidCircleRead(&cP_fig);
                 bool isMakingNoise = (abs(cP_fig.dy) > 15 || abs(cP_fig.dx) > 15) && !isCrouching && hideState == NOT_HIDING;
 
-                // 1. Kill Condition (He is blind, but if he physically bumps into you, you die)
+                // Kill Condition
                 if (distSq < 0.8f && !isDead) { 
                     playerHealth = 0; 
                     isDead = true; 
@@ -439,9 +441,41 @@ int main() {
                     messageTimer = 60; 
                 } 
                 else {
+                    // --- STATE 10: SCRIPTED INTRO CHARGE ---
+                    if (figureState == 10) {
+                        figureZ += figureSpeed; // Charge straight at the door
+                        figureIntroTimer++;
+                        
+                        if (figureIntroTimer == 30) {
+                            // Lamp falls to the player's left!
+                            sprintf(uiMessage, "* CRAAASH! *"); 
+                            messageTimer = 60;
+                            if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } // Loud thud
+                            
+                            figureState = 11; // Distracted!
+                            figureTargetX = -4.5f; // Player's far left
+                            figureTargetZ = camZ - 4.0f; 
+                        }
+                    }
+                    // --- STATE 11: SCRIPTED INTRO DISTRACTION ---
+                    else if (figureState == 11) {
+                        float dx = figureTargetX - figureX;
+                        float dz = figureTargetZ - figureZ;
+                        float distToTarget = sqrtf(dx*dx + dz*dz);
+                        
+                        if (distToTarget > 0.15f) {
+                            figureX += (dx / distToTarget) * figureSpeed;
+                            figureZ += (dz / distToTarget) * figureSpeed;
+                        } else {
+                            // He reached the fallen lamp. Start regular patrol!
+                            figureState = 0; 
+                            figureSpeed = 0.04f; // Slow down to walking speed
+                            sprintf(uiMessage, "He's blind... Crouch to sneak."); 
+                            messageTimer = 100;
+                        }
+                    }
                     // --- STATE 0: PATROL ---
-                    if (figureState == 0) { 
-                        // Waypoints forming a rectangle around the library
+                    else if (figureState == 0) { 
                         float patrolX = 0, patrolZ = 0;
                         if (figureTargetWP == 0) { patrolX = -3.0f; patrolZ = roomCenterZ + 6.0f; }
                         else if (figureTargetWP == 1) { patrolX = 3.0f; patrolZ = roomCenterZ + 6.0f; }
@@ -460,10 +494,9 @@ int main() {
                             if (figureTargetWP > 3) figureTargetWP = 0;
                         }
                         
-                        // Hearing Check: Did the player take a loud step?
                         if (isMakingNoise && distSq < 36.0f) {
                             figureState = 1; 
-                            figureTargetX = camX; // Log the exact coordinate
+                            figureTargetX = camX;
                             figureTargetZ = camZ;
                             sprintf(uiMessage, "He heard something!"); 
                             messageTimer = 45;
@@ -471,25 +504,20 @@ int main() {
                     } 
                     // --- STATE 1: INVESTIGATE / CHASE ---
                     else if (figureState == 1) { 
-                        // If the player KEEPS making noise, keep updating the lock-on
                         if (isMakingNoise && distSq < 49.0f) {
                             figureTargetX = camX;
                             figureTargetZ = camZ;
                         }
                         
-                        // Run towards the LAST KNOWN sound location, NOT the player!
                         float dx = figureTargetX - figureX;
                         float dz = figureTargetZ - figureZ;
                         float distToTarget = sqrtf(dx*dx + dz*dz);
-                        
                         float chaseSpeed = figureSpeed * 1.8f; 
                         
                         if (distToTarget > 0.15f) {
                             figureX += (dx / distToTarget) * chaseSpeed;
                             figureZ += (dz / distToTarget) * chaseSpeed;
                         } else {
-                            // He reached the spot where he heard you. 
-                            // If you sneaked away, he gives up and resumes his patrol!
                             figureState = 0; 
                             sprintf(uiMessage, "He lost the sound..."); 
                             messageTimer = 45;
@@ -662,9 +690,10 @@ int main() {
             
             // --- Screech Logic ---
             bool iSE = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 9); 
+            bool inLibrary = (playerCurrentRoom >= 49 && playerCurrentRoom <= 51);
             int sC = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 12000;
             
-            if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && !iSE && (rand() % sC == 0)) { 
+            if (!screechActive && screechCooldown <= 0 && hideState == NOT_HIDING && playerCurrentRoom > 0 && !iSE && !inLibrary && (rand() % sC == 0)) { 
                 screechActive = true; screechState = 1; screechTimer = 120; 
                 float aO = 1.57f + ((rand() % 200) / 100.0f) * 1.57f;
                 float sY = camYaw + aO; 
@@ -976,7 +1005,7 @@ int main() {
             }
             
             // Spawning Rush randomly
-            if (playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !iSE && rand() % 10000 < 2) {
+            if (playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !iSE && !inLibrary && rand() % 10000 < 2) {
                 rushActive = true; rushState = 1; rushTimer = 150 + (rand() % 60); rushStartTimer = (float)rushTimer;
                 if (audio_ok) {
                     if (sLightsFlicker.data_vaddr) { float m[12] = {0}; m[0] = 2.5f; m[1] = 2.5f; ndspChnSetMix(12, m); ndspChnWaveBufClear(12); sLightsFlicker.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(12, &sLightsFlicker); }
