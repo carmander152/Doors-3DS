@@ -36,6 +36,12 @@ bool figureActive = false, figureState = 0;
 float figureX = 0.0f, figureY = 0.0f, figureZ = 0.0f, figureSpeed = 0.06f; 
 int figureWaypoint = 0;
 
+// --- NEW FIGURE VARIABLES ---
+int figureTargetWP = 0;
+float figureTargetX = 0.0f;
+float figureTargetZ = 0.0f;
+// ----------------------------
+
 int getDisplayRoom(int idx) { 
     return (idx < 0) ? 0 : idx + 1; 
 }
