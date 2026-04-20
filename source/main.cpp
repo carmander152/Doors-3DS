@@ -965,21 +965,21 @@ int main() {
             }
             
             // --- Camera Effects Math ---
-            float chaseMultiplier = (seekState == 2) ? 2.5f : 1.0f; // Multiplies chaos during Seek
+            float chaseMultiplier = (seekState == 2) ? 1.5f : 1.0f; 
             
             float targetRoll = turnSpeed * 0.6f * chaseMultiplier; 
-            if (targetRoll > 0.08f * chaseMultiplier) targetRoll = 0.08f * chaseMultiplier; // Clamp max tilt
+            if (targetRoll > 0.08f * chaseMultiplier) targetRoll = 0.08f * chaseMultiplier; 
             if (targetRoll < -0.08f * chaseMultiplier) targetRoll = -0.08f * chaseMultiplier;
-            currentRoll += (targetRoll - currentRoll) * 0.15f; // Smoothly lerp to tilt
+            currentRoll += (targetRoll - currentRoll) * 0.15f; 
             
             if (isMoving) {
-                bobTime += (isCrouching ? 0.12f : 0.22f) * chaseMultiplier; 
+                bobTime += (isCrouching ? 0.12f : 0.22f) * (seekState == 2 ? 1.3f : 1.0f); 
             } else {
-                bobTime += (round(bobTime / 3.14159f) * 3.14159f - bobTime) * 0.1f; // Smoothly return to center
+                bobTime += (0 - bobTime) * 0.15f; 
             }
             
-            camBobY = sinf(bobTime) * 0.05f * chaseMultiplier; // Vertical bounce
-            camBobX = cosf(bobTime / 2.0f) * 0.025f * chaseMultiplier; // Horizontal sway
+            camBobY = fabsf(sinf(bobTime)) * 0.012f * chaseMultiplier; 
+            camBobX = sinf(bobTime * 0.5f) * 0.004f * chaseMultiplier;
         } // End of if(!isDead)
 
         // --- Door Open/Close Checks ---
