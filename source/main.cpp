@@ -352,8 +352,13 @@ int main() {
                 printf("  >> SCREECH ATTACK!! <<      \n\n     (PSST!)                  \n   LOOK AROUND QUICKLY!       \n\n\x1b[0J"); 
             } else { 
                 printf("        PLAYER STATUS         \n==============================\n\n"); 
-                int dC = getDisplayRoom(playerCurrentRoom);
-                int nD = getNextDoorIndex(playerCurrentRoom);
+                
+                int uiRoom = playerCurrentRoom;
+                if (uiRoom == 51) uiRoom = 50; // Skip 51 for UI text
+
+                int dC = getDisplayRoom(uiRoom);
+                int nD = getNextDoorIndex(uiRoom);
+                if (uiRoom == 50 && nD == 51) nD = 52; // Point door 50's exit directly to 52
                 int dN = getDisplayRoom(nD); 
                 
                 if (playerCurrentRoom == -1) { 
@@ -386,10 +391,10 @@ int main() {
                         printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", dN); 
                     }
                 } else {
-                    printf("                           \x1b[K\n\n");
+                    printf("                            \x1b[K\n\n");
                 }
                 
-                printf(" Health       : %d / 100   \x1b[K\n Golden Key   : %s         \x1b[K\n Coins        : %04d       \x1b[K\n FPS          : %.2f       \x1b[K\n\n        --- CONTROLS ---      \x1b[K\n [A] Interact  [B] Crouch    \x1b[K\n [X] Hide(Cab/Bed) [CPAD] Move \x1b[K\n [TOUCH/CSTICK] Look Around  \x1b[K\n", playerHealth, hasKey?"EQUIPPED":"None    ", playerCoins, currentFps);
+                printf(" Health       : %d / 100   \x1b[K\n Golden Key   : %s         \x1b[K\n Coins        : %04d       \x1b[K\n FPS          : %.2f       \x1b[K\n\n       --- CONTROLS ---       \x1b[K\n [A] Interact  [B] Crouch    \x1b[K\n [X] Hide(Cab/Bed) [CPAD] Move \x1b[K\n [TOUCH/CSTICK] Look Around  \x1b[K\n", playerHealth, hasKey?"EQUIPPED":"None    ", playerCoins, currentFps);
                 
                 if (texErrorMessage[0] != '\0') printf("\n \x1b[31m[TEX ERROR] %s\x1b[0m \x1b[K\n", texErrorMessage);
                 
@@ -410,14 +415,14 @@ int main() {
             // --- The Figure ---
             static int figureIntroTimer = 0;
             
-            if (playerCurrentRoom == 50 && !figureActive) { 
+            // Trigger Cutscene exactly when the big double doors open!
+            if (doorOpen[50] && !figureActive) { 
                 figureActive = true; 
                 figureState = 10; // STATE 10 = Intro Cutscene Charge
                 figureSpeed = 0.12f; // Sprinting speed!
                 
-                // Spawn him deep in the library, looking right at the door
                 figureX = 0.0f;
-                figureZ = -10.0f - (50 * 10.0f) - 18.0f; 
+                figureZ = -10.0f - (50 * 10.0f) - 18.0f; // Spawn deep in the back!
                 
                 figureIntroTimer = 0;
                 sprintf(uiMessage, "??!"); 
@@ -446,7 +451,7 @@ int main() {
                         figureZ += figureSpeed; // Charge straight at the door
                         figureIntroTimer++;
                         
-                        if (figureIntroTimer == 30) {
+                        if (figureIntroTimer == 45) { // Give him a second to run out of the darkness
                             // Lamp falls to the player's left!
                             sprintf(uiMessage, "* CRAAASH! *"); 
                             messageTimer = 60;
@@ -454,7 +459,7 @@ int main() {
                             
                             figureState = 11; // Distracted!
                             figureTargetX = -4.5f; // Player's far left
-                            figureTargetZ = camZ - 4.0f; 
+                            figureTargetZ = roomCenterZ + 5.0f; 
                         }
                     }
                     // --- STATE 11: SCRIPTED INTRO DISTRACTION ---
@@ -523,6 +528,16 @@ int main() {
                             messageTimer = 45;
                         }
                     }
+                    
+                    // --- THE LIBRARY LOCK-IN CLAMP ---
+                    // Physically prevents the Figure from leaving through the front or back doors!
+                    float libFrontZ = -10.0f - (50 * 10.0f) - 1.5f;
+                    float libBackZ = -10.0f - (50 * 10.0f) - 18.5f;
+                    
+                    if (figureZ > libFrontZ) figureZ = libFrontZ; 
+                    if (figureZ < libBackZ) figureZ = libBackZ; 
+                    if (figureX > 5.5f) figureX = 5.5f;
+                    if (figureX < -5.5f) figureX = -5.5f;
                 }
             }
             
@@ -1274,7 +1289,7 @@ int main() {
     
     C3D_TexDelete(&atlasTex); 
     linearFree(vbo_main); 
-    romfsExit(); 
+    romfsInit(); 
     C3D_Fini(); 
     gfxExit(); 
     
