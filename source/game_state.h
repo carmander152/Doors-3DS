@@ -26,14 +26,17 @@ extern bool isBuildingEntities;
 extern char texErrorMessage[100];
 
 struct RoomSetup {
-    int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
-    bool drawerOpen[3], isLocked, isJammed, hasLeftRoom, leftDoorOpen, hasRightRoom, rightDoorOpen, isDupeRoom, hasEyes, hasSeekEyes, isSeekHallway, isSeekChase, isSeekFinale;
-    float animMain[3], animLL[3], animLR[3], animRL[3], animRL3[3], animRR[3]; 
-    float lightLevel, leftDoorOffset, rightDoorOffset, eyesX, eyesY, eyesZ; 
+    int slotType[3], slotItem[3], doorPos; 
+    bool isLocked, isJammed, hasEyes, isDupeRoom, hasLeftRoom, hasRightRoom, leftDoorOpen, rightDoorOpen;
+    bool isSeekChase, hasSeekEyes, isSeekFinale;
+    float lightLevel, eyesX, eyesY, eyesZ; 
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10]; int pSide[10];   
     int leftRoomSlotTypeL[3], leftRoomSlotItemL[3], leftRoomSlotTypeR[3], leftRoomSlotItemR[3]; bool leftRoomDrawerOpenL[3], leftRoomDrawerOpenR[3];
     int rightRoomSlotTypeL[3], rightRoomSlotItemL[3], rightRoomSlotTypeR[3], rightRoomSlotItemR[3]; bool rightRoomDrawerOpenL[3], rightRoomDrawerOpenR[3];
     int correctDupePos, dupeNumbers[3]; 
+    float leftDoorOffset, rightDoorOffset;
+    bool drawerOpen[3];
+    float animMain[3], animLL[3], animLR[3], animRL[3], animRR[3];
 };
 
 extern RoomSetup rooms[TOTAL_ROOMS];
@@ -51,15 +54,11 @@ extern int screechState, screechTimer, screechCooldown, rushState, rushTimer, ru
 
 extern float screechX, screechY, screechZ, screechOffsetX, screechOffsetY, screechOffsetZ, rushStartTimer, rushZ, rushTargetZ, seekZ, seekSpeed, seekMaxSpeed; 
 
-extern bool figureActive, figureState; 
+extern bool figureActive;
+extern int figureState; 
 extern float figureX, figureY, figureZ, figureSpeed; 
 extern int figureWaypoint;
 
 // --- NEW FIGURE VARIABLES ---
 extern int figureTargetWP;
-extern float figureTargetX;
-extern float figureTargetZ;
-// ----------------------------
-
-int getDisplayRoom(int idx);
-int getNextDoorIndex(int currentIdx);
+extern float figureTargetX, figureTargetZ;
