@@ -410,25 +410,92 @@ int main() {
             // --- The Figure ---
             if (playerCurrentRoom == 49 && !figureActive) { 
                 figureActive = true; 
-                figureZ = -10.0f - (49 * 10.0f) - 5.0f; 
+                figureState = 0; // 0 = Patrol, 1 = Investigate/Chase
+                figureSpeed = 0.04f; 
+                
+                // Spawn him at the back of the library
+                figureX = -3.0f;
+                figureZ = -10.0f - (49 * 10.0f) - 15.0f; 
+                
                 sprintf(uiMessage, "Shh... He can hear you."); 
                 messageTimer = 75; 
             }
+            
             if (figureActive) { 
                 float distSq = (camX - figureX)*(camX - figureX) + (camZ - figureZ)*(camZ - figureZ); 
-                if (figureState == 0) { 
-                    if (!isCrouching && distSq < 16.0f) figureState = 2; 
-                } else if (figureState == 2) { 
-                    if (camX > figureX) figureX += figureSpeed; else figureX -= figureSpeed; 
-                    if (camZ > figureZ) figureZ += figureSpeed; else figureZ -= figureSpeed; 
-                    if (distSq < 0.64f) { 
-                        playerHealth = 0; 
-                        isDead = true; 
-                        flashRedFrames = 15; 
-                        sprintf(uiMessage, "The Figure found you..."); 
-                        messageTimer = 60; 
-                    } 
+                float roomCenterZ = -10.0f - (49 * 10.0f) - 10.0f; 
+                
+                // Read circle pad just for the Figure's hearing check
+                circlePosition cP_fig; 
+                hidCircleRead(&cP_fig);
+                bool isMakingNoise = (abs(cP_fig.dy) > 15 || abs(cP_fig.dx) > 15) && !isCrouching && hideState == NOT_HIDING;
+
+                // 1. Kill Condition (He is blind, but if he physically bumps into you, you die)
+                if (distSq < 0.8f && !isDead) { 
+                    playerHealth = 0; 
+                    isDead = true; 
+                    flashRedFrames = 15; 
+                    sprintf(uiMessage, "The Figure found you..."); 
+                    messageTimer = 60; 
                 } 
+                else {
+                    // --- STATE 0: PATROL ---
+                    if (figureState == 0) { 
+                        // Waypoints forming a rectangle around the library
+                        float patrolX = 0, patrolZ = 0;
+                        if (figureTargetWP == 0) { patrolX = -3.0f; patrolZ = roomCenterZ + 6.0f; }
+                        else if (figureTargetWP == 1) { patrolX = 3.0f; patrolZ = roomCenterZ + 6.0f; }
+                        else if (figureTargetWP == 2) { patrolX = 3.0f; patrolZ = roomCenterZ - 6.0f; }
+                        else if (figureTargetWP == 3) { patrolX = -3.0f; patrolZ = roomCenterZ - 6.0f; }
+                        
+                        float dx = patrolX - figureX;
+                        float dz = patrolZ - figureZ;
+                        float distToWP = sqrtf(dx*dx + dz*dz);
+                        
+                        if (distToWP > 0.1f) {
+                            figureX += (dx / distToWP) * figureSpeed;
+                            figureZ += (dz / distToWP) * figureSpeed;
+                        } else {
+                            figureTargetWP++;
+                            if (figureTargetWP > 3) figureTargetWP = 0;
+                        }
+                        
+                        // Hearing Check: Did the player take a loud step?
+                        if (isMakingNoise && distSq < 36.0f) {
+                            figureState = 1; 
+                            figureTargetX = camX; // Log the exact coordinate
+                            figureTargetZ = camZ;
+                            sprintf(uiMessage, "He heard something!"); 
+                            messageTimer = 45;
+                        }
+                    } 
+                    // --- STATE 1: INVESTIGATE / CHASE ---
+                    else if (figureState == 1) { 
+                        // If the player KEEPS making noise, keep updating the lock-on
+                        if (isMakingNoise && distSq < 49.0f) {
+                            figureTargetX = camX;
+                            figureTargetZ = camZ;
+                        }
+                        
+                        // Run towards the LAST KNOWN sound location, NOT the player!
+                        float dx = figureTargetX - figureX;
+                        float dz = figureTargetZ - figureZ;
+                        float distToTarget = sqrtf(dx*dx + dz*dz);
+                        
+                        float chaseSpeed = figureSpeed * 1.8f; 
+                        
+                        if (distToTarget > 0.15f) {
+                            figureX += (dx / distToTarget) * chaseSpeed;
+                            figureZ += (dz / distToTarget) * chaseSpeed;
+                        } else {
+                            // He reached the spot where he heard you. 
+                            // If you sneaked away, he gives up and resumes his patrol!
+                            figureState = 0; 
+                            sprintf(uiMessage, "He lost the sound..."); 
+                            messageTimer = 45;
+                        }
+                    }
+                }
             }
             
             // --- Seek Logic ---
