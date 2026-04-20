@@ -275,25 +275,45 @@ void buildWorld(int cChunk, int pRm) {
             if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1] && (i + 1) != seekStartRoom + 1 && (i + 1) != seekStartRoom + 2) isInteriorVisible = false;
         }
 
-        // Room 49 (Library / Figure Room)
-        if (i == 49) {
+        // Room 50 (Library / Figure Room)
+        if (i == 50) {
             float cL = rooms[i].lightLevel; 
             globalTintR=0.9f; globalTintG=0.8f; globalTintB=0.6f; 
             
-            addWallWithDoors(z - 20.0f, false, false, true, doorOpen[i], false, false, i, cL);
+            // Front Wall with Big Double Doors (Separates Room 49 and 50)
+            addTiledSurface(-3.0f, 0.0f, z, 2.0f, 1.8f, -0.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, false); 
+            addTiledSurface(1.0f, 0.0f, z, 2.0f, 1.8f, -0.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, false); 
+            addTiledSurface(-3.0f, 1.8f, z, 6.0f, 1.8f, -0.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, false); 
+            
+            if (!doorOpen[i]) {
+                addBox(-1.0f, 0.0f, z, 1.0f, 1.8f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
+                addBox(0.0f, 0.0f, z, 1.0f, 1.8f, -0.1f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
+            } else {
+                addBox(-1.0f, 0.0f, z-0.9f, 0.1f, 1.8f, 1.0f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
+                addBox(0.9f, 0.0f, z-0.9f, 0.1f, 1.8f, 1.0f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
+            }
             
             if (isInteriorVisible) {
+                // Giant Floor and Ceiling (Spans Rooms 50 and 51)
                 addTiledSurface(-6.0f, 0.0f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, cL, false); 
                 addTiledSurface(-6.0f, 3.6f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, cL, false); 
+                
+                // Side Walls
                 addTiledSurface(-6.1f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
                 addTiledSurface(6.0f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);  
-                addTiledSurface(-6.0f, 0.0f, z, 4.6f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
-                addTiledSurface(1.4f, 0.0f, z, 4.6f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
-                addTiledSurface(-1.4f, 1.8f, z, 2.8f, 1.8f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
                 
+                // Back Wall at end of Library (z - 20)
+                addTiledSurface(-6.0f, 0.0f, z-20.0f, 12.0f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
+                
+                // Locked Exit Door (For the upcoming Code Padlock)
+                addBox(-0.6f, 0.0f, z-19.9f, 1.2f, 1.6f, 0.1f, 0.15f, 0.08f, 0.04f, true, 0, cL); 
+                addBox(-0.1f, 0.7f, z-19.8f, 0.2f, 0.3f, 0.1f, 0.8f, 0.8f, 0.8f, false, 0, cL); 
+                
+                // Balcony/Mezzanine
                 addBox(-6.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
                 addBox(3.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL);  
                 addBox(-3.0f, 1.8f, z-15.0f, 6.0f, 0.1f, -3.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
+                // Railings
                 addBox(-3.1f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL); 
                 addBox(3.0f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL);
                 addBox(-3.0f, 1.9f, z-14.9f, 6.0f, 0.6f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, cL);
@@ -306,20 +326,17 @@ void buildWorld(int cChunk, int pRm) {
                     addBox(3.5f, 0.0f, sZ, 2.0f, sY+0.15f, -0.25f, 0.2f, 0.12f, 0.08f, true, 0, cL); 
                 }
                 
+                // Desk
                 addBox(-1.5f, 0.0f, z-7.0f, 3.0f, 0.6f, -4.0f, 0.3f, 0.18f, 0.1f, true, 0, cL); 
                 addBox(-1.6f, 0.6f, z-6.9f, 3.2f, 0.1f, -4.2f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
                 buildLamp(-1.2f, z-7.5f, cL); 
                 buildLamp(1.2f, z-7.5f, cL);
-                
-                addTiledSurface(-2.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
-                addTiledSurface(1.5f, 0.0f, z-12.0f, 1.0f, 1.8f, -4.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
-                addBox(-6.0f, 0.0f, z, 0.04f, 0.12f, -20.0f, 0.12f, 0.06f, 0.03f, false, 0, cL); 
-                addBox(5.96f, 0.0f, z, 0.04f, 0.12f, -20.0f, 0.12f, 0.06f, 0.03f, false, 0, cL);
-                addBox(-6.0f, 0.0f, z, 4.6f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, cL); 
-                addBox(1.4f, 0.0f, z, 4.6f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, cL);
             }
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; continue; 
         }
+
+        // Skip Room 51 completely since Library consumes its physical space
+        if (i == 51) continue;
 
         // Global Tints based on state
         if (seekState == 1) {
@@ -814,8 +831,10 @@ void generateRooms() {
     rooms[0].isLocked = true; 
     rooms[0].isJammed = false; 
     rooms[0].hasEyes = false; 
-    rooms[48].doorPos = 1; 
+    
     rooms[49].doorPos = 1; 
+    rooms[50].doorPos = 1; 
+    rooms[51].doorPos = 1; 
     
     // Assign Locks and Keys
     for (int i = 2; i < TOTAL_ROOMS - 1; i++) { 
