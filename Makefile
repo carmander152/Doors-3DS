@@ -6,31 +6,46 @@ include $(DEVKITPRO)/devkitARM/3ds_rules
 
 TARGET := Doors_3DS
 SRC_DIR := source
-CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+
+# ========================================================
+# CHANGE 1: Only compile the bundled file, ignore the rest
+# ========================================================
+CPP_FILES := $(SRC_DIR)/main_bundle.cpp
 CPP_OBJS := $(CPP_FILES:.cpp=.o)
 
 OBJS := vshader.shbin.o $(CPP_OBJS)
 LIBS := -L$(DEVKITPRO)/libcitro3d/lib -L$(DEVKITPRO)/portlibs/3ds/lib -L$(DEVKITPRO)/libctru/lib -lcitro3d -lctru -lm
 ROMFS_DIR := romfs
 
-.PHONY: all clean
+.PHONY: all clean pre-build
 
-all: $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
+# ========================================================
+# CHANGE 2: Force 'pre-build' to run before compiling
+# ========================================================
+all: pre-build $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
+
+pre-build:
+	@mkdir -p $(ROMFS_DIR) raw_textures .github/scripts
+	@echo "--- 1. Packing Textures ---"
+	python3 .github/scripts/pack_atlas.py
+	@if [ -f "$(ROMFS_DIR)/atlas.png" ]; then \
+		tex3ds -f rgba8888 $(ROMFS_DIR)/atlas.png -o $(ROMFS_DIR)/atlas.t3x; \
+		rm $(ROMFS_DIR)/atlas.png; \
+	fi
+	@echo "--- 2. Bundling C++ Source ---"
+	python3 .github/scripts/bundle.py
 
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
 
-# Convert atlas.png to atlas.t3x and FORCE 32-bit RGBA color formatting
-$(ROMFS_DIR)/atlas.t3x: atlas.png
-	@mkdir -p $(ROMFS_DIR)
-	tex3ds -f rgba8888 $< -o $@
+# (Removed your old atlas.png rule since pre-build handles it now)
 
 # Make the 3dsx wait for the texture to be converted
-$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh $(ROMFS_DIR)/atlas.t3x
+$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh 
 	3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS_DIR)
 
 # Make the CIA romfs.bin wait for the texture to be converted
-romfs.bin: $(ROMFS_DIR) $(ROMFS_DIR)/atlas.t3x
+romfs.bin: $(ROMFS_DIR) 
 	3dstool -c -t romfs -f $@ --romfs-dir $(ROMFS_DIR)
 
 banner.bin: banner.png audio.wav
@@ -93,7 +108,6 @@ $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
 	rm -f stripped_for_cia.elf
 
-# Generic rule to compile ANY .cpp file inside the source/ directory
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp vshader_shbin.h
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O3 -ffast-math -fno-exceptions -fno-rtti -I. -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/portlibs/3ds/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
@@ -110,4 +124,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf $(ROMFS_DIR)/atlas.t3x
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf $(ROMFS_DIR)/atlas.t3x $(SRC_DIR)/main_bundle.cpp source/atlas_uvs.h
