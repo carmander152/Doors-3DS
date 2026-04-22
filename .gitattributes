@@ -1,0 +1,6 @@
+# Force Linux line endings for everything that touches the build
+*.yml text eol=lf
+*.py text eol=lf
+Makefile text eol=lf
+*.v.pica text eol=lf
+*.sh text eol=lf
