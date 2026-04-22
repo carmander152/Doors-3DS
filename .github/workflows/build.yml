@@ -63,11 +63,8 @@ jobs:
           python3 .github/scripts/pack_atlas.py
           
           echo "Converting atlas.png to 3DS format..."
-          # This is the line where the '' error usually happens if line endings are wrong
-          if [ -f "romfs/atlas.png" ]; then
-            tex3ds -i romfs/atlas.png -o romfs/atlas.t3x
-            rm romfs/atlas.png
-          fi
+          # BULLETPROOF FIX: Putting this all on one line prevents the hidden newline bug from breaking tex3ds!
+          if [ -f "romfs/atlas.png" ]; then tex3ds -i romfs/atlas.png -o romfs/atlas.t3x; rm romfs/atlas.png; fi
           
           echo "Bundling C++ source code..."
           python3 .github/scripts/bundle.py
