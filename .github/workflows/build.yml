@@ -9,9 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Using the official DevkitPro container is best practice!
     container: devkitpro/devkitarm:latest
 
-    # Environment variables for devkitPro tools
     env:
       DEVKITPRO: /opt/devkitpro
       DEVKITARM: /opt/devkitpro/devkitARM
@@ -23,7 +23,12 @@ jobs:
       - name: Install System Dependencies
         run: |
           apt-get update
-          apt-get install -y wget unzip zip make sox
+          # Added python3 and pip3 here so our bundling scripts work!
+          apt-get install -y wget unzip zip make sox python3 python3-pip
+          
+          # Install Pillow for the texture atlas packer 
+          # (--break-system-packages is often needed in modern containerized Ubuntu)
+          pip3 install Pillow --break-system-packages
 
       - name: Install CIA Build Tools
         run: |
@@ -47,6 +52,22 @@ jobs:
           
           echo "Patching 3dstool missing ignore file bug..."
           touch /usr/local/bin/ignore_3dstool.txt
+
+      - name: Pre-process Textures and Bundle Source Code
+        run: |
+          mkdir -p raw_textures romfs source .github/scripts
+          
+          echo "Packing texture atlas..."
+          python3 .github/scripts/pack_atlas.py
+          
+          echo "Converting atlas.png to 3DS format..."
+          if [ -f "romfs/atlas.png" ]; then
+            tex3ds -i romfs/atlas.png -o romfs/atlas.t3x
+            rm romfs/atlas.png # Remove the raw PNG so it doesn't bloat the game file
+          fi
+          
+          echo "Bundling C++ source code..."
+          python3 .github/scripts/bundle.py
 
       - name: Build Game
         run: make
