@@ -22,16 +22,13 @@ jobs:
       - name: Install System Dependencies
         run: |
           apt-get update
-          # Added dos2unix to the install list to fix the Windows Line Ending bug!
+          # Install dos2unix to sanitize other files, even if this YML has issues
           apt-get install -y wget unzip zip make sox python3 python3-pip dos2unix
-          
-          # Install Pillow for the texture atlas packer 
           pip3 install Pillow --break-system-packages
 
       - name: Fix Windows Line Endings
         run: |
-          # This strips the hidden \r characters out of your files so Linux can read them cleanly.
-          # It safely ignores files that don't exist yet or are already formatted correctly.
+          # Clean the internal scripts and Makefile just in case
           if [ -f "Makefile" ]; then dos2unix Makefile; fi
           if [ -d ".github/scripts" ]; then find .github/scripts -name "*.py" -exec dos2unix {} +; fi
 
@@ -66,9 +63,10 @@ jobs:
           python3 .github/scripts/pack_atlas.py
           
           echo "Converting atlas.png to 3DS format..."
+          # This is the line where the '' error usually happens if line endings are wrong
           if [ -f "romfs/atlas.png" ]; then
             tex3ds -i romfs/atlas.png -o romfs/atlas.t3x
-            rm romfs/atlas.png # Remove the raw PNG so it doesn't bloat the game file
+            rm romfs/atlas.png
           fi
           
           echo "Bundling C++ source code..."
