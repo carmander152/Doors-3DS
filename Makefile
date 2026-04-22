@@ -8,7 +8,7 @@ TARGET := Doors_3DS
 SRC_DIR := source
 
 # ========================================================
-# CHANGE 1: Only compile the bundled file, ignore the rest
+# Only compile the bundled file, ignore the rest
 # ========================================================
 CPP_FILES := $(SRC_DIR)/main_bundle.cpp
 CPP_OBJS := $(CPP_FILES:.cpp=.o)
@@ -20,25 +20,21 @@ ROMFS_DIR := romfs
 .PHONY: all clean pre-build
 
 # ========================================================
-# CHANGE 2: Force 'pre-build' to run before compiling
+# Force 'pre-build' to run before compiling
 # ========================================================
 all: pre-build $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
 pre-build:
 	@mkdir -p $(ROMFS_DIR) raw_textures .github/scripts
 	@echo "--- 1. Packing Textures ---"
-	python3 .github/scripts/pack_atlas.py
-	@if [ -f "$(ROMFS_DIR)/atlas.png" ]; then \
-		tex3ds -f rgba8888 $(ROMFS_DIR)/atlas.png -o $(ROMFS_DIR)/atlas.t3x; \
-		rm $(ROMFS_DIR)/atlas.png; \
-	fi
-	@echo "--- 2. Bundling C++ Source ---"
-	python3 .github/scripts/bundle.py
+	@python3 .github/scripts/pack_atlas.py
+	@echo "--- 2. Converting Atlas to t3x ---"
+	@find $(ROMFS_DIR) -name "atlas.png" -exec tex3ds -f rgba8888 {} -o $(ROMFS_DIR)/atlas.t3x \; -exec rm {} \;
+	@echo "--- 3. Bundling C++ Source ---"
+	@python3 .github/scripts/bundle.py
 
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
-
-# (Removed your old atlas.png rule since pre-build handles it now)
 
 # Make the 3dsx wait for the texture to be converted
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh 
