@@ -20,6 +20,9 @@ def bundle():
         out.write("#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <math.h>\n")
         out.write("#include <vector>\n#include <time.h>\n\n")
 
+        # CRITICAL FIX: Explicitly include the generated shader header!
+        out.write('#include "vshader_shbin.h"\n\n')
+
         # Process Headers
         for h in HEADER_ORDER:
             path = os.path.join(source_dir, h)
