@@ -9,7 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Using the official DevkitPro container is best practice!
     container: devkitpro/devkitarm:latest
 
     env:
@@ -23,12 +22,18 @@ jobs:
       - name: Install System Dependencies
         run: |
           apt-get update
-          # Added python3 and pip3 here so our bundling scripts work!
-          apt-get install -y wget unzip zip make sox python3 python3-pip
+          # Added dos2unix to the install list to fix the Windows Line Ending bug!
+          apt-get install -y wget unzip zip make sox python3 python3-pip dos2unix
           
           # Install Pillow for the texture atlas packer 
-          # (--break-system-packages is often needed in modern containerized Ubuntu)
           pip3 install Pillow --break-system-packages
+
+      - name: Fix Windows Line Endings
+        run: |
+          # This strips the hidden \r characters out of your files so Linux can read them cleanly.
+          # It safely ignores files that don't exist yet or are already formatted correctly.
+          if [ -f "Makefile" ]; then dos2unix Makefile; fi
+          if [ -d ".github/scripts" ]; then find .github/scripts -name "*.py" -exec dos2unix {} +; fi
 
       - name: Install CIA Build Tools
         run: |
