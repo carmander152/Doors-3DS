@@ -74,7 +74,8 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
         sprintf(texErrorMessage, "Tex3DS Import failed"); 
         return false; 
     }
-    Tex3DS_TextureFree(t3x);
+    
+    // We intentionally do NOT free t3x here. The GPU needs it to stay alive!
     
     C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST); 
     C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
