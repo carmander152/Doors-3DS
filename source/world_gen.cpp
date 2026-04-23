@@ -4,17 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-
-// --- ATLAS COORDINATES ---
-struct UVData {
-    float u, v, uw, vh;
-};
-
-// Define your Texture Atlas coordinates here (from 0.0f to 1.0f)
-// U, V = Top-Left corner | UW, VH = Width and Height
-const UVData TEX_FLOOR = { 0.032f, 0.032f, 0.436f, 0.436f };
-const UVData TEX_WALL  = { 0.032f, 0.532f, 0.436f, 0.436f };
-// -------------------------
+#include "atlas_uvs.h"
 
 void buildLamp(float x, float z, float L) { 
     addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L); 
