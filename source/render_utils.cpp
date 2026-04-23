@@ -67,8 +67,6 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     fread(texData, 1, size, f); 
     fclose(f);
     
-    // THE FIX: Push the loaded file from the CPU cache into physical RAM
-    // so the GPU DMA engine can actually see the image data!
     GSPGPU_FlushDataCache(texData, size);
     
     Tex3DS_Texture t3x = Tex3DS_TextureImport(texData, size, tex, NULL, false);
@@ -83,7 +81,7 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
 
     Tex3DS_TextureFree(t3x); 
-    linearFree(texData); // Safe to free now because the cache is coherent!
+    linearFree(texData); 
     
     return true;
 }
@@ -105,7 +103,11 @@ void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, verte
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float r, float g, float b, float light) {
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
-    float u1 = u, v1 = v; float u2 = u + (uw * repW), v2 = v + (vh * repH);
+    
+    // === ATLAS PLASTER TEST OVERRIDE ===
+    // Force the entire atlas to stretch across this box to prove the engine works!
+    float u1 = 0.0f, v1 = 0.0f; 
+    float u2 = 1.0f, v2 = 1.0f;
     
     addFaceTextured({{x,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
     addFaceTextured({{x,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}); 
@@ -124,8 +126,12 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
     float br_x = cx + rx, br_y = cy - hh, br_z = cz + rz;
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
+
+    // === ATLAS PLASTER TEST OVERRIDE ===
+    float u1 = 0.0f, v1 = 0.0f;
+    float u2 = 1.0f, v2 = 1.0f;
     
-    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}});
+    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
 
 void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
@@ -139,7 +145,11 @@ void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float
     float tl_x = cx - rx + ux, tl_y = cy + uy, tl_z = cz - rz + uz;
     float tr_x = cx + rx + ux, tr_y = cy + uy, tr_z = cz + rz + uz;
     
-    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u, v}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u+uw, v}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u+uw, v+vh}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u, v+vh}, {r_c, g_c, b_c, 1}});
+    // === ATLAS PLASTER TEST OVERRIDE ===
+    float u1 = 0.0f, v1 = 0.0f;
+    float u2 = 1.0f, v2 = 1.0f;
+    
+    addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
 
 void addBoxColored(float x, float y, float z, float w, float h, float d, float r, float g, float b, float light) {
@@ -167,89 +177,23 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         collisions.push_back({fminf(x,x+w), fminf(y,y+h), fminf(z,z+d), fmaxf(x,x+w), fmaxf(y,y+h), fmaxf(z,z+d), 0});
     }
     
-    float minX = fminf(x, x+w), maxX = fmaxf(x, x+w);
-    float minY = fminf(y, y+h), maxY = fmaxf(y, y+h);
-    float minZ = fminf(z, z+d), maxZ = fmaxf(z, z+d);
-    float width = maxX - minX, height = maxY - minY, depth = maxZ - minZ;
+    // === ATLAS PLASTER TEST OVERRIDE ===
+    // Bypass all tiling logic and just stick the full atlas image over the whole surface
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
+    float x2=x+w, y2=y+h, z2=z+d;
+    float u1 = 0.0f, v1 = 0.0f;
+    float u2 = 1.0f, v2 = 1.0f;
     
-    auto getP = [](float val, float s) { 
-        float p = val - (float)((int)(val / s)) * s; 
-        if (p < 0) p += s; 
-        if (s - p < 0.001f) p = 0.0f; 
-        return p; 
-    };
-    
-    bool isFloor = (height <= 0.05f);
+    bool isFloor = (h <= 0.05f);
     if (isFloor) {
-        float scaleU = texScale * 1.5f, scaleV = texScale * 1.5f; 
-        float currX = minX;
-        while(currX < maxX - 0.0001f) {
-            float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX);
-            float u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
-            if (segW < 0.001f) segW = 0.001f; 
-            
-            float currZ = minZ;
-            while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleV), segD = fminf(scaleV - pZ, maxZ - currZ);
-                float v1 = v + (pZ / scaleV) * vh, repZ = segD / scaleV;
-                if (segD < 0.001f) segD = 0.001f; 
-                
-                float u2 = u1 + (uw * repX), v2 = v1 + (vh * repZ);
-                float x2 = currX + segW, z2 = currZ + segD;
-                
-                addFaceTextured({{currX,maxY,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,maxY,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,maxY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,maxY,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,maxY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,maxY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}); 
-                addFaceTextured({{currX,minY,currZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,minY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,minY,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,minY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,minY,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,minY,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
-                currZ += segD;
-            } 
-            currX += segW;
-        }
+        addFaceTextured({{x, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x2, y2, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}});
     } else {
-        float scaleU = texScale, scaleV = texScale; 
-        if (width >= depth) { 
-            float currX = minX;
-            while(currX < maxX - 0.0001f) {
-                float pX = getP(currX, scaleU), segW = fminf(scaleU - pX, maxX - currX);
-                float u1 = u + (pX / scaleU) * uw, repX = segW / scaleU;
-                if (segW < 0.001f) segW = 0.001f; 
-                
-                float currY = minY;
-                while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY);
-                    float v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
-                    if (segH < 0.001f) segH = 0.001f;
-                    
-                    float u2 = u1 + (uw * repX), v2 = v1 + (vh * repY);
-                    float x2 = currX + segW, y2 = currY + segH;
-                    
-                    addFaceTextured({{currX,currY,maxZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{currX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,currY,maxZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,maxZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{currX,y2,maxZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
-                    addFaceTextured({{currX,currY,minZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{currX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,currY,minZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,minZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{currX,y2,minZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
-                    currY += segH;
-                } 
-                currX += segW;
-            }
-        } else { 
-            float currZ = minZ;
-            while(currZ < maxZ - 0.0001f) {
-                float pZ = getP(currZ, scaleU), segD = fminf(scaleU - pZ, maxZ - currZ);
-                float u1 = u + (pZ / scaleU) * uw, repZ = segD / scaleU;
-                if (segD < 0.001f) segD = 0.001f; 
-                
-                float currY = minY;
-                while(currY < maxY - 0.0001f) {
-                    float pY = getP(currY, scaleV), segH = fminf(scaleV - pY, maxY - currY);
-                    float v1 = v + (pY / scaleV) * vh, repY = segH / scaleV;
-                    if (segH < 0.001f) segH = 0.001f;
-                    
-                    float u2 = u1 + (uw * repZ), v2 = v1 + (vh * repY);
-                    float z2 = currZ + segD, y2 = currY + segH;
-                    
-                    addFaceTextured({{maxX,currY,currZ,1},{u2,v2},{r_c,g_c,b_c,1}}, {{maxX,currY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}, {{maxX,currY,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{maxX,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{maxX,y2,currZ,1},{u2,v1},{r_c,g_c,b_c,1}}); 
-                    addFaceTextured({{minX,currY,currZ,1},{u1,v2},{r_c,g_c,b_c,1}}, {{minX,currY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}, {{minX,currY,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{minX,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{minX,y2,currZ,1},{u1,v1},{r_c,g_c,b_c,1}}); 
-                    currY += segH;
-                } 
-                currZ += segD;
-            }
+        if (w >= d) {
+            addFaceTextured({{x, y, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z2, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
+            addFaceTextured({{x, y, z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x2, y, z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x2, y, z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+        } else {
+            addFaceTextured({{x2, y, z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z2, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+            addFaceTextured({{x, y, z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
         }
     }
 }
