@@ -15,6 +15,7 @@ def pack_textures():
 
     images = glob.glob(os.path.join(INPUT_DIR, "*.png"))
     if not images:
+        print(f"WARNING: No .png files found in {INPUT_DIR}! Put your individual textures here.")
         return
 
     atlas = Image.new("RGBA", (ATLAS_SIZE, ATLAS_SIZE), (0, 0, 0, 0))
@@ -32,7 +33,8 @@ def pack_textures():
     ]
 
     for img_path in images:
-        name = os.path.basename(img_path).split('.')[0]
+        # THE FIX: Replace spaces and dashes with underscores for C++!
+        name = os.path.basename(img_path).split('.')[0].replace(" ", "_").replace("-", "_")
         img = Image.open(img_path).convert("RGBA")
         
         # Move to next row if it doesn't fit
