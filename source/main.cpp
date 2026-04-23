@@ -1231,8 +1231,6 @@ int main() {
             } else if (hasAtlas) { 
                 // STANDARD: Multiply Texture by Vertex Color/Lighting
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
-                C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
-                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR); 
@@ -1265,8 +1263,6 @@ int main() {
             } else if (hasAtlas) { 
                 // STANDARD: Multiply Texture by Vertex Color/Lighting
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
-                C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
-                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR); 
@@ -1312,7 +1308,7 @@ int main() {
     
     C3D_TexDelete(&atlasTex); 
     linearFree(vbo_main); 
-    romfsInit(); 
+    romfsExit(); 
     C3D_Fini(); 
     gfxExit(); 
     
