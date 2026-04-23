@@ -26,11 +26,9 @@ all: pre-build $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 
 pre-build:
 	@mkdir -p $(ROMFS_DIR) raw_textures .github/scripts
-	@echo "--- 1. Packing Textures ---"
-	@python3 .github/scripts/pack_atlas.py
-	@echo "--- 2. Converting Atlas to t3x ---"
-	@find $(ROMFS_DIR) -name "atlas.png" -exec tex3ds -f rgba8888 {} -o $(ROMFS_DIR)/atlas.t3x \; -exec rm {} \;
-	@echo "--- 3. Bundling C++ Source ---"
+	@echo "--- 1. Packing Textures & Generating atlas.h ---"
+	@tex3ds -i raw_textures/game/atlas.t3s -o $(ROMFS_DIR)/atlas.t3x -H $(SRC_DIR)/atlas.h
+	@echo "--- 2. Bundling C++ Source ---"
 	@python3 .github/scripts/bundle.py
 
 $(TARGET).smdh: icon.png
@@ -120,4 +118,4 @@ vshader_shbin.h: vshader.shbin
 	echo "extern const u32 vshader_shbin_size;" >> $@
 
 clean:
-	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf $(ROMFS_DIR)/atlas.t3x $(SRC_DIR)/main_bundle.cpp source/atlas_uvs.h
+	rm -f $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf $(OBJS) vshader.shbin vshader.shbin.s vshader_shbin.h banner.bin clean_audio.wav romfs.bin app.rsf stripped_for_cia.elf $(ROMFS_DIR)/atlas.t3x $(SRC_DIR)/main_bundle.cpp $(SRC_DIR)/atlas.h source/atlas_uvs.h
