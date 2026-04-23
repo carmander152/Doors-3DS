@@ -27,7 +27,7 @@ all: pre-build $(TARGET).elf $(TARGET).3dsx $(TARGET).cia
 pre-build:
 	@mkdir -p $(ROMFS_DIR) raw_textures .github/scripts
 	@echo "--- 1. Packing Textures & Generating atlas.h ---"
-	@tex3ds -i raw_textures/game/atlas.t3s -o $(ROMFS_DIR)/atlas.t3x -H $(SRC_DIR)/atlas.h
+	@tex3ds -a -i raw_textures/game/atlas.t3s -o $(ROMFS_DIR)/atlas.t3x -H $(SRC_DIR)/atlas.h
 	@echo "--- 2. Bundling C++ Source ---"
 	@python3 .github/scripts/bundle.py
 
