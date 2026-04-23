@@ -1,6 +1,7 @@
 #include "world_gen.h"
 #include "render_utils.h"
 #include "physics.h"
+#include "game_uvs.h" // <-- Auto-generated Texture Atlas coordinates
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -107,7 +108,8 @@ void buildChest(float x, float z, float openFactor, float L) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L) {
-    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f;
+    // --- UPDATED ATLAS MATH ---
+    float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     
     addTiledSurface(-3.0f, 0.4f, z, 0.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
@@ -162,6 +164,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
         addBox(dx + 0.05f, 1.35f, z, 1.1f, 0.05f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         
         if (!o) { 
+            // HERE IS THE DOOR! 1.2 Width by 1.4 Height
             addBox(dx, 0, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
             addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); 
             addBox(dx+1.05f, 0.7f, z+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L); 
@@ -185,9 +188,9 @@ void buildWorld(int cChunk, int pRm) {
     world_mesh_textured.clear(); 
     collisions.clear();
     
-    // Texture constants
-    float floorU = 0.032f, floorV = 0.032f, floorUW = 0.436f, floorVH = 0.436f;
-    float wallU = 0.032f, wallV = 0.532f, wallUW = 0.436f, wallVH = 0.436f;     
+    // --- UPDATED ATLAS MATH ---
+    float floorU = TEX_FLOOR.u, floorV = TEX_FLOOR.v, floorUW = TEX_FLOOR.uw, floorVH = TEX_FLOOR.vh;
+    float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
 
     int st = pRm; 
@@ -654,7 +657,6 @@ void generateRooms() {
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = dN;
         }
         
-        // --- THE FIX: Eyes Entity Back in the Middle! ---
         rooms[i].hasEyes = (!iSE && i > 2 && !rooms[i].isDupeRoom && rand() % 100 < 8); 
         if (rooms[i].hasEyes) {
             rooms[i].eyesX = 0.0f;
