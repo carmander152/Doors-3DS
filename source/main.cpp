@@ -109,8 +109,10 @@ int main() {
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); 
     AttrInfo_Init(attr); 
     
-    // Position is 3 floats (X,Y,Z)
-    AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 3); 
+    // ==========================================
+    // FIX: Restored to 4 floats for position.
+    // ==========================================
+    AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); 
     AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); 
     AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); 
     
