@@ -108,7 +108,12 @@ int main() {
     int uLoc_proj = shaderInstanceGetUniformLocation(program.vertexShader, "proj_mtx"); 
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); 
     AttrInfo_Init(attr); 
-    AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); 
+    
+    // ==========================================
+    // FIX 1: Position is typically 3 floats (X,Y,Z). 
+    // Passing 4 can break texture coordinates.
+    // ==========================================
+    AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 3); 
     AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); 
     AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); 
     
@@ -137,7 +142,7 @@ int main() {
     static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f;
 
     // ==========================================
-    //               GAMEPLAY LOGIC
+    //                 GAMEPLAY LOGIC
     // ==========================================
     while (aptMainLoop()) {
         u64 currTime = osGetTime(); 
@@ -1216,13 +1221,21 @@ int main() {
             }
             C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
         }
+        
+        // ==========================================
+        // FIX 2: Updated TexEnv to force standard 
+        // texture sampling, bypassing zero-alpha vertices
+        // ==========================================
         // Draw Textured World
         if (textured_size > 0) {
             C3D_TexBind(0, &atlasTex); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
             if (flashRedFrames > 0 && !isDead) { 
                 C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
+                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, 0, 0); 
+                C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, 0, 0); 
+                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, 0, 0); 
+                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else { 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
             }
@@ -1239,13 +1252,17 @@ int main() {
             }
             C3D_DrawArrays(GPU_TRIANGLES, world_total, ent_col_size); 
         }
+        
         // Draw Textured Entities
         if (ent_tex_size > 0) {
             C3D_TexBind(0, &atlasTex); C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env); 
             if (flashRedFrames > 0 && !isDead) { 
                 C3D_TexEnvColor(env, 0xFF0000FF); C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, GPU_CONSTANT, GPU_CONSTANT); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
+                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, 0, 0); 
+                C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, 0, 0); 
+                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, 0, 0); 
+                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else { 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR); C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
             }
@@ -1257,7 +1274,7 @@ int main() {
     }
     
     // ==========================================
-    //               CLEANUP
+    //                 CLEANUP
     // ==========================================
     if (audio_ok) { 
         if (sPsst.data_vaddr) linearFree((void*)sPsst.data_vaddr); 
