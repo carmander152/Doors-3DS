@@ -67,18 +67,27 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     fread(texData, 1, size, f); 
     fclose(f);
     
+    // The GPU starts copying the image data into VRAM here...
     Tex3DS_Texture t3x = Tex3DS_TextureImport(texData, size, tex, NULL, false);
-    linearFree(texData); 
     
     if (!t3x) { 
         sprintf(texErrorMessage, "Tex3DS Import failed"); 
+        linearFree(texData); // Safe to free here because it failed
         return false; 
     }
     
-    // We intentionally do NOT free t3x here. The GPU needs it to stay alive!
-    
     C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST); 
     C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
+
+    // Free the metadata object (the GPU doesn't need the t3x handle anymore)
+    Tex3DS_TextureFree(t3x); 
+
+    // DO NOT FREE THE RAW PIXEL DATA YET! 
+    // The GPU is still copying it via the GX command buffer in the background. 
+    // We are intentionally leaving `texData` allocated in linear memory for this test
+    // to prevent the texture from turning black.
+    // linearFree(texData); 
+    
     return true;
 }
 
