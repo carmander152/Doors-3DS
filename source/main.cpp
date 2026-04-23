@@ -109,7 +109,6 @@ int main() {
     C3D_AttrInfo* attr = C3D_GetAttrInfo(); 
     AttrInfo_Init(attr); 
     
-    // Position restored to 4 floats!
     AttrInfo_AddLoader(attr, 0, GPU_FLOAT, 4); 
     AttrInfo_AddLoader(attr, 1, GPU_FLOAT, 2); 
     AttrInfo_AddLoader(attr, 2, GPU_FLOAT, 4); 
@@ -1219,9 +1218,6 @@ int main() {
             C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
         }
         
-        // ==========================================
-        // FIX: The Alpha Test Override
-        // ==========================================
         // Draw Textured World
         if (textured_size > 0) {
             C3D_TexBind(0, &atlasTex); 
@@ -1233,15 +1229,11 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                // 1. RGB: Multiply Texture by Vertex Color (Restores lighting/shadows!)
-                C3D_TexEnvSrc(env, C3D_RGB, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
+                // STANDARD: Multiply Texture by Vertex Color/Lighting
+                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
-                C3D_TexEnvFunc(env, C3D_RGB, GPU_MODULATE);
-                
-                // 2. ALPHA: Force Vertex Alpha (Prevents empty atlas space from turning invisible)
-                C3D_TexEnvSrc(env, C3D_Alpha, GPU_PRIMARY_COLOR); 
-                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA); 
-                C3D_TexEnvFunc(env, C3D_Alpha, GPU_REPLACE);
+                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
+                C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
@@ -1271,15 +1263,11 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                // 1. RGB: Multiply Texture by Vertex Color (Restores lighting/shadows!)
-                C3D_TexEnvSrc(env, C3D_RGB, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
+                // STANDARD: Multiply Texture by Vertex Color/Lighting
+                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvOpRgb(env, GPU_TEVOP_RGB_SRC_COLOR, GPU_TEVOP_RGB_SRC_COLOR); 
-                C3D_TexEnvFunc(env, C3D_RGB, GPU_MODULATE);
-                
-                // 2. ALPHA: Force Vertex Alpha (Prevents empty atlas space from turning invisible)
-                C3D_TexEnvSrc(env, C3D_Alpha, GPU_PRIMARY_COLOR); 
-                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA); 
-                C3D_TexEnvFunc(env, C3D_Alpha, GPU_REPLACE);
+                C3D_TexEnvOpAlpha(env, GPU_TEVOP_A_SRC_ALPHA, GPU_TEVOP_A_SRC_ALPHA); 
+                C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
                 C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
