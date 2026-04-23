@@ -13,9 +13,11 @@ def pack_textures():
         print(f"Directory {INPUT_DIR} not found. Skipping atlas generation.")
         return
 
-    images = glob.glob(os.path.join(INPUT_DIR, "*.png"))
+    # Recursive search to grab everything inside raw_textures, including subfolders
+    images = glob.glob(os.path.join(INPUT_DIR, "**/*.png"), recursive=True)
+    
     if not images:
-        print(f"WARNING: No .png files found in {INPUT_DIR}! Put your individual textures here.")
+        print(f"WARNING: No .png files found in {INPUT_DIR} or its subfolders!")
         return
 
     atlas = Image.new("RGBA", (ATLAS_SIZE, ATLAS_SIZE), (0, 0, 0, 0))
@@ -33,7 +35,7 @@ def pack_textures():
     ]
 
     for img_path in images:
-        # THE FIX: Replace spaces and dashes with underscores for C++!
+        # Keep spaces and dashes out of C++ variable names!
         name = os.path.basename(img_path).split('.')[0].replace(" ", "_").replace("-", "_")
         img = Image.open(img_path).convert("RGBA")
         
