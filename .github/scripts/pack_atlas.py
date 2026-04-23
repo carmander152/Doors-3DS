@@ -3,7 +3,8 @@ import glob
 from PIL import Image
 
 # Configuration
-INPUT_DIR = "raw_textures/"
+# CHANGED: Now explicitly points ONLY to the game folder!
+INPUT_DIR = "raw_textures/game/"
 OUTPUT_IMG = "romfs/atlas.png"
 OUTPUT_HEADER = "source/atlas_uvs.h"
 ATLAS_SIZE = 1024 # 1024x1024 is a safe maximum for 3DS
@@ -13,7 +14,7 @@ def pack_textures():
         print(f"Directory {INPUT_DIR} not found. Skipping atlas generation.")
         return
 
-    # Recursive search to grab everything inside raw_textures, including subfolders
+    # Recursive search to grab everything inside raw_textures/game
     images = glob.glob(os.path.join(INPUT_DIR, "**/*.png"), recursive=True)
     
     if not images:
