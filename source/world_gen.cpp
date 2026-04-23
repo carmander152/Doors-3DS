@@ -1,10 +1,20 @@
 #include "world_gen.h"
 #include "render_utils.h"
 #include "physics.h"
-#include "game_uvs.h" // <-- Auto-generated Texture Atlas coordinates
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+
+// --- ATLAS COORDINATES ---
+struct UVData {
+    float u, v, uw, vh;
+};
+
+// Define your Texture Atlas coordinates here (from 0.0f to 1.0f)
+// U, V = Top-Left corner | UW, VH = Width and Height
+const UVData TEX_FLOOR = { 0.032f, 0.032f, 0.436f, 0.436f };
+const UVData TEX_WALL  = { 0.032f, 0.532f, 0.436f, 0.436f };
+// -------------------------
 
 void buildLamp(float x, float z, float L) { 
     addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L); 
@@ -108,7 +118,6 @@ void buildChest(float x, float z, float openFactor, float L) {
 }
 
 void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool rO, int rm, float L) {
-    // --- UPDATED ATLAS MATH ---
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     
@@ -164,7 +173,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
         addBox(dx + 0.05f, 1.35f, z, 1.1f, 0.05f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         
         if (!o) { 
-            // HERE IS THE DOOR! 1.2 Width by 1.4 Height
+            // Door Face
             addBox(dx, 0, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
             addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); 
             addBox(dx+1.05f, 0.7f, z+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L); 
@@ -188,7 +197,6 @@ void buildWorld(int cChunk, int pRm) {
     world_mesh_textured.clear(); 
     collisions.clear();
     
-    // --- UPDATED ATLAS MATH ---
     float floorU = TEX_FLOOR.u, floorV = TEX_FLOOR.v, floorUW = TEX_FLOOR.uw, floorVH = TEX_FLOOR.vh;
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;     
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
@@ -338,22 +346,18 @@ void buildWorld(int cChunk, int pRm) {
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; continue; 
         }
 
-        // Skip Room 51 completely since Library consumes its physical space
         if (i == 51) continue;
 
-        // Global Tints based on state
         if (seekState == 1) {
             globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f;
         } else {
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f;
         }
         
-        // Seek blockages
         if(i == seekStartRoom + 9 && rooms[i].isLocked) {
             addBox(-3.0f, 0, z+0.2f, 6.0f, 1.8f, 0.1f, 0.4f, 0.7f, 1.0f, true, 0, 1.5f);
         }
         
-        // Build generic walls
         if (!(i == seekStartRoom + 1 || i == seekStartRoom + 2)) { 
             if (rooms[i].isDupeRoom) { 
                 if (pRm >= i) {
@@ -366,7 +370,6 @@ void buildWorld(int cChunk, int pRm) {
             } 
         }
         
-        // Update tints for eyes
         if (seekState == 1) {
             globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f;
         } else if (rooms[i].hasEyes) {
@@ -375,7 +378,6 @@ void buildWorld(int cChunk, int pRm) {
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f;
         }
 
-        // Draw Seek Eyes (WITH DOOR AVOIDANCE MATH)
         bool rE = !(rooms[i].isSeekChase || rooms[i].hasSeekEyes) || (i >= pRm && i <= pRm + 1);
         if (isInteriorVisible) {
             if (rE && (rooms[i].hasSeekEyes || rooms[i].isSeekChase)) { 
@@ -385,7 +387,6 @@ void buildWorld(int cChunk, int pRm) {
                     bool iL = (rand() % 2 == 0); 
                     float randomZOffset = 0.5f + (rand() % 90) / 10.0f;
                     
-                    // --- THE FIX: Check if the eye hits a side door! ---
                     if (iL && rooms[i].hasLeftRoom && fabsf(-randomZOffset - rooms[i].leftDoorOffset) < 1.8f) continue;
                     if (!iL && rooms[i].hasRightRoom && fabsf(-randomZOffset - rooms[i].rightDoorOffset) < 1.8f) continue;
 
@@ -406,7 +407,6 @@ void buildWorld(int cChunk, int pRm) {
             }
         }
 
-        // Special Seek Rooms
         if (rooms[i].isSeekChase) { 
             srand(i * 777); 
             int oT = rand() % 3; 
@@ -456,7 +456,6 @@ void buildWorld(int cChunk, int pRm) {
             addBox(2.85f, 0.4f, z-8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L); 
         } 
         
-        // Lambda for generating side rooms
         auto drawSide = [&](bool isL) {
             float dZ = z + (isL ? rooms[i].leftDoorOffset : rooms[i].rightDoorOffset);
             float bL = fabsf(dZ - z);
@@ -509,7 +508,6 @@ void buildWorld(int cChunk, int pRm) {
             addTiledSurface(sW, 0.0f, srZ-5.0f, 6.0f, 0.4f, -0.12f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
             addBox(sW, 0.0f, srZ-5.0f, 6.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L);
             
-            // Side room furnishings
             if (i == pRm && dO) {
                 srand(i * (isL ? 123 : 321)); 
                 if (rand() % 2 == 0) { 
@@ -546,7 +544,6 @@ void buildWorld(int cChunk, int pRm) {
             }
         };
         
-        // Draw the Room Shell
         if (isInteriorVisible) {
             addTiledSurface(-3, 0, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
             addTiledSurface(-3, 1.8f, z, 6, 0.01f, -10, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, L, false); 
@@ -569,7 +566,6 @@ void buildWorld(int cChunk, int pRm) {
             
             addBox(-0.4f, 1.78f, z-5.4f, 0.8f, 0.02f, 0.8f, (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.9f : 0.2f), (L > 0.5f ? 0.8f : 0.2f), false);
             
-            // Build Furniture and Paintings
             if (!tAN) {
                 for (int s = 0; s < 3; s++) { 
                     float zC = z - 2.5f - (s * 2.5f); 
@@ -624,7 +620,6 @@ void generateRooms() {
             rooms[i].animRR[s] = 0.0f; 
         }
         
-        // Setup Seek Events
         if (i >= seekStartRoom - 5 && i < seekStartRoom) {
             rooms[i].hasSeekEyes = true;
             rooms[i].seekEyeCount = ((i - (seekStartRoom - 5) + 1) * 2) + 3;
@@ -642,7 +637,6 @@ void generateRooms() {
             rooms[i].doorPos = 1;
         }
         
-        // Setup Dupe Rooms
         rooms[i].isDupeRoom = (!iSCE && i > 1 && (rand() % 100 < 15)); 
         if (rooms[i].isDupeRoom) {
             rooms[i].correctDupePos = rand() % 3; 
@@ -664,12 +658,10 @@ void generateRooms() {
             rooms[i].eyesZ = -10.0f - (i * 10.0f) - 5.0f;
         }
         
-        // Regular Room Setup (Furniture & Side Rooms)
         if (!rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale && !rooms[i].isDupeRoom) {
             rooms[i].hasLeftRoom = (rand() % 100 < 60); 
             rooms[i].hasRightRoom = (rand() % 100 < 60);
             
-            // Left Side Room Layouts
             if (rooms[i].hasLeftRoom) { 
                 rooms[i].leftDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
                 bool cL = false; 
@@ -707,7 +699,6 @@ void generateRooms() {
                 } 
             }
             
-            // Right Side Room Layouts
             if (rooms[i].hasRightRoom) { 
                 rooms[i].rightDoorOffset = -3.0f - (rand() % 40) / 10.0f; 
                 bool cR = false; 
@@ -745,7 +736,6 @@ void generateRooms() {
                 } 
             }
             
-            // Main Room Layouts
             bool bS = false; 
             for (int s = 0; s < 3; s++) { 
                 float sZR = -2.5f - (s * 2.5f); 
@@ -764,7 +754,6 @@ void generateRooms() {
                     else if (rand() % 100 < 30) rooms[i].slotItem[s] = 3;
                 } 
                 
-                // Keep furniture away from side doors
                 if (rooms[i].hasLeftRoom && fabsf(rooms[i].leftDoorOffset - sZR) < 2.6f && (rooms[i].slotType[s] == 1 || rooms[i].slotType[s] == 3 || rooms[i].slotType[s] == 5)) {
                     rooms[i].slotType[s] = 0;
                     rooms[i].slotItem[s] = 0;
@@ -782,7 +771,6 @@ void generateRooms() {
             rooms[i].hasRightRoom = false;
         }
         
-        // Generate Paintings/Posters
         if (rooms[i].isSeekHallway || rooms[i].isSeekFinale || rooms[i].isSeekChase) {
             rooms[i].pCount = 0;
         } else if (!iSE || rooms[i].hasSeekEyes) { 
@@ -827,7 +815,6 @@ void generateRooms() {
         }
     }
     
-    // Hardcoded special rooms
     rooms[0].doorPos = 1; 
     rooms[0].isDupeRoom = false; 
     rooms[0].isLocked = true; 
@@ -838,7 +825,6 @@ void generateRooms() {
     rooms[50].doorPos = 1; 
     rooms[51].doorPos = 1; 
     
-    // Assign Locks and Keys
     for (int i = 2; i < TOTAL_ROOMS - 1; i++) { 
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && 
             !(i >= seekStartRoom && i <= seekStartRoom + 9) && 
