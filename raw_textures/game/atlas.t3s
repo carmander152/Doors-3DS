@@ -1,7 +1,3 @@
 -f rgba8888
 -z auto
-Floor Texture.png
-Wall Texture.png
-EyesRender.png
-Rush1.png
-Screech_Render.png
+atlas.png
