@@ -5,6 +5,18 @@
 #include <string.h>
 #include <math.h>
 
+inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
+    const float ATLAS_WIDTH = 1024.0f;
+    const float ATLAS_HEIGHT = 1024.0f;
+    
+    if (uw > 1.0f || vh > 1.0f) {
+        u /= ATLAS_WIDTH;
+        v /= ATLAS_HEIGHT;
+        uw /= ATLAS_WIDTH;
+        vh /= ATLAS_HEIGHT;
+    }
+}
+
 ndspWaveBuf loadWav(const char* path) {
     ndspWaveBuf w = {0}; 
     FILE* f = fopen(path, "rb"); 
@@ -101,24 +113,31 @@ void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, verte
 }
 
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float r, float g, float b, float light) {
+    normalizeUVs(u, v, uw, vh);
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
-    float x2=x+w, y2=y+h, z2=z+d; 
+
+    float minX = fminf(x, x + w), maxX = fmaxf(x, x + w);
+    float minY = fminf(y, y + h), maxY = fmaxf(y, y + h);
+    float minZ = fminf(z, z + d), maxZ = fmaxf(z, z + d);
     
-    // Invert the V axis so the 3DS doesn't read the empty bottom of the atlas!
-    float u1 = u; 
-    float u2 = u + uw;
-    float v1 = 1.0f - v; 
-    float v2 = 1.0f - (v + vh);
-    
-    addFaceTextured({{x,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
-    addFaceTextured({{x,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}); 
-    addFaceTextured({{x,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}); 
-    addFaceTextured({{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}); 
-    addFaceTextured({{x,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v2},{r_c,g_c,b_c,1}}); 
-    addFaceTextured({{x,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
+    float u1 = u, u2 = u + uw;
+    float v1 = 1.0f - v, v2 = 1.0f - (v + vh);
+
+    auto drawQuad = [&](vertex BL, vertex BR, vertex TL, vertex TR) {
+        addFaceTextured(BL, BR, TL, BR, TR, TL);
+    };
+
+    // Standard 6 Faces with flawless CCW normals
+    drawQuad({{minX, maxY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Top
+    drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Bottom
+    drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Front
+    drawQuad({{minX, minY, minZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Back
+    drawQuad({{maxX, minY, minZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Right
+    drawQuad({{minX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Left
 }
 
 void addBillboard(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
+    normalizeUVs(u, v, uw, vh);
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f, cosY = cosf(camYaw), sinY = sinf(camYaw);
     float rx = hw * cosY, rz = -hw * sinY;
@@ -128,15 +147,14 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
 
-    float u1 = u;
-    float u2 = u + uw;
-    float v1 = 1.0f - v; 
-    float v2 = 1.0f - (v + vh);
+    float u1 = u, u2 = u + uw;
+    float v1 = 1.0f - v, v2 = 1.0f - (v + vh);
     
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
 
 void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
+    normalizeUVs(u, v, uw, vh);
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f;
     float cosY = cosf(camYaw), sinY = sinf(camYaw), cosP = cosf(camPitch), sinP = sinf(camPitch);
@@ -147,10 +165,8 @@ void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float
     float tl_x = cx - rx + ux, tl_y = cy + uy, tl_z = cz - rz + uz;
     float tr_x = cx + rx + ux, tr_y = cy + uy, tr_z = cz + rz + uz;
     
-    float u1 = u;
-    float u2 = u + uw;
-    float v1 = 1.0f - v; 
-    float v2 = 1.0f - (v + vh);
+    float u1 = u, u2 = u + uw;
+    float v1 = 1.0f - v, v2 = 1.0f - (v + vh);
     
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
@@ -158,14 +174,21 @@ void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float
 void addBoxColored(float x, float y, float z, float w, float h, float d, float r, float g, float b, float light) {
     float r_c=r*light*globalTintR, g_c=g*light*globalTintG, b_c=b*light*globalTintB;
     if(r_c>1.0f) r_c=1.0f; if(g_c>1.0f) g_c=1.0f; if(b_c>1.0f) b_c=1.0f;
-    float x2=x+w, y2=y+h, z2=z+d;
     
-    addFaceColored({{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}); 
-    addFaceColored({{x,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}); 
-    addFaceColored({{x,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}); 
-    addFaceColored({{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}); 
-    addFaceColored({{x,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{0,0},{r_c,g_c,b_c,1}}); 
-    addFaceColored({{x,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{0,0},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{0,0},{r_c,g_c,b_c,1}}, {{x,y,z2,1},{0,0},{r_c,g_c,b_c,1}}); 
+    float minX = fminf(x, x + w), maxX = fmaxf(x, x + w);
+    float minY = fminf(y, y + h), maxY = fmaxf(y, y + h);
+    float minZ = fminf(z, z + d), maxZ = fmaxf(z, z + d);
+
+    auto drawQuad = [&](vertex BL, vertex BR, vertex TL, vertex TR) {
+        addFaceColored(BL, BR, TL, BR, TR, TL);
+    };
+
+    drawQuad({{minX, maxY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}});
+    drawQuad({{maxX, minY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}});
+    drawQuad({{maxX, minY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}});
+    drawQuad({{minX, minY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}});
+    drawQuad({{maxX, minY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, minY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}});
+    drawQuad({{minX, minY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {0,0}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {0,0}, {r_c, g_c, b_c, 1}});
 }
 
 void addBox(float x, float y, float z, float w, float h, float d, float r, float g, float b, bool collide, int colType, float light) {
@@ -175,21 +198,23 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     }
 }
 
-// === DYNAMIC SUBDIVISION LOOP ===
+// === FLAWLESS NO-OVERLAP TILING LOOP ===
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
+    normalizeUVs(u, v, uw, vh);
+
     if(collide && !isBuildingEntities) {
         collisions.push_back({fminf(x,x+w), fminf(y,y+h), fminf(z,z+d), fmaxf(x,x+w), fmaxf(y,y+h), fmaxf(z,z+d), 0});
     }
     
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
 
-    float signW = (w >= 0) ? 1.0f : -1.0f;
-    float signH = (h >= 0) ? 1.0f : -1.0f;
-    float signD = (d >= 0) ? 1.0f : -1.0f;
+    float minX = fminf(x, x + w), maxX = fmaxf(x, x + w);
+    float minY = fminf(y, y + h), maxY = fmaxf(y, y + h);
+    float minZ = fminf(z, z + d), maxZ = fmaxf(z, z + d);
 
-    float absW = fabsf(w);
-    float absH = fabsf(h);
-    float absD = fabsf(d);
+    float absW = maxX - minX;
+    float absH = maxY - minY;
+    float absD = maxZ - minZ;
 
     int stepsX = (absW > 0) ? ceilf(absW / texScale) : 1;
     int stepsY = (absH > 0) ? ceilf(absH / texScale) : 1;
@@ -197,107 +222,92 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
 
     bool isFloor = (absH <= 0.05f);
 
+    auto drawQuad = [&](vertex BL, vertex BR, vertex TL, vertex TR) {
+        addFaceTextured(BL, BR, TL, BR, TR, TL);
+    };
+
     if (isFloor) {
+        float yTop = maxY;
         for (int ix = 0; ix < stepsX; ix++) {
-            float sW = ix * texScale;
-            float eW = fminf((ix + 1) * texScale, absW);
-            float nextU = u + uw * ((eW - sW) / texScale); 
-            
-            float curX = x + sW * signW;
-            float nextX = x + eW * signW;
+            float curX = minX + ix * texScale;
+            float nextX = fminf(curX + texScale, maxX);
+            float nextU = u + uw * ((nextX - curX) / texScale); // Clean slice!
 
             for (int iz = 0; iz < stepsZ; iz++) {
-                float sD = iz * texScale;
-                float eD = fminf((iz + 1) * texScale, absD);
+                float curZ = minZ + iz * texScale;
+                float nextZ = fminf(curZ + texScale, maxZ);
                 
-                float curZ = z + sD * signD;
-                float nextZ = z + eD * signD;
+                float pv1 = 1.0f - v; 
+                float pv2 = 1.0f - (v + vh * ((nextZ - curZ) / texScale)); // Clean slice!
 
-                // Invert the V calculations
-                float pv1 = 1.0f - v;
-                float pv2 = 1.0f - (v + vh * ((eD - sD) / texScale));
-                
-                float yTop = y + h;
-
-                addFaceTextured({{curX, yTop, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}},
-                                {{nextX, yTop, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}},
-                                {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}},
-                                {{nextX, yTop, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}},
-                                {{nextX, yTop, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}},
-                                {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}});
+                vertex BL = {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                vertex BR = {{nextX, yTop, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                vertex TL = {{curX, yTop, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                vertex TR = {{nextX, yTop, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                drawQuad(BL, BR, TL, TR);
             }
         }
     } else {
-        if (w >= d) {
+        if (absW >= absD) {
+            float zFront = maxZ; // Facing inside the room
+            float zBack = minZ;  // Facing outside the room
+
             for (int ix = 0; ix < stepsX; ix++) {
-                float sW = ix * texScale;
-                float eW = fminf((ix + 1) * texScale, absW);
-                float curX = x + sW * signW;
-                float nextX = x + eW * signW;
-                float nextU = u + uw * ((eW - sW) / texScale);
-                
+                float curX = minX + ix * texScale;
+                float nextX = fminf(curX + texScale, maxX);
+                float nextU = u + uw * ((nextX - curX) / texScale);
+
                 for (int iy = 0; iy < stepsY; iy++) {
-                    float sH = iy * texScale;
-                    float eH = fminf((iy + 1) * texScale, absH);
-                    float curY = y + sH * signH;
-                    float nextY = y + eH * signH;
+                    float curY = minY + iy * texScale;
+                    float nextY = fminf(curY + texScale, maxY);
                     
-                    // Invert the V calculations
-                    float pv1 = 1.0f - v;
-                    float pv2 = 1.0f - (v + vh * ((eH - sH) / texScale));
+                    float pv1 = 1.0f - v; 
+                    float pv2 = 1.0f - (v + vh * ((nextY - curY) / texScale));
 
-                    float zBack = z;
-                    float zFront = z + d;
+                    // Front Face
+                    vertex F_BL = {{nextX, curY, zFront, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex F_BR = {{curX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex F_TL = {{nextX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex F_TR = {{curX, nextY, zFront, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    drawQuad(F_BL, F_BR, F_TL, F_TR);
 
-                    addFaceTextured({{curX, curY, zFront, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, nextY, zFront, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}});
-                    
-                    addFaceTextured({{curX, curY, zBack, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, nextY, zBack, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}});
+                    // Back Face
+                    vertex B_BL = {{curX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex B_BR = {{nextX, curY, zBack, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex B_TL = {{curX, nextY, zBack, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex B_TR = {{nextX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    drawQuad(B_BL, B_BR, B_TL, B_TR);
                 }
             }
         } else {
+            float xRight = maxX; 
+            float xLeft = minX;  
+
             for (int iz = 0; iz < stepsZ; iz++) {
-                float sD = iz * texScale;
-                float eD = fminf((iz + 1) * texScale, absD);
-                float curZ = z + sD * signD;
-                float nextZ = z + eD * signD;
-                float nextU = u + uw * ((eD - sD) / texScale);
+                float curZ = minZ + iz * texScale;
+                float nextZ = fminf(curZ + texScale, maxZ);
+                float nextU = u + uw * ((nextZ - curZ) / texScale);
 
                 for (int iy = 0; iy < stepsY; iy++) {
-                    float sH = iy * texScale;
-                    float eH = fminf((iy + 1) * texScale, absH);
-                    float curY = y + sH * signH;
-                    float nextY = y + eH * signH;
+                    float curY = minY + iy * texScale;
+                    float nextY = fminf(curY + texScale, maxY);
                     
-                    // Invert the V calculations
-                    float pv1 = 1.0f - v;
-                    float pv2 = 1.0f - (v + vh * ((eH - sH) / texScale));
+                    float pv1 = 1.0f - v; 
+                    float pv2 = 1.0f - (v + vh * ((nextY - curY) / texScale));
 
-                    float xLeft = x;
-                    float xRight = x + w;
+                    // Right Face (+X)
+                    vertex R_BL = {{xRight, curY, curZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex R_BR = {{xRight, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex R_TL = {{xRight, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex R_TR = {{xRight, nextY, nextZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    drawQuad(R_BL, R_BR, R_TL, R_TR);
 
-                    addFaceTextured({{xRight, curY, curZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, nextY, nextZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}});
-                    
-                    addFaceTextured({{xLeft, curY, curZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, nextY, nextZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}});
+                    // Left Face (-X)
+                    vertex L_BL = {{xLeft, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex L_BR = {{xLeft, curY, curZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex L_TL = {{xLeft, nextY, nextZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex L_TR = {{xLeft, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    drawQuad(L_BL, L_BR, L_TL, L_TR);
                 }
             }
         }
