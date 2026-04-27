@@ -127,12 +127,12 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
         addFaceTextured(BL, BR, TL, BR, TR, TL);
     };
 
-    drawQuad({{minX, maxY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Top
-    drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Bottom
-    drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Front
-    drawQuad({{minX, minY, minZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Back
-    drawQuad({{maxX, minY, minZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Right
-    drawQuad({{minX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Left
+    drawQuad({{minX, maxY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+    drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+    drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+    drawQuad({{minX, minY, minZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+    drawQuad({{maxX, minY, minZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
+    drawQuad({{minX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
 }
 
 void addBillboard(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
@@ -197,7 +197,7 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     }
 }
 
-// === FLAWLESS NO-OVERLAP TILING LOOP ===
+// === FLAWLESS TILING LOOP (Absolute Measurement Edition) ===
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     normalizeUVs(u, v, uw, vh);
 
@@ -215,10 +215,6 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     float absH = maxY - minY;
     float absD = maxZ - minZ;
 
-    int stepsX = (absW > 0) ? ceilf(absW / texScale) : 1;
-    int stepsY = (absH > 0) ? ceilf(absH / texScale) : 1;
-    int stepsZ = (absD > 0) ? ceilf(absD / texScale) : 1;
-
     bool isFloor = (absH <= 0.05f);
 
     auto drawQuad = [&](vertex BL, vertex BR, vertex TL, vertex TR) {
@@ -227,93 +223,112 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
 
     if (isFloor) {
         float yTop = maxY;
-        for (int ix = 0; ix < stepsX; ix++) {
-            float curX = minX + ix * texScale;
-            float nextX = fminf(curX + texScale, maxX);
-            float sliceX = (nextX - curX) / texScale;
-            float nextU = u + uw * sliceX; // Anchored to Left
+        for (float curW = 0.0f; curW < absW - 0.001f; curW += texScale) {
+            float nextW = curW + texScale;
+            if (nextW > absW) nextW = absW;
+            float fracW = (nextW - curW) / texScale;
+            float curU2 = u + uw * fracW;
 
-            for (int iz = 0; iz < stepsZ; iz++) {
-                float curZ = minZ + iz * texScale;
-                float nextZ = fminf(curZ + texScale, maxZ);
-                float sliceZ = (nextZ - curZ) / texScale;
+            for (float curD = 0.0f; curD < absD - 0.001f; curD += texScale) {
+                float nextD = curD + texScale;
+                if (nextD > absD) nextD = absD;
+                float fracD = (nextD - curD) / texScale;
                 
-                float pv1 = 1.0f - v; // Top of texture
-                float pv2 = 1.0f - (v + vh * sliceZ); // Sliced downwards
+                float pv1 = 1.0f - v; 
+                float pv2 = 1.0f - (v + vh * fracD);
 
-                vertex BL = {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                vertex BR = {{nextX, yTop, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                vertex TL = {{curX, yTop, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                vertex TR = {{nextX, yTop, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                float X1 = minX + curW;
+                float X2 = minX + nextW;
+                float Z1 = minZ + curD;
+                float Z2 = minZ + nextD;
+
+                vertex BL = {{X1, yTop, Z2, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                vertex BR = {{X2, yTop, Z2, 1}, {curU2, pv2}, {r_c, g_c, b_c, 1}};
+                vertex TL = {{X1, yTop, Z1, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                vertex TR = {{X2, yTop, Z1, 1}, {curU2, pv1}, {r_c, g_c, b_c, 1}};
                 drawQuad(BL, BR, TL, TR);
             }
         }
     } else {
-        if (absW >= absD) { // Front and Back Walls
-            float zFront = maxZ; // Facing +Z
-            float zBack = minZ;  // Facing -Z
+        // Build Walls Bottom to Top
+        for (float curH = 0.0f; curH < absH - 0.001f; curH += texScale) {
+            float nextH = curH + texScale;
+            // The ultimate fix: This GUARANTEES the final wall tile perfectly touches the ceiling!
+            if (nextH > absH) nextH = absH; 
+            
+            float fracH = (nextH - curH) / texScale;
+            float pv2 = 1.0f - (v + vh); // Floor anchor
+            float pv1 = 1.0f - (v + vh - vh * fracH); // Ceiling slice
 
-            for (int ix = 0; ix < stepsX; ix++) {
-                float curX = minX + ix * texScale;
-                float nextX = fminf(curX + texScale, maxX);
-                float sliceX = (nextX - curX) / texScale;
-                float nextU = u + uw * sliceX;
+            float Y1 = minY + curH;
+            float Y2 = minY + nextH;
 
-                for (int iy = 0; iy < stepsY; iy++) {
-                    float curY = minY + iy * texScale;
-                    float nextY = fminf(curY + texScale, maxY);
+            if (absW >= absD) { 
+                // Front Wall (+Z) - Tiles Left to Right
+                for (float curW = 0.0f; curW < absW - 0.001f; curW += texScale) {
+                    float nextW = curW + texScale;
+                    if (nextW > absW) nextW = absW;
+                    float fracW = (nextW - curW) / texScale;
+                    float curU2 = u + uw * fracW;
+
+                    float X1 = minX + curW;
+                    float X2 = minX + nextW;
                     
-                    // Anchor to FLOOR: Bottom of texture is constant, Top is sliced
-                    float sliceY = (nextY - curY) / texScale;
-                    float pv2 = 1.0f - (v + vh); // Bottom of texture
-                    float pv1 = 1.0f - (v + vh - vh * sliceY); // Sliced upwards
-
-                    // Front Face (Looking +Z). Left is minX, Right is maxX.
-                    vertex F_BL = {{curX, curY, zFront, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex F_BR = {{nextX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex F_TL = {{curX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex F_TR = {{nextX, nextY, zFront, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex F_BL = {{X1, Y1, maxZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex F_BR = {{X2, Y1, maxZ, 1}, {curU2, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex F_TL = {{X1, Y2, maxZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex F_TR = {{X2, Y2, maxZ, 1}, {curU2, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(F_BL, F_BR, F_TL, F_TR);
+                }
 
-                    // Back Face (Looking -Z). Left is maxX, Right is minX.
-                    vertex B_BL = {{nextX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex B_BR = {{curX, curY, zBack, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex B_TL = {{nextX, nextY, zBack, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex B_TR = {{curX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                // Back Wall (-Z) - Tiles Right to Left (so it matches the Front visual mapping!)
+                for (float curW = 0.0f; curW < absW - 0.001f; curW += texScale) {
+                    float nextW = curW + texScale;
+                    if (nextW > absW) nextW = absW;
+                    float fracW = (nextW - curW) / texScale;
+                    float curU2 = u + uw * fracW;
+
+                    float X1 = maxX - curW; 
+                    float X2 = maxX - nextW;
+                    
+                    vertex B_BL = {{X1, Y1, minZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex B_BR = {{X2, Y1, minZ, 1}, {curU2, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex B_TL = {{X1, Y2, minZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex B_TR = {{X2, Y2, minZ, 1}, {curU2, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(B_BL, B_BR, B_TL, B_TR);
                 }
-            }
-        } else { // Left and Right Walls
-            float xRight = maxX; // Facing +X
-            float xLeft = minX;  // Facing -X
+            } else { 
+                // Right Wall (+X)
+                for (float curW = 0.0f; curW < absD - 0.001f; curW += texScale) {
+                    float nextW = curW + texScale;
+                    if (nextW > absD) nextW = absD;
+                    float fracW = (nextW - curW) / texScale;
+                    float curU2 = u + uw * fracW;
 
-            for (int iz = 0; iz < stepsZ; iz++) {
-                float curZ = minZ + iz * texScale;
-                float nextZ = fminf(curZ + texScale, maxZ);
-                float sliceZ = (nextZ - curZ) / texScale;
-                float nextU = u + uw * sliceZ;
-
-                for (int iy = 0; iy < stepsY; iy++) {
-                    float curY = minY + iy * texScale;
-                    float nextY = fminf(curY + texScale, maxY);
+                    float Z1 = maxZ - curW;
+                    float Z2 = maxZ - nextW;
                     
-                    // Anchor to FLOOR: Bottom of texture is constant, Top is sliced
-                    float sliceY = (nextY - curY) / texScale;
-                    float pv2 = 1.0f - (v + vh); // Bottom of texture
-                    float pv1 = 1.0f - (v + vh - vh * sliceY); // Sliced upwards
-
-                    // Right Face (+X). Looking +X. Left is maxZ, Right is minZ.
-                    vertex R_BL = {{xRight, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex R_BR = {{xRight, curY, curZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex R_TL = {{xRight, nextY, nextZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex R_TR = {{xRight, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex R_BL = {{maxX, Y1, Z1, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex R_BR = {{maxX, Y1, Z2, 1}, {curU2, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex R_TL = {{maxX, Y2, Z1, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex R_TR = {{maxX, Y2, Z2, 1}, {curU2, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(R_BL, R_BR, R_TL, R_TR);
+                }
 
-                    // Left Face (-X). Looking -X. Left is minZ, Right is maxZ.
-                    vertex L_BL = {{xLeft, curY, curZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex L_BR = {{xLeft, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex L_TL = {{xLeft, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex L_TR = {{xLeft, nextY, nextZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                // Left Wall (-X)
+                for (float curW = 0.0f; curW < absD - 0.001f; curW += texScale) {
+                    float nextW = curW + texScale;
+                    if (nextW > absD) nextW = absD;
+                    float fracW = (nextW - curW) / texScale;
+                    float curU2 = u + uw * fracW;
+
+                    float Z1 = minZ + curW;
+                    float Z2 = minZ + nextW;
+                    
+                    vertex L_BL = {{minX, Y1, Z1, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex L_BR = {{minX, Y1, Z2, 1}, {curU2, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex L_TL = {{minX, Y2, Z1, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex L_TR = {{minX, Y2, Z2, 1}, {curU2, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(L_BL, L_BR, L_TL, L_TR);
                 }
             }
