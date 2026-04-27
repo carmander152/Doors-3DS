@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include "atlas_uvs.h" // Added this to import your dynamic texture coordinates!
 
 void buildEntities(int pRm) {
     entity_mesh_colored.clear(); 
@@ -12,12 +13,12 @@ void buildEntities(int pRm) {
     // Screech Entity
     if (screechActive) { 
         float scale = (screechState == 3) ? 2.5f : 1.5f; 
-        addBillboard(screechX, screechY + 0.2f, screechZ, scale, scale, 0.6f, 0.0f, 0.4f, 0.33f); 
+        addBillboard(screechX, screechY + 0.2f, screechZ, scale, scale, TEX_SCREECH.u, TEX_SCREECH.v, TEX_SCREECH.uw, TEX_SCREECH.vh); 
     }
     
     // Rush Entity
     if (rushActive && rushState == 2) { 
-        addBillboard(0.0f, 0.7f, rushZ, 1.4f, 1.4f, 0.6f, 0.66f, 0.4f, 0.34f); 
+        addBillboard(0.0f, 0.7f, rushZ, 1.4f, 1.4f, TEX_RUSH.u, TEX_RUSH.v, TEX_RUSH.uw, TEX_RUSH.vh); 
     }
     
     // Eyes Entity
@@ -35,13 +36,13 @@ void buildEntities(int pRm) {
             if (isVisible) {
                 bool renderEyes = !(rooms[i].isSeekChase || rooms[i].hasSeekEyes) || (i >= pRm && i <= pRm + 1);
                 if (renderEyes) {
-                    addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY, rooms[i].eyesZ, 1.2f, 1.2f, 0.6f, 0.0f, 0.4f, 0.33f);
+                    addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY, rooms[i].eyesZ, 1.2f, 1.2f, TEX_EYES.u, TEX_EYES.v, TEX_EYES.uw, TEX_EYES.vh);
                 }
             }
         }
     }
     
-    // Seek Entity
+    // Seek Entity (Remains Solid 3D Geometry for now)
     if (seekActive) { 
         float sY = 0.2f, sH = 0.8f;
         if (seekState == 1) { 
@@ -71,7 +72,7 @@ void buildEntities(int pRm) {
         }
     }
     
-    // Figure Entity
+    // Figure Entity (Remains Solid 3D Geometry for now)
     if (figureActive) {
         float fY = 0.0f, fH = 1.2f;
         addBox(figureX - 0.3f, fY, figureZ - 0.3f, 0.6f, fH, 0.6f, 0.4f, 0.1f, 0.05f, false); 
