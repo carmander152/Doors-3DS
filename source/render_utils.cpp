@@ -5,6 +5,22 @@
 #include <string.h>
 #include <math.h>
 
+// === ATLAS PIXEL FIX ===
+// If your pack_atlas.py outputs pixel coordinates (e.g., 64, 128) instead of floats (0.0 to 1.0),
+// this function will automatically convert them so the 3DS GPU can actually render them!
+inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
+    const float ATLAS_WIDTH = 512.0f;  // <-- CHANGE THIS to your actual atlas.png width!
+    const float ATLAS_HEIGHT = 512.0f; // <-- CHANGE THIS to your actual atlas.png height!
+    
+    if (uw > 1.0f || vh > 1.0f) {
+        u /= ATLAS_WIDTH;
+        v /= ATLAS_HEIGHT;
+        uw /= ATLAS_WIDTH;
+        vh /= ATLAS_HEIGHT;
+    }
+}
+// =======================
+
 ndspWaveBuf loadWav(const char* path) {
     ndspWaveBuf w = {0}; 
     FILE* f = fopen(path, "rb"); 
@@ -101,6 +117,8 @@ void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, verte
 }
 
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float r, float g, float b, float light) {
+    normalizeUVs(u, v, uw, vh);
+    
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
@@ -116,6 +134,8 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
 }
 
 void addBillboard(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
+    normalizeUVs(u, v, uw, vh);
+    
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f, cosY = cosf(camYaw), sinY = sinf(camYaw);
     float rx = hw * cosY, rz = -hw * sinY;
@@ -132,6 +152,8 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
 }
 
 void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
+    normalizeUVs(u, v, uw, vh);
+    
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f;
     float cosY = cosf(camYaw), sinY = sinf(camYaw), cosP = cosf(camPitch), sinP = sinf(camPitch);
@@ -170,14 +192,14 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
 
 // === CORRECTED DYNAMIC SUBDIVISION LOOP ===
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
+    normalizeUVs(u, v, uw, vh);
+
     if(collide && !isBuildingEntities) {
         collisions.push_back({fminf(x,x+w), fminf(y,y+h), fminf(z,z+d), fmaxf(x,x+w), fmaxf(y,y+h), fmaxf(z,z+d), 0});
     }
     
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
 
-    // We must strictly honor the step directions so we don't accidentally reverse 
-    // the 3D winding order and cause backface culling to make the walls invisible!
     float signW = (w >= 0) ? 1.0f : -1.0f;
     float signH = (h >= 0) ? 1.0f : -1.0f;
     float signD = (d >= 0) ? 1.0f : -1.0f;
@@ -220,7 +242,6 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
             }
         }
     } else {
-        // Must use the original w >= d to keep the plane mapping aligned to the correct axis
         if (w >= d) {
             for (int ix = 0; ix < stepsX; ix++) {
                 float sW = ix * texScale;
