@@ -27,6 +27,9 @@ pre-build:
 	@echo "--- 3. Bundling C++ Source ---"
 	@python3 .github/scripts/bundle.py
 
+# THIS IS THE FIX: Tell Make it absolutely MUST finish 'pre-build' before compiling the C++ code!
+$(CPP_OBJS): pre-build vshader_shbin.h
+
 $(TARGET).smdh: icon.png
 	smdhtool --create "Doors 3DS" "Doors 3DS" "Carmander152" icon.png $@
 
@@ -96,7 +99,7 @@ $(TARGET).cia: $(TARGET).elf $(TARGET).smdh banner.bin app.rsf romfs.bin
 	makerom -f cia -o $@ -elf stripped_for_cia.elf -rsf app.rsf -icon $(TARGET).smdh -banner banner.bin -romfs romfs.bin -exefslogo -target t
 	rm -f stripped_for_cia.elf
 
-$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp vshader_shbin.h
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__ -O3 -ffast-math -fno-exceptions -fno-rtti -I. -I$(DEVKITPRO)/libcitro3d/include -I$(DEVKITPRO)/portlibs/3ds/include -I$(DEVKITPRO)/libctru/include -c $< -o $@
 
 $(TARGET).elf: $(OBJS)
