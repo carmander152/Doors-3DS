@@ -5,22 +5,6 @@
 #include <string.h>
 #include <math.h>
 
-// === ATLAS PIXEL FIX ===
-// If your pack_atlas.py outputs pixel coordinates (e.g., 64, 128) instead of floats (0.0 to 1.0),
-// this function will automatically convert them so the 3DS GPU can actually render them!
-inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
-    const float ATLAS_WIDTH = 512.0f;  // <-- CHANGE THIS to your actual atlas.png width!
-    const float ATLAS_HEIGHT = 512.0f; // <-- CHANGE THIS to your actual atlas.png height!
-    
-    if (uw > 1.0f || vh > 1.0f) {
-        u /= ATLAS_WIDTH;
-        v /= ATLAS_HEIGHT;
-        uw /= ATLAS_WIDTH;
-        vh /= ATLAS_HEIGHT;
-    }
-}
-// =======================
-
 ndspWaveBuf loadWav(const char* path) {
     ndspWaveBuf w = {0}; 
     FILE* f = fopen(path, "rb"); 
@@ -117,13 +101,14 @@ void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, verte
 }
 
 void addBoxTextured(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float repW, float repH, float r, float g, float b, float light) {
-    normalizeUVs(u, v, uw, vh);
-    
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
-    float u1 = u, v1 = v; 
-    float u2 = u + uw, v2 = v + vh;
+    // Invert the V axis so the 3DS doesn't read the empty bottom of the atlas!
+    float u1 = u; 
+    float u2 = u + uw;
+    float v1 = 1.0f - v; 
+    float v2 = 1.0f - (v + vh);
     
     addFaceTextured({{x,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
     addFaceTextured({{x,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}); 
@@ -134,8 +119,6 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
 }
 
 void addBillboard(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
-    normalizeUVs(u, v, uw, vh);
-    
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f, cosY = cosf(camYaw), sinY = sinf(camYaw);
     float rx = hw * cosY, rz = -hw * sinY;
@@ -145,15 +128,15 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
 
-    float u1 = u, v1 = v;
-    float u2 = u + uw, v2 = v + vh;
+    float u1 = u;
+    float u2 = u + uw;
+    float v1 = 1.0f - v; 
+    float v2 = 1.0f - (v + vh);
     
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
 
 void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float u, float v, float uw, float vh, float light) {
-    normalizeUVs(u, v, uw, vh);
-    
     float r_c = light * globalTintR, g_c = light * globalTintG, b_c = light * globalTintB;
     float hw = w / 2.0f, hh = h / 2.0f;
     float cosY = cosf(camYaw), sinY = sinf(camYaw), cosP = cosf(camPitch), sinP = sinf(camPitch);
@@ -164,8 +147,10 @@ void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float
     float tl_x = cx - rx + ux, tl_y = cy + uy, tl_z = cz - rz + uz;
     float tr_x = cx + rx + ux, tr_y = cy + uy, tr_z = cz + rz + uz;
     
-    float u1 = u, v1 = v;
-    float u2 = u + uw, v2 = v + vh;
+    float u1 = u;
+    float u2 = u + uw;
+    float v1 = 1.0f - v; 
+    float v2 = 1.0f - (v + vh);
     
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
@@ -190,10 +175,8 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     }
 }
 
-// === CORRECTED DYNAMIC SUBDIVISION LOOP ===
+// === DYNAMIC SUBDIVISION LOOP ===
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
-    normalizeUVs(u, v, uw, vh);
-
     if(collide && !isBuildingEntities) {
         collisions.push_back({fminf(x,x+w), fminf(y,y+h), fminf(z,z+d), fmaxf(x,x+w), fmaxf(y,y+h), fmaxf(z,z+d), 0});
     }
@@ -230,15 +213,18 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                 float curZ = z + sD * signD;
                 float nextZ = z + eD * signD;
 
-                float curV2 = v + vh * ((eD - sD) / texScale);
+                // Invert the V calculations
+                float pv1 = 1.0f - v;
+                float pv2 = 1.0f - (v + vh * ((eD - sD) / texScale));
+                
                 float yTop = y + h;
 
-                addFaceTextured({{curX, yTop, curZ, 1}, {u, v}, {r_c, g_c, b_c, 1}},
-                                {{nextX, yTop, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}},
-                                {{curX, yTop, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}},
-                                {{nextX, yTop, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}},
-                                {{nextX, yTop, nextZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}},
-                                {{curX, yTop, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}});
+                addFaceTextured({{curX, yTop, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}},
+                                {{nextX, yTop, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}},
+                                {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}},
+                                {{nextX, yTop, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}},
+                                {{nextX, yTop, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}},
+                                {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}});
             }
         }
     } else {
@@ -255,24 +241,27 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                     float eH = fminf((iy + 1) * texScale, absH);
                     float curY = y + sH * signH;
                     float nextY = y + eH * signH;
-                    float curV2 = v + vh * ((eH - sH) / texScale);
+                    
+                    // Invert the V calculations
+                    float pv1 = 1.0f - v;
+                    float pv2 = 1.0f - (v + vh * ((eH - sH) / texScale));
 
                     float zBack = z;
                     float zFront = z + d;
 
-                    addFaceTextured({{curX, curY, zFront, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zFront, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zFront, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zFront, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, nextY, zFront, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zFront, 1}, {u, v}, {r_c, g_c, b_c, 1}});
+                    addFaceTextured({{curX, curY, zFront, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, nextY, zFront, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}});
                     
-                    addFaceTextured({{curX, curY, zBack, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zBack, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zBack, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, curY, zBack, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{nextX, nextY, zBack, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{curX, nextY, zBack, 1}, {nextU, v}, {r_c, g_c, b_c, 1}});
+                    addFaceTextured({{curX, curY, zBack, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, nextY, zBack, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}});
                 }
             }
         } else {
@@ -288,24 +277,27 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                     float eH = fminf((iy + 1) * texScale, absH);
                     float curY = y + sH * signH;
                     float nextY = y + eH * signH;
-                    float curV2 = v + vh * ((eH - sH) / texScale);
+                    
+                    // Invert the V calculations
+                    float pv1 = 1.0f - v;
+                    float pv2 = 1.0f - (v + vh * ((eH - sH) / texScale));
 
                     float xLeft = x;
                     float xRight = x + w;
 
-                    addFaceTextured({{xRight, curY, curZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, curY, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, nextY, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, curY, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, nextY, nextZ, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{xRight, nextY, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}});
+                    addFaceTextured({{xRight, curY, curZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, nextY, nextZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}});
                     
-                    addFaceTextured({{xLeft, curY, curZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, curY, nextZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, nextY, curZ, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, curY, nextZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, nextY, nextZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
-                                    {{xLeft, nextY, curZ, 1}, {u, v}, {r_c, g_c, b_c, 1}});
+                    addFaceTextured({{xLeft, curY, curZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, nextY, nextZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}});
                 }
             }
         }
