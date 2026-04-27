@@ -54,9 +54,7 @@ jobs:
           touch /usr/local/bin/ignore_3dstool.txt
 
       - name: Build Game
-        run: |
-          python3 pack_atlas.py
-          make
+        run: make
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
