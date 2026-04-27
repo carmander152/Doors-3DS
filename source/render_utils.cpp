@@ -104,7 +104,6 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
-    // Map directly to the passed sub-texture coordinates!
     float u1 = u, v1 = v; 
     float u2 = u + uw, v2 = v + vh;
     
@@ -169,8 +168,7 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     }
 }
 
-// === NEW DYNAMIC SUBDIVISION LOOP ===
-// This handles texture atlas repeating safely by slicing long geometry into multiple smaller tiles
+// === CORRECTED DYNAMIC SUBDIVISION LOOP ===
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     if(collide && !isBuildingEntities) {
         collisions.push_back({fminf(x,x+w), fminf(y,y+h), fminf(z,z+d), fmaxf(x,x+w), fmaxf(y,y+h), fmaxf(z,z+d), 0});
@@ -178,6 +176,8 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
 
+    // We must strictly honor the step directions so we don't accidentally reverse 
+    // the 3D winding order and cause backface culling to make the walls invisible!
     float signW = (w >= 0) ? 1.0f : -1.0f;
     float signH = (h >= 0) ? 1.0f : -1.0f;
     float signD = (d >= 0) ? 1.0f : -1.0f;
@@ -186,121 +186,106 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
     float absH = fabsf(h);
     float absD = fabsf(d);
 
-    int stepsX = ceilf(absW / texScale); if(stepsX == 0) stepsX = 1;
-    int stepsY = ceilf(absH / texScale); if(stepsY == 0) stepsY = 1;
-    int stepsZ = ceilf(absD / texScale); if(stepsZ == 0) stepsZ = 1;
+    int stepsX = (absW > 0) ? ceilf(absW / texScale) : 1;
+    int stepsY = (absH > 0) ? ceilf(absH / texScale) : 1;
+    int stepsZ = (absD > 0) ? ceilf(absD / texScale) : 1;
 
     bool isFloor = (absH <= 0.05f);
 
     if (isFloor) {
-        // Tile Floor along X and Z
-        for(int ix = 0; ix < stepsX; ix++) {
-            float startW = ix * texScale;
-            float endW = fminf((ix + 1) * texScale, absW);
-            float fracW = (endW - startW) / texScale;
+        for (int ix = 0; ix < stepsX; ix++) {
+            float sW = ix * texScale;
+            float eW = fminf((ix + 1) * texScale, absW);
+            float nextU = u + uw * ((eW - sW) / texScale); 
+            
+            float curX = x + sW * signW;
+            float nextX = x + eW * signW;
 
-            for(int iz = 0; iz < stepsZ; iz++) {
-                float startD = iz * texScale;
-                float endD = fminf((iz + 1) * texScale, absD);
-                float fracD = (endD - startD) / texScale;
-
-                float px1 = x + startW * signW;
-                float px2 = x + endW * signW;
-                float pz1 = z + startD * signD;
-                float pz2 = z + endD * signD;
-
-                float pu1 = u;
-                float pu2 = u + uw * fracW;
-                float pv1 = v;
-                float pv2 = v + vh * fracD;
-                float py = y + h;
-
-                addFaceTextured({{px1, py, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px2, py, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px1, py, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px2, py, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px1, py, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}});
-            }
-        }
-    } else if (absW >= absD) {
-        // Tile Wall along X and Y axes
-        for(int ix = 0; ix < stepsX; ix++) {
-            float startW = ix * texScale;
-            float endW = fminf((ix + 1) * texScale, absW);
-            float fracW = (endW - startW) / texScale;
-
-            for(int iy = 0; iy < stepsY; iy++) {
-                float startH = iy * texScale;
-                float endH = fminf((iy + 1) * texScale, absH);
-                float fracH = (endH - startH) / texScale;
-
-                float px1 = x + startW * signW;
-                float px2 = x + endW * signW;
-                float py1 = y + startH * signH;
-                float py2 = y + endH * signH;
+            for (int iz = 0; iz < stepsZ; iz++) {
+                float sD = iz * texScale;
+                float eD = fminf((iz + 1) * texScale, absD);
                 
-                float pz1 = z;
-                float pz2 = z + d;
+                float curZ = z + sD * signD;
+                float nextZ = z + eD * signD;
 
-                float pu1 = u;
-                float pu2 = u + uw * fracW;
-                float pv1 = v;
-                float pv2 = v + vh * fracH;
+                float curV2 = v + vh * ((eD - sD) / texScale);
+                float yTop = y + h;
 
-                addFaceTextured({{px1, py1, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz2, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px2, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py2, pz2, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz2, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}});
-
-                addFaceTextured({{px1, py1, pz1, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py1, pz1, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px2, py1, pz1, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py2, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}});
+                addFaceTextured({{curX, yTop, curZ, 1}, {u, v}, {r_c, g_c, b_c, 1}},
+                                {{nextX, yTop, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}},
+                                {{curX, yTop, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}},
+                                {{nextX, yTop, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}},
+                                {{nextX, yTop, nextZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}},
+                                {{curX, yTop, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}});
             }
         }
     } else {
-        // Tile Wall along Z and Y axes
-        for(int iz = 0; iz < stepsZ; iz++) {
-            float startD = iz * texScale;
-            float endD = fminf((iz + 1) * texScale, absD);
-            float fracD = (endD - startD) / texScale;
-
-            for(int iy = 0; iy < stepsY; iy++) {
-                float startH = iy * texScale;
-                float endH = fminf((iy + 1) * texScale, absH);
-                float fracH = (endH - startH) / texScale;
-
-                float pz1 = z + startD * signD;
-                float pz2 = z + endD * signD;
-                float py1 = y + startH * signH;
-                float py2 = y + endH * signH;
+        // Must use the original w >= d to keep the plane mapping aligned to the correct axis
+        if (w >= d) {
+            for (int ix = 0; ix < stepsX; ix++) {
+                float sW = ix * texScale;
+                float eW = fminf((ix + 1) * texScale, absW);
+                float curX = x + sW * signW;
+                float nextX = x + eW * signW;
+                float nextU = u + uw * ((eW - sW) / texScale);
                 
-                float px1 = x;
-                float px2 = x + w;
+                for (int iy = 0; iy < stepsY; iy++) {
+                    float sH = iy * texScale;
+                    float eH = fminf((iy + 1) * texScale, absH);
+                    float curY = y + sH * signH;
+                    float nextY = y + eH * signH;
+                    float curV2 = v + vh * ((eH - sH) / texScale);
 
-                float pu1 = u;
-                float pu2 = u + uw * fracD;
-                float pv1 = v;
-                float pv2 = v + vh * fracH;
+                    float zBack = z;
+                    float zFront = z + d;
 
-                addFaceTextured({{px2, py1, pz1, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py1, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px2, py1, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px2, py2, pz2, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px2, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}});
+                    addFaceTextured({{curX, curY, zFront, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zFront, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zFront, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zFront, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, nextY, zFront, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zFront, 1}, {u, v}, {r_c, g_c, b_c, 1}});
+                    
+                    addFaceTextured({{curX, curY, zBack, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zBack, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zBack, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, curY, zBack, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{nextX, nextY, zBack, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{curX, nextY, zBack, 1}, {nextU, v}, {r_c, g_c, b_c, 1}});
+                }
+            }
+        } else {
+            for (int iz = 0; iz < stepsZ; iz++) {
+                float sD = iz * texScale;
+                float eD = fminf((iz + 1) * texScale, absD);
+                float curZ = z + sD * signD;
+                float nextZ = z + eD * signD;
+                float nextU = u + uw * ((eD - sD) / texScale);
 
-                addFaceTextured({{px1, py1, pz1, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px1, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px1, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz2, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
-                                {{px1, py2, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}});
+                for (int iy = 0; iy < stepsY; iy++) {
+                    float sH = iy * texScale;
+                    float eH = fminf((iy + 1) * texScale, absH);
+                    float curY = y + sH * signH;
+                    float nextY = y + eH * signH;
+                    float curV2 = v + vh * ((eH - sH) / texScale);
+
+                    float xLeft = x;
+                    float xRight = x + w;
+
+                    addFaceTextured({{xRight, curY, curZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, curY, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, nextY, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, curY, nextZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, nextY, nextZ, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{xRight, nextY, curZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}});
+                    
+                    addFaceTextured({{xLeft, curY, curZ, 1}, {u, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, curY, nextZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, nextY, curZ, 1}, {u, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, curY, nextZ, 1}, {nextU, curV2}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, nextY, nextZ, 1}, {nextU, v}, {r_c, g_c, b_c, 1}}, 
+                                    {{xLeft, nextY, curZ, 1}, {u, v}, {r_c, g_c, b_c, 1}});
+                }
             }
         }
     }
