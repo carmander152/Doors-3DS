@@ -127,7 +127,6 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
         addFaceTextured(BL, BR, TL, BR, TR, TL);
     };
 
-    // Standard 6 Faces with flawless CCW normals
     drawQuad({{minX, maxY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{minX, maxY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Top
     drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, minY, minZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, minY, minZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Bottom
     drawQuad({{maxX, minY, maxZ, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{minX, minY, maxZ, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{maxX, maxY, maxZ, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{minX, maxY, maxZ, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}); // Front
@@ -231,14 +230,16 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
         for (int ix = 0; ix < stepsX; ix++) {
             float curX = minX + ix * texScale;
             float nextX = fminf(curX + texScale, maxX);
-            float nextU = u + uw * ((nextX - curX) / texScale); // Clean slice!
+            float sliceX = (nextX - curX) / texScale;
+            float nextU = u + uw * sliceX; // Anchored to Left
 
             for (int iz = 0; iz < stepsZ; iz++) {
                 float curZ = minZ + iz * texScale;
                 float nextZ = fminf(curZ + texScale, maxZ);
+                float sliceZ = (nextZ - curZ) / texScale;
                 
-                float pv1 = 1.0f - v; 
-                float pv2 = 1.0f - (v + vh * ((nextZ - curZ) / texScale)); // Clean slice!
+                float pv1 = 1.0f - v; // Top of texture
+                float pv2 = 1.0f - (v + vh * sliceZ); // Sliced downwards
 
                 vertex BL = {{curX, yTop, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
                 vertex BR = {{nextX, yTop, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
@@ -248,65 +249,71 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
             }
         }
     } else {
-        if (absW >= absD) {
-            float zFront = maxZ; // Facing inside the room
-            float zBack = minZ;  // Facing outside the room
+        if (absW >= absD) { // Front and Back Walls
+            float zFront = maxZ; // Facing +Z
+            float zBack = minZ;  // Facing -Z
 
             for (int ix = 0; ix < stepsX; ix++) {
                 float curX = minX + ix * texScale;
                 float nextX = fminf(curX + texScale, maxX);
-                float nextU = u + uw * ((nextX - curX) / texScale);
+                float sliceX = (nextX - curX) / texScale;
+                float nextU = u + uw * sliceX;
 
                 for (int iy = 0; iy < stepsY; iy++) {
                     float curY = minY + iy * texScale;
                     float nextY = fminf(curY + texScale, maxY);
                     
-                    float pv1 = 1.0f - v; 
-                    float pv2 = 1.0f - (v + vh * ((nextY - curY) / texScale));
+                    // Anchor to FLOOR: Bottom of texture is constant, Top is sliced
+                    float sliceY = (nextY - curY) / texScale;
+                    float pv2 = 1.0f - (v + vh); // Bottom of texture
+                    float pv1 = 1.0f - (v + vh - vh * sliceY); // Sliced upwards
 
-                    // Front Face
-                    vertex F_BL = {{nextX, curY, zFront, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex F_BR = {{curX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex F_TL = {{nextX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex F_TR = {{curX, nextY, zFront, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    // Front Face (Looking +Z). Left is minX, Right is maxX.
+                    vertex F_BL = {{curX, curY, zFront, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex F_BR = {{nextX, curY, zFront, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex F_TL = {{curX, nextY, zFront, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex F_TR = {{nextX, nextY, zFront, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(F_BL, F_BR, F_TL, F_TR);
 
-                    // Back Face
-                    vertex B_BL = {{curX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex B_BR = {{nextX, curY, zBack, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex B_TL = {{curX, nextY, zBack, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex B_TR = {{nextX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    // Back Face (Looking -Z). Left is maxX, Right is minX.
+                    vertex B_BL = {{nextX, curY, zBack, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex B_BR = {{curX, curY, zBack, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex B_TL = {{nextX, nextY, zBack, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex B_TR = {{curX, nextY, zBack, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(B_BL, B_BR, B_TL, B_TR);
                 }
             }
-        } else {
-            float xRight = maxX; 
-            float xLeft = minX;  
+        } else { // Left and Right Walls
+            float xRight = maxX; // Facing +X
+            float xLeft = minX;  // Facing -X
 
             for (int iz = 0; iz < stepsZ; iz++) {
                 float curZ = minZ + iz * texScale;
                 float nextZ = fminf(curZ + texScale, maxZ);
-                float nextU = u + uw * ((nextZ - curZ) / texScale);
+                float sliceZ = (nextZ - curZ) / texScale;
+                float nextU = u + uw * sliceZ;
 
                 for (int iy = 0; iy < stepsY; iy++) {
                     float curY = minY + iy * texScale;
                     float nextY = fminf(curY + texScale, maxY);
                     
-                    float pv1 = 1.0f - v; 
-                    float pv2 = 1.0f - (v + vh * ((nextY - curY) / texScale));
+                    // Anchor to FLOOR: Bottom of texture is constant, Top is sliced
+                    float sliceY = (nextY - curY) / texScale;
+                    float pv2 = 1.0f - (v + vh); // Bottom of texture
+                    float pv1 = 1.0f - (v + vh - vh * sliceY); // Sliced upwards
 
-                    // Right Face (+X)
-                    vertex R_BL = {{xRight, curY, curZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex R_BR = {{xRight, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex R_TL = {{xRight, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex R_TR = {{xRight, nextY, nextZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    // Right Face (+X). Looking +X. Left is maxZ, Right is minZ.
+                    vertex R_BL = {{xRight, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex R_BR = {{xRight, curY, curZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex R_TL = {{xRight, nextY, nextZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex R_TR = {{xRight, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(R_BL, R_BR, R_TL, R_TR);
 
-                    // Left Face (-X)
-                    vertex L_BL = {{xLeft, curY, nextZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex L_BR = {{xLeft, curY, curZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
-                    vertex L_TL = {{xLeft, nextY, nextZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
-                    vertex L_TR = {{xLeft, nextY, curZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
+                    // Left Face (-X). Looking -X. Left is minZ, Right is maxZ.
+                    vertex L_BL = {{xLeft, curY, curZ, 1}, {u, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex L_BR = {{xLeft, curY, nextZ, 1}, {nextU, pv2}, {r_c, g_c, b_c, 1}};
+                    vertex L_TL = {{xLeft, nextY, curZ, 1}, {u, pv1}, {r_c, g_c, b_c, 1}};
+                    vertex L_TR = {{xLeft, nextY, nextZ, 1}, {nextU, pv1}, {r_c, g_c, b_c, 1}};
                     drawQuad(L_BL, L_BR, L_TL, L_TR);
                 }
             }
