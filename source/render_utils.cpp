@@ -104,10 +104,9 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
     float x2=x+w, y2=y+h, z2=z+d; 
     
-    // === ATLAS PLASTER TEST OVERRIDE ===
-    // Force the entire atlas to stretch across this box to prove the engine works!
-    float u1 = 0.0f, v1 = 0.0f; 
-    float u2 = 1.0f, v2 = 1.0f;
+    // Map directly to the passed sub-texture coordinates!
+    float u1 = u, v1 = v; 
+    float u2 = u + uw, v2 = v + vh;
     
     addFaceTextured({{x,y,z2,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x2,y,z2,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z2,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x,y2,z2,1},{u1,v1},{r_c,g_c,b_c,1}}); 
     addFaceTextured({{x,y,z,1},{u2,v2},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}, {{x2,y,z,1},{u1,v2},{r_c,g_c,b_c,1}}, {{x2,y2,z,1},{u1,v1},{r_c,g_c,b_c,1}}, {{x,y2,z,1},{u2,v1},{r_c,g_c,b_c,1}}); 
@@ -127,9 +126,8 @@ void addBillboard(float cx, float cy, float cz, float w, float h, float u, float
     float tl_x = cx - rx, tl_y = cy + hh, tl_z = cz - rz;
     float tr_x = cx + rx, tr_y = cy + hh, tr_z = cz + rz;
 
-    // === ATLAS PLASTER TEST OVERRIDE ===
-    float u1 = 0.0f, v1 = 0.0f;
-    float u2 = 1.0f, v2 = 1.0f;
+    float u1 = u, v1 = v;
+    float u2 = u + uw, v2 = v + vh;
     
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
@@ -145,9 +143,8 @@ void addBillboardSpherical(float cx, float cy, float cz, float w, float h, float
     float tl_x = cx - rx + ux, tl_y = cy + uy, tl_z = cz - rz + uz;
     float tr_x = cx + rx + ux, tr_y = cy + uy, tr_z = cz + rz + uz;
     
-    // === ATLAS PLASTER TEST OVERRIDE ===
-    float u1 = 0.0f, v1 = 0.0f;
-    float u2 = 1.0f, v2 = 1.0f;
+    float u1 = u, v1 = v;
+    float u2 = u + uw, v2 = v + vh;
     
     addFaceTextured({{bl_x, bl_y, bl_z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{br_x, br_y, br_z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{tr_x, tr_y, tr_z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{tl_x, tl_y, tl_z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
 }
@@ -172,28 +169,139 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     }
 }
 
+// === NEW DYNAMIC SUBDIVISION LOOP ===
+// This handles texture atlas repeating safely by slicing long geometry into multiple smaller tiles
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     if(collide && !isBuildingEntities) {
         collisions.push_back({fminf(x,x+w), fminf(y,y+h), fminf(z,z+d), fmaxf(x,x+w), fmaxf(y,y+h), fmaxf(z,z+d), 0});
     }
     
-    // === ATLAS PLASTER TEST OVERRIDE ===
-    // Bypass all tiling logic and just stick the full atlas image over the whole surface
     float r_c = r * light * globalTintR, g_c = g * light * globalTintG, b_c = b * light * globalTintB;
-    float x2=x+w, y2=y+h, z2=z+d;
-    float u1 = 0.0f, v1 = 0.0f;
-    float u2 = 1.0f, v2 = 1.0f;
-    
-    bool isFloor = (h <= 0.05f);
+
+    float signW = (w >= 0) ? 1.0f : -1.0f;
+    float signH = (h >= 0) ? 1.0f : -1.0f;
+    float signD = (d >= 0) ? 1.0f : -1.0f;
+
+    float absW = fabsf(w);
+    float absH = fabsf(h);
+    float absD = fabsf(d);
+
+    int stepsX = ceilf(absW / texScale); if(stepsX == 0) stepsX = 1;
+    int stepsY = ceilf(absH / texScale); if(stepsY == 0) stepsY = 1;
+    int stepsZ = ceilf(absD / texScale); if(stepsZ == 0) stepsZ = 1;
+
+    bool isFloor = (absH <= 0.05f);
+
     if (isFloor) {
-        addFaceTextured({{x, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x2, y2, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}});
+        // Tile Floor along X and Z
+        for(int ix = 0; ix < stepsX; ix++) {
+            float startW = ix * texScale;
+            float endW = fminf((ix + 1) * texScale, absW);
+            float fracW = (endW - startW) / texScale;
+
+            for(int iz = 0; iz < stepsZ; iz++) {
+                float startD = iz * texScale;
+                float endD = fminf((iz + 1) * texScale, absD);
+                float fracD = (endD - startD) / texScale;
+
+                float px1 = x + startW * signW;
+                float px2 = x + endW * signW;
+                float pz1 = z + startD * signD;
+                float pz2 = z + endD * signD;
+
+                float pu1 = u;
+                float pu2 = u + uw * fracW;
+                float pv1 = v;
+                float pv2 = v + vh * fracD;
+                float py = y + h;
+
+                addFaceTextured({{px1, py, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px2, py, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px1, py, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px2, py, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px1, py, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}});
+            }
+        }
+    } else if (absW >= absD) {
+        // Tile Wall along X and Y axes
+        for(int ix = 0; ix < stepsX; ix++) {
+            float startW = ix * texScale;
+            float endW = fminf((ix + 1) * texScale, absW);
+            float fracW = (endW - startW) / texScale;
+
+            for(int iy = 0; iy < stepsY; iy++) {
+                float startH = iy * texScale;
+                float endH = fminf((iy + 1) * texScale, absH);
+                float fracH = (endH - startH) / texScale;
+
+                float px1 = x + startW * signW;
+                float px2 = x + endW * signW;
+                float py1 = y + startH * signH;
+                float py2 = y + endH * signH;
+                
+                float pz1 = z;
+                float pz2 = z + d;
+
+                float pu1 = u;
+                float pu2 = u + uw * fracW;
+                float pv1 = v;
+                float pv2 = v + vh * fracH;
+
+                addFaceTextured({{px1, py1, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz2, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px2, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py2, pz2, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz2, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}});
+
+                addFaceTextured({{px1, py1, pz1, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py1, pz1, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px2, py1, pz1, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py2, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}});
+            }
+        }
     } else {
-        if (w >= d) {
-            addFaceTextured({{x, y, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z2, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
-            addFaceTextured({{x, y, z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x2, y, z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x2, y, z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
-        } else {
-            addFaceTextured({{x2, y, z, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x2, y, z2, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x2, y2, z2, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x2, y2, z, 1}, {u2, v1}, {r_c, g_c, b_c, 1}});
-            addFaceTextured({{x, y, z, 1}, {u1, v2}, {r_c, g_c, b_c, 1}}, {{x, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}}, {{x, y, z2, 1}, {u2, v2}, {r_c, g_c, b_c, 1}}, {{x, y2, z2, 1}, {u2, v1}, {r_c, g_c, b_c, 1}}, {{x, y2, z, 1}, {u1, v1}, {r_c, g_c, b_c, 1}});
+        // Tile Wall along Z and Y axes
+        for(int iz = 0; iz < stepsZ; iz++) {
+            float startD = iz * texScale;
+            float endD = fminf((iz + 1) * texScale, absD);
+            float fracD = (endD - startD) / texScale;
+
+            for(int iy = 0; iy < stepsY; iy++) {
+                float startH = iy * texScale;
+                float endH = fminf((iy + 1) * texScale, absH);
+                float fracH = (endH - startH) / texScale;
+
+                float pz1 = z + startD * signD;
+                float pz2 = z + endD * signD;
+                float py1 = y + startH * signH;
+                float py2 = y + endH * signH;
+                
+                float px1 = x;
+                float px2 = x + w;
+
+                float pu1 = u;
+                float pu2 = u + uw * fracD;
+                float pv1 = v;
+                float pv2 = v + vh * fracH;
+
+                addFaceTextured({{px2, py1, pz1, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py1, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px2, py1, pz2, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px2, py2, pz2, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px2, py2, pz1, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}});
+
+                addFaceTextured({{px1, py1, pz1, 1}, {pu1, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px1, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px1, py1, pz2, 1}, {pu2, pv2}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz2, 1}, {pu2, pv1}, {r_c, g_c, b_c, 1}},
+                                {{px1, py2, pz1, 1}, {pu1, pv1}, {r_c, g_c, b_c, 1}});
+            }
         }
     }
 }
