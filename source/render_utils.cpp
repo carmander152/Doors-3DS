@@ -5,8 +5,8 @@
 #include <string.h>
 #include <math.h>
 
-// === ATLAS PIXEL FIX ===
-// Converts pixel coordinates from pack_atlas.py into floating point UVs
+// Atlas pixel normalization.
+// Pixel coordinates to floating point UV conversion.
 inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
     const float ATLAS_WIDTH = 1024.0f;
     const float ATLAS_HEIGHT = 1024.0f;
@@ -63,7 +63,7 @@ ndspWaveBuf loadWav(const char* path) {
 bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     FILE* f = fopen(path, "rb"); 
     if (!f) { 
-        sprintf(texErrorMessage, "Could not find %s", path); 
+        sprintf(texErrorMessage, "Texture not found: %s", path); 
         return false; 
     }
     
@@ -86,7 +86,7 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     Tex3DS_Texture t3x = Tex3DS_TextureImport(texData, size, tex, NULL, false);
     
     if (!t3x) { 
-        sprintf(texErrorMessage, "Tex3DS Import failed"); 
+        sprintf(texErrorMessage, "Tex3DS import failure"); 
         linearFree(texData); 
         return false; 
     }
@@ -123,7 +123,7 @@ void addBoxTextured(float x, float y, float z, float w, float h, float d, float 
     float minZ = fminf(z, z + d), maxZ = fmaxf(z, z + d);
     
     float u1 = u, u2 = u + uw;
-    // Invert the V axis for the Atlas!
+    // Atlas V-axis inversion.
     float v1 = 1.0f - v, v2 = 1.0f - (v + vh);
 
     auto drawQuad = [&](vertex BL, vertex BR, vertex TL, vertex TR) {
@@ -200,7 +200,7 @@ void addBox(float x, float y, float z, float w, float h, float d, float r, float
     }
 }
 
-// === WORLD-SPACE TILING LOOP ===
+// World-space tiling loop.
 void addTiledSurface(float x, float y, float z, float w, float h, float d, float u, float v, float uw, float vh, float texScale, float r, float g, float b, float light, bool collide) {
     normalizeUVs(u, v, uw, vh);
 
@@ -250,7 +250,7 @@ void addTiledSurface(float x, float y, float z, float w, float h, float d, float
                 float segD = fminf(scaleV - pZ, maxZ - currZ);
                 if (segD < 0.001f) segD = 0.001f;
                 
-                float pv1 = 1.0f - (v + (pZ / scaleV) * vh);              
+                float pv1 = 1.0f - (v + (pZ / scaleV) * vh);               
                 float pv2 = 1.0f - (v + ((pZ + segD) / scaleV) * vh);     
 
                 float x1 = currX, x2 = currX + segW;
