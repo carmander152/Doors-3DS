@@ -13,19 +13,21 @@ void buildEntities(int pRm) {
     // Screech Entity
     if (screechActive) { 
         float scale = (screechState == 3) ? 2.5f : 1.5f; 
-        addBillboard(screechX, screechY + 0.2f, screechZ, scale, scale, TEX_SCREECH.u, TEX_SCREECH.v, TEX_SCREECH.uw, TEX_SCREECH.vh); 
+        // Changed to Spherical so he always stares at the camera, and added 1.0f light!
+        addBillboardSpherical(screechX, screechY + 0.2f, screechZ, scale, scale, TEX_SCREECH.u, TEX_SCREECH.v, TEX_SCREECH.uw, TEX_SCREECH.vh, 1.0f); 
     }
     
     // Rush Entity
     if (rushActive && rushState == 2) { 
-        addBillboard(0.0f, 0.7f, rushZ, 1.4f, 1.4f, TEX_RUSH.u, TEX_RUSH.v, TEX_RUSH.uw, TEX_RUSH.vh); 
+        // Made Rush a bit bigger (1.8f) and added 1.0f light so he glows in the dark!
+        addBillboard(0.0f, 0.7f, rushZ, 1.8f, 1.8f, TEX_RUSH.u, TEX_RUSH.v, TEX_RUSH.uw, TEX_RUSH.vh, 1.0f); 
     }
     
     // Eyes Entity
     for (int i = pRm - 1; i <= pRm + 2; i++) {
         if (i >= 0 && i < TOTAL_ROOMS && rooms[i].hasEyes) {
             
-            // --- THE FIX: Eyes Render Cullling ---
+            // --- THE FIX: Eyes Render Culling ---
             // Replicates world_gen.cpp's line of sight system for entity culling
             bool isVisible = true;
             if (!seekActive) {
@@ -36,7 +38,8 @@ void buildEntities(int pRm) {
             if (isVisible) {
                 bool renderEyes = !(rooms[i].isSeekChase || rooms[i].hasSeekEyes) || (i >= pRm && i <= pRm + 1);
                 if (renderEyes) {
-                    addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY, rooms[i].eyesZ, 1.2f, 1.2f, TEX_EYES.u, TEX_EYES.v, TEX_EYES.uw, TEX_EYES.vh);
+                    // Added 1.0f light!
+                    addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY, rooms[i].eyesZ, 1.2f, 1.2f, TEX_EYES.u, TEX_EYES.v, TEX_EYES.uw, TEX_EYES.vh, 1.0f);
                 }
             }
         }
