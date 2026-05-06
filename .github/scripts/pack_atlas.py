@@ -2,19 +2,18 @@ import os
 import glob
 from PIL import Image
 
-# Configuration
-# CHANGED: Now explicitly points ONLY to the game folder!
+# Configuration.
 INPUT_DIR = "raw_textures/game/"
 OUTPUT_IMG = "romfs/atlas.png"
 OUTPUT_HEADER = "source/atlas_uvs.h"
-ATLAS_SIZE = 1024 # 1024x1024 is a safe maximum for 3DS
+ATLAS_SIZE = 1024 # Atlas size limit.
 
 def pack_textures():
     if not os.path.exists(INPUT_DIR):
         print(f"Directory {INPUT_DIR} not found. Skipping atlas generation.")
         return
 
-    # Recursive search to grab everything inside raw_textures/game
+    # Recursive file search.
     images = glob.glob(os.path.join(INPUT_DIR, "**/*.png"), recursive=True)
     
     if not images:
@@ -36,11 +35,11 @@ def pack_textures():
     ]
 
     for img_path in images:
-        # Keep spaces and dashes out of C++ variable names!
+        # Sanitize names.
         name = os.path.basename(img_path).split('.')[0].replace(" ", "_").replace("-", "_")
         img = Image.open(img_path).convert("RGBA")
         
-        # Move to next row if it doesn't fit
+        # Row wrap.
         if current_x + img.width > ATLAS_SIZE:
             current_x = 0
             current_y += max_row_height
@@ -50,23 +49,23 @@ def pack_textures():
             print("ERROR: Atlas is full! Increase ATLAS_SIZE.")
             return
 
-        # Paste image into atlas
+        # Paste to atlas.
         atlas.paste(img, (current_x, current_y))
         
-        # Calculate UV coordinates (0.0 to 1.0 mapping)
+        # Calculate UVs.
         u = current_x / ATLAS_SIZE
         v = current_y / ATLAS_SIZE
         uw = img.width / ATLAS_SIZE
         vh = img.height / ATLAS_SIZE
         
-        # Write to C++ header
+        # Generate header line.
         macro_name = f"TEX_{name.upper()}"
         header_lines.append(f"const UVData {macro_name} = {{ {u}f, {v}f, {uw}f, {vh}f }};")
 
         current_x += img.width
         max_row_height = max(max_row_height, img.height)
 
-    # Save output
+    # Save outputs.
     os.makedirs(os.path.dirname(OUTPUT_IMG), exist_ok=True)
     atlas.save(OUTPUT_IMG)
     
