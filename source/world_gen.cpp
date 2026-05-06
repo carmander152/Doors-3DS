@@ -149,13 +149,14 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
         addBox(bx, 0.0f, z-0.2f, bw, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
     };
     
-    bb(-3.0f, 0.4f); 
+    // THE FIX: Baseboards now properly span the entire width out to exactly -2.90 and 2.86
+    bb(-2.9f, 0.3f); 
     if(!lD) bb(-2.6f, 1.2f); 
     bb(-1.4f, 0.8f); 
     if(!cD) bb(-0.6f, 1.2f); 
     bb(0.6f, 0.8f); 
     if(!rD) bb(1.4f, 1.2f); 
-    bb(2.6f, 0.4f);
+    bb(2.6f, 0.26f); 
 
     auto dr = [&](float dx, bool o) {
         addBox(dx, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
@@ -496,16 +497,19 @@ void buildWorld(int cChunk, int pRm) {
             // --- INNER SIDE ROOM BASEBOARDS ---
             float baseR = 0.12f, baseG = 0.06f, baseB = 0.03f;
             
-            // Back and Front Inner Walls (Z-axis bounds)
-            addBox(sW, 0.0f, srZ, 6.0f, 0.12f, -0.04f, baseR, baseG, baseB, false, 0, L); // Back Wall
-            addBox(sW, 0.0f, srZ-5.0f, 6.0f, 0.12f, 0.04f, baseR, baseG, baseB, false, 0, L); // Front Wall
+            float sideWidth = 5.80f;
+            float sideStartX = isL ? -8.84f : 3.04f;
+            
+            // Back and Front Inner Walls (Perfectly fitted to not clip!)
+            addBox(sideStartX, 0.0f, srZ, sideWidth, 0.12f, -0.04f, baseR, baseG, baseB, false, 0, L); // Back Wall
+            addBox(sideStartX, 0.0f, srZ-5.0f, sideWidth, 0.12f, 0.04f, baseR, baseG, baseB, false, 0, L); // Front Wall
             
             // Far Side Inner Wall (X-axis bound)
-            float farX = isL ? -9.0f : 8.96f; 
+            float farX = isL ? -8.90f : 8.84f; 
             addBox(farX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, baseR, baseG, baseB, false, 0, L);
             
-            // Door Wall Inner Side (X-axis bound, perfectly split so it doesn't block the door)
-            float doorX = isL ? -3.04f : 3.0f; // <--- THE FIX: Correctly maps the right-side baseboard!
+            // Door Wall Inner Side
+            float doorX = isL ? -3.04f : 3.00f; 
             addBox(doorX, 0.0f, srZ, 0.04f, 0.12f, -(srZ - dZ), baseR, baseG, baseB, false, 0, L); // Wall up to the door
             addBox(doorX, 0.0f, dZ - 1.2f, 0.04f, 0.12f, -1.3f, baseR, baseG, baseB, false, 0, L); // Wall after the door
             
