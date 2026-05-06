@@ -94,19 +94,19 @@ void buildDresser(float zC, bool isL, float openFactor, int item, float L, float
 void buildChest(float x, float z, float openFactor, float L) {
     bool isOpen = (openFactor > 0.5f);
     
-    // Chest base
+    // Chest base.
     addBox(x-0.4f, 0, z-0.3f, 0.8f, 0.4f, 0.6f, 0.3f, 0.15f, 0.05f, true, 0, L); 
     addBox(x-0.42f, 0, z-0.32f, 0.05f, 0.4f, 0.05f, 0.8f, 0.7f, 0.1f, false, 0, L); 
     addBox(x+0.37f, 0, z-0.32f, 0.05f, 0.4f, 0.05f, 0.8f, 0.7f, 0.1f, false, 0, L);
     
     if (!isOpen) { 
-        // Closed lid
+        // Closed lid.
         addBox(x-0.4f, 0.4f, z-0.3f, 0.8f, 0.2f, 0.6f, 0.35f, 0.18f, 0.08f, false, 0, L); 
         addBox(x-0.05f, 0.3f, z+0.3f, 0.1f, 0.15f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); 
     } else { 
-        // Open lid
+        // Open lid.
         addBox(x-0.4f, 0.4f, z-0.4f, 0.8f, 0.6f, 0.1f, 0.35f, 0.18f, 0.08f, false, 0, L); 
-        // Flat dark void simulating hollow inside
+        // Hollow interior simulation.
         addBox(x-0.35f, 0.401f, z-0.25f, 0.7f, 0.005f, 0.5f, 0.05f, 0.05f, 0.05f, false, 0, L); 
     }
 }
@@ -115,7 +115,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     
-    // Left wall sections
+    // Left wall sections.
     addTiledSurface(-3.0f, 0.4f, z, 0.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(-3.0f, 0.0f, z, 0.4f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
@@ -129,7 +129,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(-1.4f, 0.4f, z, 0.8f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(-1.4f, 0.0f, z, 0.8f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
-    // Center wall sections
+    // Center wall sections.
     if (!cD) { 
         addTiledSurface(-0.6f, 0.4f, z, 1.2f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
         addTiledSurface(-0.6f, 0.0f, z, 1.2f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); 
@@ -140,7 +140,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(0.6f, 0.4f, z, 0.8f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(0.6f, 0.0f, z, 0.8f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
-    // Right wall sections
+    // Right wall sections.
     if (!rD) { 
         addTiledSurface(1.4f, 0.4f, z, 1.2f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
         addTiledSurface(1.4f, 0.0f, z, 1.2f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); 
@@ -151,7 +151,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(2.6f, 0.4f, z, 0.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(2.6f, 0.0f, z, 0.4f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
-    // Baseboards
+    // Baseboards.
     auto bb = [&](float bx, float bw) { 
         addBox(bx, 0.0f, z, bw, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
         addBox(bx, 0.0f, z-0.2f, bw, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
@@ -165,7 +165,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     if(!rD) bb(1.4f, 1.2f); 
     bb(2.6f, 0.26f); 
 
-    // Doors
+    // Doors.
     auto dr = [&](float dx, bool o) {
         addBox(dx, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         addBox(dx + 1.15f, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
@@ -219,7 +219,7 @@ void buildWorld(int cChunk, int pRm) {
     if (st < -1) st = -1; 
     if (en > TOTAL_ROOMS - 1) en = TOTAL_ROOMS - 1;
 
-    // Room 0 
+    // Room 0.
     if(st <= -1){
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         addTiledSurface(-2, 0, 5, 4, 0.01f, 4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f, false); 
@@ -271,7 +271,7 @@ void buildWorld(int cChunk, int pRm) {
 
     if (st < 0) st = 0; 
     
-    // Main room rendering loop
+    // Main room rendering loop.
     for(int i = st; i <= en; i++) {
         float z = -10 - (i * 10);
         float L = rooms[i].lightLevel;
@@ -284,7 +284,7 @@ void buildWorld(int cChunk, int pRm) {
             if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1] && (i + 1) != seekStartRoom + 1 && (i + 1) != seekStartRoom + 2) isInteriorVisible = false;
         }
 
-        // Room 50
+        // Room 50.
         if (i == 50) {
             float cL = rooms[i].lightLevel; 
             globalTintR=0.9f; globalTintG=0.8f; globalTintB=0.6f; 
