@@ -504,8 +504,8 @@ void buildWorld(int cChunk, int pRm) {
             float farX = isL ? -9.0f : 8.96f; 
             addBox(farX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, baseR, baseG, baseB, false, 0, L);
             
-            // Door Wall Inner Side (X-axis bound, split in two so it doesn't block the door!)
-            float doorX = isL ? -3.04f : 2.96f; 
+            // Door Wall Inner Side (X-axis bound, perfectly split so it doesn't block the door)
+            float doorX = isL ? -3.04f : 3.0f; // <--- THE FIX: Correctly maps the right-side baseboard!
             addBox(doorX, 0.0f, srZ, 0.04f, 0.12f, -(srZ - dZ), baseR, baseG, baseB, false, 0, L); // Wall up to the door
             addBox(doorX, 0.0f, dZ - 1.2f, 0.04f, 0.12f, -1.3f, baseR, baseG, baseB, false, 0, L); // Wall after the door
             
