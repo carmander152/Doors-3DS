@@ -6,14 +6,14 @@ bool checkCollision(float x, float y, float z, float h) {
     
     float r = 0.2f; 
     for(auto& b : collisions) { 
-        if (b.type == 4) continue; // Ignore door interaction volumes
+        if (b.type == 4) continue; // Door volumes.
         
-        // Broad phase check (Optimization)
+        // Broad phase check.
         if (x + 2.0f < b.minX || x - 2.0f > b.maxX || z + 2.0f < b.minZ || z - 2.0f > b.maxZ) {
             continue;
         }
         
-        // Detailed AABB collision check
+        // AABB collision check.
         if (x + r > b.minX && x - r < b.maxX && 
             z + r > b.minZ && z - r < b.maxZ && 
             y + h > b.minY && y < b.maxY) {
@@ -39,7 +39,7 @@ bool checkLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2
         float tmin = 0.0f, tmax = 1.0f;
         float dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
         
-        // Check X axis
+        // X-axis check.
         if (fabsf(dx) > 0.0001f) { 
             float tx1 = (b.minX - x1) / dx;
             float tx2 = (b.maxX - x1) / dx; 
@@ -49,7 +49,7 @@ bool checkLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2
             continue;
         }
         
-        // Check Y axis
+        // Y-axis check.
         if (fabsf(dy) > 0.0001f) { 
             float ty1 = (b.minY - y1) / dy;
             float ty2 = (b.maxY - y1) / dy; 
@@ -59,7 +59,7 @@ bool checkLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2
             continue;
         }
         
-        // Check Z axis
+        // Z-axis check.
         if (fabsf(dz) > 0.0001f) { 
             float tz1 = (b.minZ - z1) / dz;
             float tz2 = (b.maxZ - z1) / dz; 
@@ -70,7 +70,7 @@ bool checkLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2
         }
         
         if (tmin <= tmax && tmax > 0.0f && tmin < 1.0f) {
-            return false; // Line of sight is blocked
+            return false;
         }
     } 
     return true; 
