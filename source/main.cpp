@@ -414,7 +414,6 @@ int main() {
             // Figure logic
             static int figureIntroTimer = 0;
             
-            // Trigger cutscene on door open
             if (doorOpen[50] && !figureActive) { 
                 figureActive = true; 
                 figureState = 10; 
@@ -436,7 +435,6 @@ int main() {
                 hidCircleRead(&cP_fig);
                 bool isMakingNoise = (abs(cP_fig.dy) > 15 || abs(cP_fig.dx) > 15) && !isCrouching && hideState == NOT_HIDING;
 
-                // Kill condition
                 if (distSq < 0.8f && !isDead) { 
                     playerHealth = 0; 
                     isDead = true; 
@@ -445,13 +443,11 @@ int main() {
                     messageTimer = 60; 
                 } 
                 else {
-                    // State 10: Intro charge
                     if (figureState == 10) {
                         figureZ += figureSpeed; 
                         figureIntroTimer++;
                         
                         if (figureIntroTimer == 45) { 
-                            // Lamp falls
                             sprintf(uiMessage, "* CRAAASH! *"); 
                             messageTimer = 60;
                             if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } 
@@ -461,7 +457,6 @@ int main() {
                             figureTargetZ = roomCenterZ + 5.0f; 
                         }
                     }
-                    // State 11: Intro distraction
                     else if (figureState == 11) {
                         float dx = figureTargetX - figureX;
                         float dz = figureTargetZ - figureZ;
@@ -471,14 +466,12 @@ int main() {
                             figureX += (dx / distToTarget) * figureSpeed;
                             figureZ += (dz / distToTarget) * figureSpeed;
                         } else {
-                            // Start patrol
                             figureState = 0; 
                             figureSpeed = 0.04f; 
                             sprintf(uiMessage, "He's blind... Crouch to sneak."); 
                             messageTimer = 100;
                         }
                     }
-                    // State 0: Patrol
                     else if (figureState == 0) { 
                         float patrolX = 0, patrolZ = 0;
                         if (figureTargetWP == 0) { patrolX = -3.0f; patrolZ = roomCenterZ + 6.0f; }
@@ -506,7 +499,6 @@ int main() {
                             messageTimer = 45;
                         }
                     } 
-                    // State 1: Investigate/chase
                     else if (figureState == 1) { 
                         if (isMakingNoise && distSq < 49.0f) {
                             figureTargetX = camX;
@@ -529,7 +521,6 @@ int main() {
                     }
                     
                     // Library bounds clamp
-                    // Prevent Figure leaving
                     float libFrontZ = -10.0f - (50 * 10.0f) - 1.5f;
                     float libBackZ = -10.0f - (50 * 10.0f) - 18.5f;
                     
@@ -773,13 +764,13 @@ int main() {
                 }
             }
 
-            // Movement and input
+            // Input reading
             if ((kDown & KEY_B) && hideState == NOT_HIDING) { 
                 if (isCrouching) { if (!checkCollision(camX, 0, camZ, 1.1f)) isCrouching = false; } 
                 else { isCrouching = true; } 
             }
             
-            // Spawn Rush randomly
+            // Spawn Rush
             if (playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !iSE && !inLibrary && rand() % 10000 < 25) {
                 rushActive = true; rushState = 1; rushTimer = 150 + (rand() % 60); rushStartTimer = (float)rushTimer;
                 if (audio_ok) {
@@ -796,16 +787,17 @@ int main() {
                 else if (!iDZ && hideState == BEHIND_DOOR) hideState = NOT_HIDING; 
             }
             
+            // Calculate movement
             float pH = isCrouching ? 0.5f : 1.1f; 
             circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
             
             float turnSpeed = 0.0f;
             bool isMoving = false;
-            float moveMag = 0.0f; // Track stick magnitude
+            float moveMag = 0.0f; 
             
             if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
                 if (abs(cS.dx) > 10) {
-                    turnSpeed = cS.dx / 156.0f; // Normalize C-Stick
+                    turnSpeed = cS.dx / 156.0f; 
                     camYaw -= turnSpeed * 0.16f; 
                 }
                 if (abs(cS.dy) > 10) camPitch += (cS.dy / 156.0f) * 0.16f;
@@ -817,7 +809,7 @@ int main() {
                         if (fabsf(dx) < 10.0f) dx = 0; if (fabsf(dy) < 10.0f) dy = 0;
                         float tTurn = (dx / 160.0f) * 0.12f;
                         camYaw -= tTurn; 
-                        turnSpeed += (tTurn * 10.0f); // Map touch to tilt
+                        turnSpeed += (tTurn * 10.0f); 
                         camPitch -= (dy / 120.0f) * 0.12f;
                     } 
                 } else { wasTouching = false; } 
@@ -829,13 +821,11 @@ int main() {
                     isMoving = true;
                     float s = (seekState == 2) ? (isCrouching ? 0.50f : 0.84f) : (isCrouching ? 0.32f : 0.56f);
                     
-                    // Normalize Circle Pad
                     float sx = cP.dx / 156.0f; 
                     float sy = cP.dy / 156.0f;
                     moveMag = sqrtf(sx*sx + sy*sy);
-                    if (moveMag > 1.0f) moveMag = 1.0f; // Clamp magnitude
+                    if (moveMag > 1.0f) moveMag = 1.0f; 
                     
-                    // Apply movement speed
                     float nX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * (s * moveMag * 0.1f);
                     float nZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * (s * moveMag * 0.1f); 
                     if (!checkCollision(nX, 0, camZ, pH)) camX = nX; 
@@ -843,10 +833,13 @@ int main() {
                 }
             }
             
-            // Camera effects math
-            float chaseMultiplier = (seekState == 2) ? 1.5f : 1.0f; 
+            // Camera effects
+            float chaseMultiplier = (seekState == 2) ? 2.2f : 1.0f; 
             
-            // Camera tilt
+            static float currentFOV = 80.0f;
+            float targetFOV = (seekState == 2) ? 105.0f : 80.0f;
+            currentFOV += (targetFOV - currentFOV) * 0.1f;
+            
             float strafeTilt = isMoving ? ((cP.dx / 156.0f) * 0.04f) : 0.0f;
             float targetRoll = (turnSpeed * 0.05f) - strafeTilt; 
             
@@ -855,17 +848,15 @@ int main() {
             currentRoll += (targetRoll - currentRoll) * 0.15f; 
             
             if (isMoving) {
-                // Scale bob speed
-                bobTime += (isCrouching ? 0.12f : 0.22f) * (seekState == 2 ? 1.3f : 1.0f) * moveMag; 
+                bobTime += (isCrouching ? 0.12f : 0.22f) * (seekState == 2 ? 1.6f : 1.0f) * moveMag; 
             } else {
                 bobTime += (0 - bobTime) * 0.15f; 
             }
             
-            // Scale bob height
             camBobY = fabsf(sinf(bobTime)) * 0.012f * chaseMultiplier * moveMag; 
             camBobX = sinf(bobTime * 0.5f) * 0.004f * chaseMultiplier * moveMag;
             
-            // Rush movement logic
+            // Rush movement
             if (rushActive) { 
                 if (rushState == 1) {
                     rushTimer--;
@@ -1187,7 +1178,8 @@ int main() {
         }
         
         C3D_Mtx proj, view; 
-        Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); 
+        // Apply dynamic FOV
+        Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(currentFOV), C3D_AspectRatioTop, 0.01f, 1000.0f, false); 
         Mtx_Identity(&view); 
         
         // Apply camera roll
@@ -1239,7 +1231,6 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                // Standard texture multiply
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
@@ -1271,7 +1262,6 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                // Standard texture multiply
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
