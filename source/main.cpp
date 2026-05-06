@@ -9,7 +9,7 @@
 #include <time.h>
 #include "vshader_shbin.h"
 
-// Your custom modules
+// Custom modules
 #include "game_state.h"
 #include "render_utils.h"
 #include "physics.h"
@@ -17,7 +17,7 @@
 #include "entities.h"
 
 int main() {
-    // --- System Initialization ---
+    // System initialization
     gfxInitDefault(); 
     gfxSet3D(false); 
     irrstInit(); 
@@ -25,7 +25,7 @@ int main() {
     consoleInit(GFX_BOTTOM, NULL); 
     romfsInit();
     
-    // --- Audio Initialization ---
+    // Audio initialization
     bool audio_ok = R_SUCCEEDED(ndspInit()); 
     ndspWaveBuf sPsst={0}, sAttack={0}, sCaught={0}, sDoor={0}, sLockedDoor={0}, sDupeAttack={0}, sRushScream={0}, sEyesAppear={0}, sEyesGarble={0}, sEyesAttack={0}, sEyesHit={0}, sSeekRise={0}, sSeekChase={0}, sSeekEscaped={0}, sDeath={0}, sElevatorJam={0}, sElevatorJamEnd={0};
     ndspWaveBuf sCoinsCollect={0}, sDarkRoomEnter={0}, sDrawerClose={0}, sDrawerOpen={0}, sLightsFlicker={0}, sWardrobeEnter={0}, sWardrobeExit={0};
@@ -66,14 +66,14 @@ int main() {
         sWardrobeExit = loadWav("romfs:/Wardrobe_Exit.wav");
     }
 
-    // --- Graphics & GPU Setup ---
+    // Graphics and GPU setup
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); 
     C3D_RenderTarget* target = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8); 
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
     
     hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
     
-    // --- Initial World Generation ---
+    // Initial world generation
     generateRooms(); 
     int currentChunk = 0, playerCurrentRoom = -1; 
     
@@ -98,7 +98,7 @@ int main() {
     
     buildWorld(currentChunk, playerCurrentRoom);
     
-    // --- Shader Setup ---
+    // Shader setup
     DVLB_s* vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size); 
     shaderProgram_s program; 
     shaderProgramInit(&program); 
@@ -121,7 +121,7 @@ int main() {
     memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex)); 
     GSPGPU_FlushDataCache(vbo_main, (colored_size + textured_size) * sizeof(vertex));
     
-    // --- Render States ---
+    // Render states
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL); 
     C3D_CullFace(GPU_CULL_NONE); 
     C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
@@ -137,9 +137,7 @@ int main() {
 
     static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f;
 
-    // ==========================================
-    //                 GAMEPLAY LOGIC
-    // ==========================================
+    // Gameplay logic
     while (aptMainLoop()) {
         u64 currTime = osGetTime(); 
         frames++; 
@@ -159,7 +157,7 @@ int main() {
         static u64 totalFrames = 0; 
         totalFrames++;
 
-        // --- Death Audio Handling ---
+        // Death audio handling
         if (isDead) { 
             if (!deathSoundPlayed) { 
                 if (audio_ok) { 
@@ -183,7 +181,7 @@ int main() {
             deathSoundPlayed = false;
         }
         
-        // --- Restart Game ---
+        // Restart game
         if (kDown & KEY_START) { 
             if (isDead) { 
                 isDead = false; hasKey = false; lobbyKeyPickedUp = false; isCrouching = false; 
@@ -221,7 +219,7 @@ int main() {
             } 
         }
         
-        // --- Debug Cheats ---
+        // Debug cheats
         if (!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) { 
             if (kDown & KEY_DDOWN) { 
                 camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; 
@@ -239,7 +237,7 @@ int main() {
             } 
         }
         
-        // --- Room Management ---
+        // Room management
         playerCurrentRoom = (camZ >= -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f); 
         if (playerCurrentRoom < -1) playerCurrentRoom = -1; 
         if (playerCurrentRoom > TOTAL_ROOMS - 2) playerCurrentRoom = TOTAL_ROOMS - 2;
@@ -254,14 +252,14 @@ int main() {
             }
         }
         
-        // --- Timers ---
+        // Timers
         if (messageTimer > 0) messageTimer--; 
         if (flashRedFrames > 0 && !isDead) flashRedFrames--; 
         if (screechCooldown > 0) screechCooldown--; 
         if (rushCooldown > 0) rushCooldown--; 
         if (eyesSoundCooldown > 0) eyesSoundCooldown--;
 
-        // --- Dark Room Logic ---
+        // Dark room logic
         if (playerCurrentRoom != lastRoomForDarkCheck && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
             lastRoomForDarkCheck = playerCurrentRoom; 
             if (rooms[playerCurrentRoom].lightLevel < 0.5f && audio_ok && sDarkRoomEnter.data_vaddr) { 
@@ -274,7 +272,7 @@ int main() {
             } 
         }
         
-        // --- Elevator Logic ---
+        // Elevator logic
         if (inElevator && !elevatorDoorsOpen) { 
             if (elevatorTimer == 796 && audio_ok && sElevatorJam.data_vaddr) {
                 ndspChnWaveBufClear(9);
@@ -319,7 +317,7 @@ int main() {
             needsVBOUpdate = true;
         }
 
-        // --- Animations ---
+        // Animations
         bool animActive = false;
         if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
             auto stepAnim = [&](bool target, float& val) { 
@@ -341,7 +339,7 @@ int main() {
         } 
         if (animActive) needsVBOUpdate = true;
 
-        // --- Bottom Screen UI ---
+        // Bottom screen UI
         if (totalFrames % 5 == 0) {
             static bool prevScreech = false; 
             if (screechActive != prevScreech) { consoleClear(); prevScreech = screechActive; }
@@ -355,11 +353,11 @@ int main() {
                 printf("        PLAYER STATUS         \n==============================\n\n"); 
                 
                 int uiRoom = playerCurrentRoom;
-                if (uiRoom == 51) uiRoom = 50; // Skip 51 for UI text
+                if (uiRoom == 51) uiRoom = 50; 
 
                 int dC = getDisplayRoom(uiRoom);
                 int nD = getNextDoorIndex(uiRoom);
-                if (uiRoom == 50 && nD == 51) nD = 52; // Point door 50's exit directly to 52
+                if (uiRoom == 50 && nD == 51) nD = 52; 
                 int dN = getDisplayRoom(nD); 
                 
                 if (playerCurrentRoom == -1) { 
@@ -382,7 +380,7 @@ int main() {
                     printf(" Current Room : %03d         \x1b[K\n Next Door     : %03d         \x1b[K\n                            \x1b[K\n\n", dC, dN);
                 }
                 
-                // Read Door Plaques
+                // Read door plaques
                 if (nD >= 0 && nD < TOTAL_ROOMS && fabsf(camZ - (-10.0f - (nD * 10.0f))) < 4.0f && fabsf(camX) < 2.0f) { 
                     if (isGlitch && tDR == nD) { 
                         if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[tDR].dupeNumbers[0]); 
@@ -413,17 +411,17 @@ int main() {
 
         if (!isDead) {
             
-            // --- The Figure ---
+            // Figure logic
             static int figureIntroTimer = 0;
             
-            // Trigger Cutscene exactly when the big double doors open!
+            // Trigger cutscene on door open
             if (doorOpen[50] && !figureActive) { 
                 figureActive = true; 
-                figureState = 10; // STATE 10 = Intro Cutscene Charge
-                figureSpeed = 0.12f; // Sprinting speed!
+                figureState = 10; 
+                figureSpeed = 0.12f; 
                 
                 figureX = 0.0f;
-                figureZ = -10.0f - (50 * 10.0f) - 18.0f; // Spawn deep in the back!
+                figureZ = -10.0f - (50 * 10.0f) - 18.0f; 
                 
                 figureIntroTimer = 0;
                 sprintf(uiMessage, "?\\?!"); 
@@ -438,7 +436,7 @@ int main() {
                 hidCircleRead(&cP_fig);
                 bool isMakingNoise = (abs(cP_fig.dy) > 15 || abs(cP_fig.dx) > 15) && !isCrouching && hideState == NOT_HIDING;
 
-                // Kill Condition
+                // Kill condition
                 if (distSq < 0.8f && !isDead) { 
                     playerHealth = 0; 
                     isDead = true; 
@@ -447,23 +445,23 @@ int main() {
                     messageTimer = 60; 
                 } 
                 else {
-                    // --- STATE 10: SCRIPTED INTRO CHARGE ---
+                    // State 10: Intro charge
                     if (figureState == 10) {
-                        figureZ += figureSpeed; // Charge straight at the door
+                        figureZ += figureSpeed; 
                         figureIntroTimer++;
                         
-                        if (figureIntroTimer == 45) { // Give him a second to run out of the darkness
-                            // Lamp falls to the player's left!
+                        if (figureIntroTimer == 45) { 
+                            // Lamp falls
                             sprintf(uiMessage, "* CRAAASH! *"); 
                             messageTimer = 60;
-                            if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } // Loud thud
+                            if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } 
                             
-                            figureState = 11; // Distracted!
-                            figureTargetX = -4.5f; // Player's far left
+                            figureState = 11; 
+                            figureTargetX = -4.5f; 
                             figureTargetZ = roomCenterZ + 5.0f; 
                         }
                     }
-                    // --- STATE 11: SCRIPTED INTRO DISTRACTION ---
+                    // State 11: Intro distraction
                     else if (figureState == 11) {
                         float dx = figureTargetX - figureX;
                         float dz = figureTargetZ - figureZ;
@@ -473,14 +471,14 @@ int main() {
                             figureX += (dx / distToTarget) * figureSpeed;
                             figureZ += (dz / distToTarget) * figureSpeed;
                         } else {
-                            // He reached the fallen lamp. Start regular patrol!
+                            // Start patrol
                             figureState = 0; 
-                            figureSpeed = 0.04f; // Slow down to walking speed
+                            figureSpeed = 0.04f; 
                             sprintf(uiMessage, "He's blind... Crouch to sneak."); 
                             messageTimer = 100;
                         }
                     }
-                    // --- STATE 0: PATROL ---
+                    // State 0: Patrol
                     else if (figureState == 0) { 
                         float patrolX = 0, patrolZ = 0;
                         if (figureTargetWP == 0) { patrolX = -3.0f; patrolZ = roomCenterZ + 6.0f; }
@@ -508,7 +506,7 @@ int main() {
                             messageTimer = 45;
                         }
                     } 
-                    // --- STATE 1: INVESTIGATE / CHASE ---
+                    // State 1: Investigate/chase
                     else if (figureState == 1) { 
                         if (isMakingNoise && distSq < 49.0f) {
                             figureTargetX = camX;
@@ -530,8 +528,8 @@ int main() {
                         }
                     }
                     
-                    // --- THE LIBRARY LOCK-IN CLAMP ---
-                    // Physically prevents the Figure from leaving through the front or back doors!
+                    // Library bounds clamp
+                    // Prevent Figure leaving
                     float libFrontZ = -10.0f - (50 * 10.0f) - 1.5f;
                     float libBackZ = -10.0f - (50 * 10.0f) - 18.5f;
                     
@@ -542,7 +540,7 @@ int main() {
                 }
             }
             
-            // --- Seek Logic ---
+            // Seek logic
             if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) { 
                 if (camZ < -10.0f - ((seekStartRoom + 2) * 10.0f) - 8.0f && seekState == 0) {
                     seekState = 1; seekActive = true; seekTimer = 0; seekSpeed = 0.0f; 
@@ -633,7 +631,7 @@ int main() {
                 } 
             }
             
-            // --- Eyes Logic ---
+            // Eyes logic
             bool inE = (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS && rooms[playerCurrentRoom].hasEyes); 
             if (inE && !inEyesRoom) { 
                 inEyesRoom = true; eyesGraceTimer = 30; 
@@ -704,7 +702,7 @@ int main() {
                 isLookingAtEyes = false; eyesDamageTimer = 0; eyesDamageAccumulator = 0;
             }
             
-            // --- Screech Logic ---
+            // Screech logic
             bool iSE = (playerCurrentRoom >= seekStartRoom - 5 && playerCurrentRoom <= seekStartRoom + 9); 
             bool inLibrary = (playerCurrentRoom >= 49 && playerCurrentRoom <= 51);
             int sC = (playerCurrentRoom > 0 && rooms[playerCurrentRoom].lightLevel < 0.5f) ? 400 : 12000;
@@ -775,13 +773,13 @@ int main() {
                 }
             }
 
-            // --- Movement & Input ---
+            // Movement and input
             if ((kDown & KEY_B) && hideState == NOT_HIDING) { 
                 if (isCrouching) { if (!checkCollision(camX, 0, camZ, 1.1f)) isCrouching = false; } 
                 else { isCrouching = true; } 
             }
             
-            // Spawning Rush randomly (Increased Odds!)
+            // Spawn Rush randomly
             if (playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !iSE && !inLibrary && rand() % 10000 < 25) {
                 rushActive = true; rushState = 1; rushTimer = 150 + (rand() % 60); rushStartTimer = (float)rushTimer;
                 if (audio_ok) {
@@ -790,7 +788,7 @@ int main() {
                 }
             }
             
-            // Door Hiding Logic
+            // Door hiding logic
             if (hideState == NOT_HIDING || hideState == BEHIND_DOOR) { 
                 bool iDZ = false; 
                 for (auto& b : collisions) if (b.type == 4 && camX > b.minX && camX < b.maxX && camZ > b.minZ && camZ < b.maxZ) { iDZ = true; break; } 
@@ -803,11 +801,11 @@ int main() {
             
             float turnSpeed = 0.0f;
             bool isMoving = false;
-            float moveMag = 0.0f; // Tracks how hard the player is pushing the stick!
+            float moveMag = 0.0f; // Track stick magnitude
             
             if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
                 if (abs(cS.dx) > 10) {
-                    turnSpeed = cS.dx / 156.0f; // Normalize C-Stick to -1.0 to 1.0
+                    turnSpeed = cS.dx / 156.0f; // Normalize C-Stick
                     camYaw -= turnSpeed * 0.16f; 
                 }
                 if (abs(cS.dy) > 10) camPitch += (cS.dy / 156.0f) * 0.16f;
@@ -819,7 +817,7 @@ int main() {
                         if (fabsf(dx) < 10.0f) dx = 0; if (fabsf(dy) < 10.0f) dy = 0;
                         float tTurn = (dx / 160.0f) * 0.12f;
                         camYaw -= tTurn; 
-                        turnSpeed += (tTurn * 10.0f); // Map touch turning to tilt
+                        turnSpeed += (tTurn * 10.0f); // Map touch to tilt
                         camPitch -= (dy / 120.0f) * 0.12f;
                     } 
                 } else { wasTouching = false; } 
@@ -831,23 +829,24 @@ int main() {
                     isMoving = true;
                     float s = (seekState == 2) ? (isCrouching ? 0.50f : 0.84f) : (isCrouching ? 0.32f : 0.56f);
                     
-                    // Normalize the Circle Pad to calculate exact movement magnitude
+                    // Normalize Circle Pad
                     float sx = cP.dx / 156.0f; 
                     float sy = cP.dy / 156.0f;
                     moveMag = sqrtf(sx*sx + sy*sy);
-                    if (moveMag > 1.0f) moveMag = 1.0f; // Clamp to 1.0
+                    if (moveMag > 1.0f) moveMag = 1.0f; // Clamp magnitude
                     
-                    float nX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * (s * moveMag);
-                    float nZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * (s * moveMag); 
+                    // Apply movement speed
+                    float nX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * (s * moveMag * 0.1f);
+                    float nZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * (s * moveMag * 0.1f); 
                     if (!checkCollision(nX, 0, camZ, pH)) camX = nX; 
                     if (!checkCollision(camX, 0, nZ, pH)) camZ = nZ; 
                 }
             }
             
-            // --- Camera Effects Math ---
+            // Camera effects math
             float chaseMultiplier = (seekState == 2) ? 1.5f : 1.0f; 
             
-            // TILT: Scale with the C-Stick (turnSpeed) AND Strafe left/right (cP.dx) like Roblox DOORS!
+            // Camera tilt
             float strafeTilt = isMoving ? ((cP.dx / 156.0f) * 0.04f) : 0.0f;
             float targetRoll = (turnSpeed * 0.05f) - strafeTilt; 
             
@@ -856,17 +855,17 @@ int main() {
             currentRoll += (targetRoll - currentRoll) * 0.15f; 
             
             if (isMoving) {
-                // Bob SPEED scales based on how hard you push the stick
+                // Scale bob speed
                 bobTime += (isCrouching ? 0.12f : 0.22f) * (seekState == 2 ? 1.3f : 1.0f) * moveMag; 
             } else {
                 bobTime += (0 - bobTime) * 0.15f; 
             }
             
-            // Bob HEIGHT scales based on how hard you push the stick
+            // Scale bob height
             camBobY = fabsf(sinf(bobTime)) * 0.012f * chaseMultiplier * moveMag; 
             camBobX = sinf(bobTime * 0.5f) * 0.004f * chaseMultiplier * moveMag;
             
-            // --- Rush Logic (Movement) ---
+            // Rush movement logic
             if (rushActive) { 
                 if (rushState == 1) {
                     rushTimer--;
@@ -901,7 +900,7 @@ int main() {
                 } 
             }
             
-            // --- Hiding in Closets / Under Beds ---
+            // Hide logic
             if (kDown & KEY_X && hideState == NOT_HIDING) { 
                 float r = 0.5f; 
                 for (auto& b : collisions) { 
@@ -934,10 +933,10 @@ int main() {
                 } 
             }
             
-            // --- Interactions (Doors, Drawers, Chests, Items) ---
+            // Interactions
             bool iA = false;
             
-            // Dupe Door Logic
+            // Dupe door logic
             if (!iA && (kDown & KEY_A)) { 
                 int nI = getNextDoorIndex(playerCurrentRoom); 
                 if (nI >= 0 && nI < TOTAL_ROOMS && rooms[nI].isDupeRoom) { 
@@ -970,7 +969,7 @@ int main() {
                 } 
             }
             
-            // Drawer & Chest Logic
+            // Drawer and chest logic
             if ((kDown & KEY_A) || (kDown & KEY_X && hideState == NOT_HIDING)) {
                 auto cI = [&](int ty, float zC, float sX, bool& iO, int& it) { 
                     if (ty != 0) {
@@ -1029,13 +1028,13 @@ int main() {
                     return false; 
                 };
                 
-                // Elevator Exit
+                // Elevator exit
                 if (inElevator && !elevatorDoorsOpen && camX > 0 && camZ > 5.0f && camZ < 8.0f) { 
                     elevatorJamFinished = true; elevatorDoorsOpen = true; iA = true; needsVBOUpdate = true;
                     if (audio_ok && sElevatorJamEnd.data_vaddr) { ndspChnWaveBufClear(9); sElevatorJamEnd.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(9, &sElevatorJamEnd); } 
                 }
                 
-                // Checking current room for interactables
+                // Check room interactables
                 if (!iA && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
                     for (int s = 0; s < 3; s++) {
                         if (cI(rooms[playerCurrentRoom].slotType[s], (-10.0f - (playerCurrentRoom * 10.0f)) - 2.5f - (s * 2.5f), ((rooms[playerCurrentRoom].slotType[s] % 2 != 0) ? -2.4f : 2.4f), rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].slotItem[s])) { iA = true; break; } 
@@ -1074,14 +1073,14 @@ int main() {
                     } 
                 }
                 
-                // Lobby Key Pickup
+                // Lobby key pickup
                 if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
                     lobbyKeyPickedUp = true; hasKey = true; needsVBOUpdate = true; 
                     sprintf(uiMessage, "Found the Lobby Key!"); messageTimer = 45; iA = true;
                     if (audio_ok && sCoinsCollect.data_vaddr) { ndspChnWaveBufClear(10); sCoinsCollect.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(10, &sCoinsCollect); }
                 }
                 
-                // Unlocking Doors
+                // Unlocking doors
                 if (!iA) { 
                     for (int i = 0; i < TOTAL_ROOMS; i++) { 
                         if (i == seekStartRoom + 1 || i == seekStartRoom + 2) continue; 
@@ -1105,10 +1104,10 @@ int main() {
                 }
             } 
 
-        } // End of if(!isDead)
+        } 
 
-        // --- Door Open/Close Checks ---
-        // 1. Check Main Forward Doors
+        // Door open/close checks
+        // Check main forward doors
         for (int i = 0; i < TOTAL_ROOMS; i++) { 
             if (rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
             float dZ = -10.0f - (i * 10.0f);
@@ -1123,7 +1122,7 @@ int main() {
             }
         }
 
-        // 2. Check Side Doors
+        // Check side doors
         if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
             if (rooms[playerCurrentRoom].hasLeftRoom && !rooms[playerCurrentRoom].leftDoorOpen) {
                 float lDoorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset - 0.6f;
@@ -1143,7 +1142,7 @@ int main() {
             }
         }
 
-        // --- Mesh Updates ---
+        // Mesh updates
         if (needsVBOUpdate) {
             buildWorld(currentChunk, playerCurrentRoom);
             colored_size = world_mesh_colored.size();
@@ -1168,9 +1167,7 @@ int main() {
             GSPGPU_FlushDataCache((vertex*)vbo_main + world_total, (ent_col_size + ent_tex_size) * sizeof(vertex));
         }
 
-        // ==========================================
-        //               DRAWING PHASE
-        // ==========================================
+        // Drawing phase
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW); 
         C3D_RenderTargetClear(target, C3D_CLEAR_ALL, 0x000000FF, 0); 
         C3D_FrameDrawOn(target);
@@ -1193,19 +1190,19 @@ int main() {
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(80.0f), C3D_AspectRatioTop, 0.01f, 1000.0f, false); 
         Mtx_Identity(&view); 
         
-        // 1. Apply Camera Roll (Tilt)
+        // Apply camera roll
         Mtx_RotateZ(&view, currentRoll, true);
         
-        // 2. Apply Pitch and Yaw
+        // Apply pitch and yaw
         Mtx_RotateX(&view, -dCP, true); 
         Mtx_RotateY(&view, -dCY, true); 
         
-        // 3. Apply Base Height + Bobbing
+        // Apply base height and bobbing
         float vY = isDead ? -0.1f : (isCrouching ? -0.4f : (hideState == NOT_HIDING || hideState == BEHIND_DOOR ? -0.9f : (hideState == IN_CABINET ? -0.7f : -0.15f)));
         float finalX = -dCX;
         float finalY = vY;
         
-        // Only apply bobbing if you are walking/running (not dead or hiding)
+        // Apply bobbing condition
         if (!isDead && hideState == NOT_HIDING && seekState != 1) {
             finalY -= camBobY; 
             finalX -= camBobX; 
@@ -1220,7 +1217,7 @@ int main() {
         BufInfo_Init(buf); 
         BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
         
-        // Draw Colored World
+        // Draw colored world
         if (colored_size > 0) {
             C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
             if (flashRedFrames > 0 && !isDead) { 
@@ -1231,7 +1228,7 @@ int main() {
             C3D_DrawArrays(GPU_TRIANGLES, 0, colored_size);
         }
         
-        // Draw Textured World
+        // Draw textured world
         if (textured_size > 0) {
             C3D_TexBind(0, &atlasTex); 
             C3D_TexEnv* env = C3D_GetTexEnv(0); 
@@ -1242,7 +1239,7 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                // STANDARD: Multiply Texture by Vertex Color/Lighting
+                // Standard texture multiply
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
@@ -1252,7 +1249,7 @@ int main() {
             C3D_DrawArrays(GPU_TRIANGLES, colored_size, textured_size);
         }
 
-        // Draw Colored Entities
+        // Draw colored entities
         if (ent_col_size > 0) {
             C3D_TexEnv* env = C3D_GetTexEnv(0); C3D_TexEnvInit(env);
             if (flashRedFrames > 0 && !isDead) { 
@@ -1263,7 +1260,7 @@ int main() {
             C3D_DrawArrays(GPU_TRIANGLES, world_total, ent_col_size); 
         }
         
-        // Draw Textured Entities
+        // Draw textured entities
         if (ent_tex_size > 0) {
             C3D_TexBind(0, &atlasTex); 
             C3D_TexEnv* env = C3D_GetTexEnv(0); 
@@ -1274,7 +1271,7 @@ int main() {
                 C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
             } else if (hasAtlas) { 
-                // STANDARD: Multiply Texture by Vertex Color/Lighting
+                // Standard texture multiply
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
                 C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
             } else { 
@@ -1288,9 +1285,7 @@ int main() {
         gspWaitForVBlank(); 
     }
     
-    // ==========================================
-    //                 CLEANUP
-    // ==========================================
+    // Cleanup
     if (audio_ok) { 
         if (sPsst.data_vaddr) linearFree((void*)sPsst.data_vaddr); 
         if (sAttack.data_vaddr) linearFree((void*)sAttack.data_vaddr); 
