@@ -27,7 +27,7 @@ pre-build:
 	@echo "--- 3. Bundling C++ Source ---"
 	@python3 .github/scripts/bundle.py
 
-# THIS IS THE FIX: Tell Make it absolutely MUST finish 'pre-build' before compiling the C++ code!
+
 $(CPP_OBJS): pre-build vshader_shbin.h
 
 $(TARGET).smdh: icon.png
