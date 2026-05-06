@@ -3,32 +3,32 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#include "atlas_uvs.h" // Added this to import your dynamic texture coordinates!
+#include "atlas_uvs.h" // Dynamic texture coordinates.
 
 void buildEntities(int pRm) {
     entity_mesh_colored.clear(); 
     entity_mesh_textured.clear();
     isBuildingEntities = true;
     
-    // Screech Entity
+    // Screech entity.
     if (screechActive) { 
         float scale = (screechState == 3) ? 2.5f : 1.5f; 
-        // Changed to Spherical so he always stares at the camera, and added 1.0f light!
+        // Spherical billboard for camera-facing orientation. 1.0f light intensity.
         addBillboardSpherical(screechX, screechY + 0.2f, screechZ, scale, scale, TEX_SCREECH.u, TEX_SCREECH.v, TEX_SCREECH.uw, TEX_SCREECH.vh, 1.0f); 
     }
     
-    // Rush Entity
+    // Rush entity.
     if (rushActive && rushState == 2) { 
-        // Made Rush a bit bigger (1.8f) and added 1.0f light so he glows in the dark!
+        // Scale: 1.8f. 1.0f light intensity.
         addBillboard(0.0f, 0.7f, rushZ, 1.8f, 1.8f, TEX_RUSH.u, TEX_RUSH.v, TEX_RUSH.uw, TEX_RUSH.vh, 1.0f); 
     }
     
-    // Eyes Entity
+    // Eyes entity.
     for (int i = pRm - 1; i <= pRm + 2; i++) {
         if (i >= 0 && i < TOTAL_ROOMS && rooms[i].hasEyes) {
             
-            // --- THE FIX: Eyes Render Culling ---
-            // Replicates world_gen.cpp's line of sight system for entity culling
+            // Eyes render culling.
+            // Line of sight entity culling.
             bool isVisible = true;
             if (!seekActive) {
                 if (i > pRm && !doorOpen[i] && i != seekStartRoom + 1 && i != seekStartRoom + 2) isVisible = false;
@@ -38,14 +38,14 @@ void buildEntities(int pRm) {
             if (isVisible) {
                 bool renderEyes = !(rooms[i].isSeekChase || rooms[i].hasSeekEyes) || (i >= pRm && i <= pRm + 1);
                 if (renderEyes) {
-                    // Added 1.0f light!
+                    // 1.0f light intensity.
                     addBillboardSpherical(rooms[i].eyesX, rooms[i].eyesY, rooms[i].eyesZ, 1.2f, 1.2f, TEX_EYES.u, TEX_EYES.v, TEX_EYES.uw, TEX_EYES.vh, 1.0f);
                 }
             }
         }
     }
     
-    // Seek Entity (Remains Solid 3D Geometry for now)
+    // Seek entity (Solid 3D geometry).
     if (seekActive) { 
         float sY = 0.2f, sH = 0.8f;
         if (seekState == 1) { 
@@ -65,7 +65,7 @@ void buildEntities(int pRm) {
             sH = 1.1f;
         }
         
-        // Seek's body parts
+        // Seek body parts.
         addBox(-0.3f, sY, seekZ - 0.3f, 0.6f, sH, 0.6f, 0.05f, 0.05f, 0.05f, false); 
         addBox(-0.15f, sY + 0.8f, seekZ - 0.35f, 0.3f, 0.2f, 0.06f, 0.9f, 0.9f, 0.9f, false, 0, 1.5f); 
         addBox(-0.05f, sY + 0.8f, seekZ - 0.38f, 0.1f, 0.2f, 0.04f, 0, 0, 0, false, 0, 1.5f); 
@@ -75,7 +75,7 @@ void buildEntities(int pRm) {
         }
     }
     
-    // Figure Entity (Remains Solid 3D Geometry for now)
+    // Figure entity (Solid 3D geometry).
     if (figureActive) {
         float fY = 0.0f, fH = 1.2f;
         addBox(figureX - 0.3f, fY, figureZ - 0.3f, 0.6f, fH, 0.6f, 0.4f, 0.1f, 0.05f, false); 
