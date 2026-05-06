@@ -426,7 +426,7 @@ int main() {
                 figureZ = -10.0f - (50 * 10.0f) - 18.0f; // Spawn deep in the back!
                 
                 figureIntroTimer = 0;
-                sprintf(uiMessage, "??!"); 
+                sprintf(uiMessage, "?\\?!"); 
                 messageTimer = 30; 
             }
             
@@ -775,7 +775,98 @@ int main() {
                 }
             }
 
-            // --- Rush Logic ---
+            // --- Movement & Input ---
+            if ((kDown & KEY_B) && hideState == NOT_HIDING) { 
+                if (isCrouching) { if (!checkCollision(camX, 0, camZ, 1.1f)) isCrouching = false; } 
+                else { isCrouching = true; } 
+            }
+            
+            // Spawning Rush randomly (Increased Odds!)
+            if (playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !iSE && !inLibrary && rand() % 10000 < 25) {
+                rushActive = true; rushState = 1; rushTimer = 150 + (rand() % 60); rushStartTimer = (float)rushTimer;
+                if (audio_ok) {
+                    if (sLightsFlicker.data_vaddr) { float m[12] = {0}; m[0] = 2.5f; m[1] = 2.5f; ndspChnSetMix(12, m); ndspChnWaveBufClear(12); sLightsFlicker.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(12, &sLightsFlicker); }
+                    if (sRushScream.data_vaddr) { float m[12] = {0}; ndspChnSetMix(3, m); ndspChnWaveBufClear(3); sRushScream.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(3, &sRushScream); }
+                }
+            }
+            
+            // Door Hiding Logic
+            if (hideState == NOT_HIDING || hideState == BEHIND_DOOR) { 
+                bool iDZ = false; 
+                for (auto& b : collisions) if (b.type == 4 && camX > b.minX && camX < b.maxX && camZ > b.minZ && camZ < b.maxZ) { iDZ = true; break; } 
+                if (iDZ && hideState == NOT_HIDING) hideState = BEHIND_DOOR; 
+                else if (!iDZ && hideState == BEHIND_DOOR) hideState = NOT_HIDING; 
+            }
+            
+            float pH = isCrouching ? 0.5f : 1.1f; 
+            circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
+            
+            float turnSpeed = 0.0f;
+            bool isMoving = false;
+            float moveMag = 0.0f; // Tracks how hard the player is pushing the stick!
+            
+            if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
+                if (abs(cS.dx) > 10) {
+                    turnSpeed = cS.dx / 156.0f; // Normalize C-Stick to -1.0 to 1.0
+                    camYaw -= turnSpeed * 0.16f; 
+                }
+                if (abs(cS.dy) > 10) camPitch += (cS.dy / 156.0f) * 0.16f;
+                
+                if (kHeld & KEY_TOUCH) { 
+                    if (!wasTouching) { startTouchX = t.px; startTouchY = t.py; wasTouching = true; } 
+                    else {
+                        float dx = (float)t.px - startTouchX, dy = (float)t.py - startTouchY;
+                        if (fabsf(dx) < 10.0f) dx = 0; if (fabsf(dy) < 10.0f) dy = 0;
+                        float tTurn = (dx / 160.0f) * 0.12f;
+                        camYaw -= tTurn; 
+                        turnSpeed += (tTurn * 10.0f); // Map touch turning to tilt
+                        camPitch -= (dy / 120.0f) * 0.12f;
+                    } 
+                } else { wasTouching = false; } 
+                
+                if (camPitch > 1.57f) camPitch = 1.57f; 
+                if (camPitch < -1.57f) camPitch = -1.57f;
+                
+                if (abs(cP.dy) > 15 || abs(cP.dx) > 15) { 
+                    isMoving = true;
+                    float s = (seekState == 2) ? (isCrouching ? 0.50f : 0.84f) : (isCrouching ? 0.32f : 0.56f);
+                    
+                    // Normalize the Circle Pad to calculate exact movement magnitude
+                    float sx = cP.dx / 156.0f; 
+                    float sy = cP.dy / 156.0f;
+                    moveMag = sqrtf(sx*sx + sy*sy);
+                    if (moveMag > 1.0f) moveMag = 1.0f; // Clamp to 1.0
+                    
+                    float nX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * (s * moveMag);
+                    float nZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * (s * moveMag); 
+                    if (!checkCollision(nX, 0, camZ, pH)) camX = nX; 
+                    if (!checkCollision(camX, 0, nZ, pH)) camZ = nZ; 
+                }
+            }
+            
+            // --- Camera Effects Math ---
+            float chaseMultiplier = (seekState == 2) ? 1.5f : 1.0f; 
+            
+            // TILT: Scale with the C-Stick (turnSpeed) AND Strafe left/right (cP.dx) like Roblox DOORS!
+            float strafeTilt = isMoving ? ((cP.dx / 156.0f) * 0.04f) : 0.0f;
+            float targetRoll = (turnSpeed * 0.05f) - strafeTilt; 
+            
+            if (targetRoll > 0.08f * chaseMultiplier) targetRoll = 0.08f * chaseMultiplier; 
+            if (targetRoll < -0.08f * chaseMultiplier) targetRoll = -0.08f * chaseMultiplier;
+            currentRoll += (targetRoll - currentRoll) * 0.15f; 
+            
+            if (isMoving) {
+                // Bob SPEED scales based on how hard you push the stick
+                bobTime += (isCrouching ? 0.12f : 0.22f) * (seekState == 2 ? 1.3f : 1.0f) * moveMag; 
+            } else {
+                bobTime += (0 - bobTime) * 0.15f; 
+            }
+            
+            // Bob HEIGHT scales based on how hard you push the stick
+            camBobY = fabsf(sinf(bobTime)) * 0.012f * chaseMultiplier * moveMag; 
+            camBobX = sinf(bobTime * 0.5f) * 0.004f * chaseMultiplier * moveMag;
+            
+            // --- Rush Logic (Movement) ---
             if (rushActive) { 
                 if (rushState == 1) {
                     rushTimer--;
@@ -1014,84 +1105,6 @@ int main() {
                 }
             } 
 
-            // --- Movement & Input ---
-            if ((kDown & KEY_B) && hideState == NOT_HIDING) { 
-                if (isCrouching) { if (!checkCollision(camX, 0, camZ, 1.1f)) isCrouching = false; } 
-                else { isCrouching = true; } 
-            }
-            
-            // Spawning Rush randomly
-            if (playerCurrentRoom > 1 && !rushActive && rushCooldown <= 0 && !iSE && !inLibrary && rand() % 10000 < 2) {
-                rushActive = true; rushState = 1; rushTimer = 150 + (rand() % 60); rushStartTimer = (float)rushTimer;
-                if (audio_ok) {
-                    if (sLightsFlicker.data_vaddr) { float m[12] = {0}; m[0] = 2.5f; m[1] = 2.5f; ndspChnSetMix(12, m); ndspChnWaveBufClear(12); sLightsFlicker.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(12, &sLightsFlicker); }
-                    if (sRushScream.data_vaddr) { float m[12] = {0}; ndspChnSetMix(3, m); ndspChnWaveBufClear(3); sRushScream.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(3, &sRushScream); }
-                }
-            }
-            
-            // Door Hiding Logic
-            if (hideState == NOT_HIDING || hideState == BEHIND_DOOR) { 
-                bool iDZ = false; 
-                for (auto& b : collisions) if (b.type == 4 && camX > b.minX && camX < b.maxX && camZ > b.minZ && camZ < b.maxZ) { iDZ = true; break; } 
-                if (iDZ && hideState == NOT_HIDING) hideState = BEHIND_DOOR; 
-                else if (!iDZ && hideState == BEHIND_DOOR) hideState = NOT_HIDING; 
-            }
-            
-            float pH = isCrouching ? 0.5f : 1.1f; 
-            circlePosition cS, cP; irrstCstickRead(&cS); hidCircleRead(&cP); touchPosition t; hidTouchRead(&t);
-            
-            float turnSpeed = 0.0f;
-            bool isMoving = false;
-            
-            if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
-                if (abs(cS.dx) > 10) {
-                    turnSpeed = cS.dx / 1560.0f * 1.6f;
-                    camYaw -= turnSpeed; 
-                }
-                if (abs(cS.dy) > 10) camPitch += cS.dy / 1560.0f * 1.6f;
-                
-                if (kHeld & KEY_TOUCH) { 
-                    if (!wasTouching) { startTouchX = t.px; startTouchY = t.py; wasTouching = true; } 
-                    else {
-                        float dx = (float)t.px - startTouchX, dy = (float)t.py - startTouchY;
-                        if (fabsf(dx) < 10.0f) dx = 0; if (fabsf(dy) < 10.0f) dy = 0;
-                        float tTurn = (dx / 160.0f) * 0.12f;
-                        camYaw -= tTurn; 
-                        turnSpeed += tTurn; // Combine touch turning
-                        camPitch -= (dy / 120.0f) * 0.12f;
-                    } 
-                } else { wasTouching = false; } 
-                
-                if (camPitch > 1.57f) camPitch = 1.57f; 
-                if (camPitch < -1.57f) camPitch = -1.57f;
-                
-                if (abs(cP.dy) > 15 || abs(cP.dx) > 15) { 
-                    isMoving = true;
-                    float s = (seekState == 2) ? (isCrouching ? 0.50f : 0.84f) : (isCrouching ? 0.32f : 0.56f);
-                    float sy = cP.dy / 1560.0f, sx = cP.dx / 1560.0f;
-                    float nX = camX - (sinf(camYaw) * sy - cosf(camYaw) * sx) * s;
-                    float nZ = camZ - (cosf(camYaw) * sy + sinf(camYaw) * sx) * s; 
-                    if (!checkCollision(nX, 0, camZ, pH)) camX = nX; 
-                    if (!checkCollision(camX, 0, nZ, pH)) camZ = nZ; 
-                }
-            }
-            
-            // --- Camera Effects Math ---
-            float chaseMultiplier = (seekState == 2) ? 1.5f : 1.0f; 
-            
-            float targetRoll = turnSpeed * 0.6f * chaseMultiplier; 
-            if (targetRoll > 0.08f * chaseMultiplier) targetRoll = 0.08f * chaseMultiplier; 
-            if (targetRoll < -0.08f * chaseMultiplier) targetRoll = -0.08f * chaseMultiplier;
-            currentRoll += (targetRoll - currentRoll) * 0.15f; 
-            
-            if (isMoving) {
-                bobTime += (isCrouching ? 0.12f : 0.22f) * (seekState == 2 ? 1.3f : 1.0f); 
-            } else {
-                bobTime += (0 - bobTime) * 0.15f; 
-            }
-            
-            camBobY = fabsf(sinf(bobTime)) * 0.012f * chaseMultiplier; 
-            camBobX = sinf(bobTime * 0.5f) * 0.004f * chaseMultiplier;
         } // End of if(!isDead)
 
         // --- Door Open/Close Checks ---
