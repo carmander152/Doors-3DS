@@ -103,7 +103,8 @@ void buildChest(float x, float z, float openFactor, float L) {
         addBox(x-0.05f, 0.3f, z+0.3f, 0.1f, 0.15f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); 
     } else { 
         addBox(x-0.4f, 0.4f, z-0.4f, 0.8f, 0.6f, 0.1f, 0.35f, 0.18f, 0.08f, false, 0, L); 
-        addBox(x-0.2f, 0.35f, z-0.1f, 0.4f, 0.05f, 0.2f, 1.0f, 0.85f, 0.0f, false, 0, L); 
+        // Raised Z by 0.01f to prevent Z-fighting with the chest base
+        addBox(x-0.35f, 0.41f, z-0.25f, 0.7f, 0.06f, 0.5f, 1.0f, 0.85f, 0.0f, false, 0, L); 
     }
 }
 
@@ -149,7 +150,6 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
         addBox(bx, 0.0f, z-0.2f, bw, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
     };
     
-    // THE FIX: Baseboards now properly span the entire width out to exactly -2.90 and 2.86
     bb(-2.9f, 0.3f); 
     if(!lD) bb(-2.6f, 1.2f); 
     bb(-1.4f, 0.8f); 
@@ -164,7 +164,6 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
         addBox(dx + 0.05f, 1.35f, z, 1.1f, 0.05f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         
         if (!o) { 
-            // Door Face
             addBox(dx, 0, z, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, L); 
             addBox(dx+0.4f, 1.1f, z+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L); 
             addBox(dx+1.05f, 0.7f, z+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L); 
@@ -212,7 +211,7 @@ void buildWorld(int cChunk, int pRm) {
     if (st < -1) st = -1; 
     if (en > TOTAL_ROOMS - 1) en = TOTAL_ROOMS - 1;
 
-    // Room 0 (Lobby)
+    // Room 0 
     if(st <= -1){
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         addTiledSurface(-2, 0, 5, 4, 0.01f, 4, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, 1.0f, false); 
@@ -264,7 +263,7 @@ void buildWorld(int cChunk, int pRm) {
 
     if (st < 0) st = 0; 
     
-    // Main Room Loop
+    // Main room rendering loop
     for(int i = st; i <= en; i++) {
         float z = -10 - (i * 10);
         float L = rooms[i].lightLevel;
@@ -277,12 +276,11 @@ void buildWorld(int cChunk, int pRm) {
             if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1] && (i + 1) != seekStartRoom + 1 && (i + 1) != seekStartRoom + 2) isInteriorVisible = false;
         }
 
-        // Room 50 (Library / Figure Room)
+        // Room 50
         if (i == 50) {
             float cL = rooms[i].lightLevel; 
             globalTintR=0.9f; globalTintG=0.8f; globalTintB=0.6f; 
             
-            // Front Wall with Big Double Doors (Separates Room 49 and 50)
             addTiledSurface(-3.0f, 0.0f, z, 2.0f, 1.8f, -0.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, false); 
             addTiledSurface(1.0f, 0.0f, z, 2.0f, 1.8f, -0.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, false); 
             addTiledSurface(-3.0f, 1.8f, z, 6.0f, 1.8f, -0.2f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, false); 
@@ -296,31 +294,25 @@ void buildWorld(int cChunk, int pRm) {
             }
             
             if (isInteriorVisible) {
-                // Giant Floor and Ceiling (Spans Rooms 50 and 51)
                 addTiledSurface(-6.0f, 0.0f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, cL, false); 
                 addTiledSurface(-6.0f, 3.6f, z, 12.0f, 0.01f, -20.0f, floorU,floorV,floorUW,floorVH, floorScale, cR,cG,cB, cL, false); 
                 
-                // Side Walls
                 addTiledSurface(-6.1f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true); 
                 addTiledSurface(6.0f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);  
                 
-                // Back Wall at end of Library (z - 20)
                 addTiledSurface(-6.0f, 0.0f, z-20.0f, 12.0f, 3.6f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, cL, true);
                 
-                // Locked Exit Door (For the upcoming Code Padlock)
                 addBox(-0.6f, 0.0f, z-19.9f, 1.2f, 1.6f, 0.1f, 0.15f, 0.08f, 0.04f, true, 0, cL); 
                 addBox(-0.1f, 0.7f, z-19.8f, 0.2f, 0.3f, 0.1f, 0.8f, 0.8f, 0.8f, false, 0, cL); 
                 
-                // Balcony/Mezzanine
                 addBox(-6.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
                 addBox(3.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL);  
                 addBox(-3.0f, 1.8f, z-15.0f, 6.0f, 0.1f, -3.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
-                // Railings
+
                 addBox(-3.1f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL); 
                 addBox(3.0f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL);
                 addBox(-3.0f, 1.9f, z-14.9f, 6.0f, 0.6f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, cL);
                 
-                // Bookshelves
                 for(int stt = 0; stt < 12; stt++) { 
                     float sY = stt * 0.15f; 
                     float sZ = z - 2.0f - (stt * 0.25f);
@@ -328,7 +320,6 @@ void buildWorld(int cChunk, int pRm) {
                     addBox(3.5f, 0.0f, sZ, 2.0f, sY+0.15f, -0.25f, 0.2f, 0.12f, 0.08f, true, 0, cL); 
                 }
                 
-                // Desk
                 addBox(-1.5f, 0.0f, z-7.0f, 3.0f, 0.6f, -4.0f, 0.3f, 0.18f, 0.1f, true, 0, cL); 
                 addBox(-1.6f, 0.6f, z-6.9f, 3.2f, 0.1f, -4.2f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
                 buildLamp(-1.2f, z-7.5f, cL); 
@@ -494,24 +485,20 @@ void buildWorld(int cChunk, int pRm) {
             addTiledSurface(sW, 0.4f, srZ-5.0f, 6.0f, 1.4f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); 
             addTiledSurface(sW, 0.0f, srZ-5.0f, 6.0f, 0.4f, -0.12f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
             
-            // --- INNER SIDE ROOM BASEBOARDS ---
             float baseR = 0.12f, baseG = 0.06f, baseB = 0.03f;
-            
             float sideWidth = 5.80f;
             float sideStartX = isL ? -8.84f : 3.04f;
             
-            // Back and Front Inner Walls (Perfectly fitted to not clip!)
-            addBox(sideStartX, 0.0f, srZ, sideWidth, 0.12f, -0.04f, baseR, baseG, baseB, false, 0, L); // Back Wall
-            addBox(sideStartX, 0.0f, srZ-5.0f, sideWidth, 0.12f, 0.04f, baseR, baseG, baseB, false, 0, L); // Front Wall
+            addBox(sideStartX, 0.0f, srZ, sideWidth, 0.12f, -0.04f, baseR, baseG, baseB, false, 0, L); 
+            addBox(sideStartX, 0.0f, srZ-5.0f, sideWidth, 0.12f, 0.04f, baseR, baseG, baseB, false, 0, L); 
             
-            // Far Side Inner Wall (X-axis bound)
             float farX = isL ? -8.90f : 8.84f; 
             addBox(farX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, baseR, baseG, baseB, false, 0, L);
             
-            // Door Wall Inner Side
-            float doorX = isL ? -3.04f : 3.00f; 
-            addBox(doorX, 0.0f, srZ, 0.04f, 0.12f, -(srZ - dZ), baseR, baseG, baseB, false, 0, L); // Wall up to the door
-            addBox(doorX, 0.0f, dZ - 1.2f, 0.04f, 0.12f, -1.3f, baseR, baseG, baseB, false, 0, L); // Wall after the door
+            // Fixed baseboard offsets to prevent overlap with wall textures
+            float doorX = isL ? -3.06f : 3.04f; 
+            addBox(doorX, 0.0f, srZ, 0.04f, 0.12f, -(srZ - dZ), baseR, baseG, baseB, false, 0, L); 
+            addBox(doorX, 0.0f, dZ - 1.2f, 0.04f, 0.12f, -1.3f, baseR, baseG, baseB, false, 0, L); 
             
             if (i == pRm && dO) {
                 srand(i * (isL ? 123 : 321)); 
