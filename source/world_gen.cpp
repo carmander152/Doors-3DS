@@ -94,17 +94,20 @@ void buildDresser(float zC, bool isL, float openFactor, int item, float L, float
 void buildChest(float x, float z, float openFactor, float L) {
     bool isOpen = (openFactor > 0.5f);
     
+    // Chest base
     addBox(x-0.4f, 0, z-0.3f, 0.8f, 0.4f, 0.6f, 0.3f, 0.15f, 0.05f, true, 0, L); 
     addBox(x-0.42f, 0, z-0.32f, 0.05f, 0.4f, 0.05f, 0.8f, 0.7f, 0.1f, false, 0, L); 
     addBox(x+0.37f, 0, z-0.32f, 0.05f, 0.4f, 0.05f, 0.8f, 0.7f, 0.1f, false, 0, L);
     
     if (!isOpen) { 
+        // Closed lid
         addBox(x-0.4f, 0.4f, z-0.3f, 0.8f, 0.2f, 0.6f, 0.35f, 0.18f, 0.08f, false, 0, L); 
         addBox(x-0.05f, 0.3f, z+0.3f, 0.1f, 0.15f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L); 
     } else { 
+        // Open lid
         addBox(x-0.4f, 0.4f, z-0.4f, 0.8f, 0.6f, 0.1f, 0.35f, 0.18f, 0.08f, false, 0, L); 
-        // Raised Z by 0.01f to prevent Z-fighting with the chest base
-        addBox(x-0.35f, 0.41f, z-0.25f, 0.7f, 0.06f, 0.5f, 1.0f, 0.85f, 0.0f, false, 0, L); 
+        // Flat dark void simulating hollow inside
+        addBox(x-0.35f, 0.401f, z-0.25f, 0.7f, 0.005f, 0.5f, 0.05f, 0.05f, 0.05f, false, 0, L); 
     }
 }
 
@@ -112,6 +115,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float texScale = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     
+    // Left wall sections
     addTiledSurface(-3.0f, 0.4f, z, 0.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(-3.0f, 0.0f, z, 0.4f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
@@ -125,6 +129,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(-1.4f, 0.4f, z, 0.8f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(-1.4f, 0.0f, z, 0.8f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
+    // Center wall sections
     if (!cD) { 
         addTiledSurface(-0.6f, 0.4f, z, 1.2f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
         addTiledSurface(-0.6f, 0.0f, z, 1.2f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); 
@@ -135,6 +140,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(0.6f, 0.4f, z, 0.8f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(0.6f, 0.0f, z, 0.8f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
+    // Right wall sections
     if (!rD) { 
         addTiledSurface(1.4f, 0.4f, z, 1.2f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
         addTiledSurface(1.4f, 0.0f, z, 1.2f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false); 
@@ -145,6 +151,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     addTiledSurface(2.6f, 0.4f, z, 0.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, true); 
     addTiledSurface(2.6f, 0.0f, z, 0.4f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, texScale, r,g,b, L, false);
     
+    // Baseboards
     auto bb = [&](float bx, float bw) { 
         addBox(bx, 0.0f, z, bw, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
         addBox(bx, 0.0f, z-0.2f, bw, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L); 
@@ -158,6 +165,7 @@ void addWallWithDoors(float z, bool lD, bool lO, bool cD, bool cO, bool rD, bool
     if(!rD) bb(1.4f, 1.2f); 
     bb(2.6f, 0.26f); 
 
+    // Doors
     auto dr = [&](float dx, bool o) {
         addBox(dx, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
         addBox(dx + 1.15f, 0, z, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L); 
@@ -495,7 +503,6 @@ void buildWorld(int cChunk, int pRm) {
             float farX = isL ? -8.90f : 8.84f; 
             addBox(farX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, baseR, baseG, baseB, false, 0, L);
             
-            // Fixed baseboard offsets to prevent overlap with wall textures
             float doorX = isL ? -3.06f : 3.04f; 
             addBox(doorX, 0.0f, srZ, 0.04f, 0.12f, -(srZ - dZ), baseR, baseG, baseB, false, 0, L); 
             addBox(doorX, 0.0f, dZ - 1.2f, 0.04f, 0.12f, -1.3f, baseR, baseG, baseB, false, 0, L); 
