@@ -135,7 +135,8 @@ int main() {
     int frames = 0; 
     float currentFps = 0.0f;
 
-    static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f;
+    // THE FIX: currentFOV is now safely declared globally for the whole loop
+    static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f, currentFOV = 80.0f;
 
     // Gameplay logic
     while (aptMainLoop()) {
@@ -414,6 +415,7 @@ int main() {
             // Figure logic
             static int figureIntroTimer = 0;
             
+            // Trigger cutscene on door open
             if (doorOpen[50] && !figureActive) { 
                 figureActive = true; 
                 figureState = 10; 
@@ -435,6 +437,7 @@ int main() {
                 hidCircleRead(&cP_fig);
                 bool isMakingNoise = (abs(cP_fig.dy) > 15 || abs(cP_fig.dx) > 15) && !isCrouching && hideState == NOT_HIDING;
 
+                // Kill condition
                 if (distSq < 0.8f && !isDead) { 
                     playerHealth = 0; 
                     isDead = true; 
@@ -443,11 +446,13 @@ int main() {
                     messageTimer = 60; 
                 } 
                 else {
+                    // State 10: Intro charge
                     if (figureState == 10) {
                         figureZ += figureSpeed; 
                         figureIntroTimer++;
                         
                         if (figureIntroTimer == 45) { 
+                            // Lamp falls
                             sprintf(uiMessage, "* CRAAASH! *"); 
                             messageTimer = 60;
                             if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } 
@@ -457,6 +462,7 @@ int main() {
                             figureTargetZ = roomCenterZ + 5.0f; 
                         }
                     }
+                    // State 11: Intro distraction
                     else if (figureState == 11) {
                         float dx = figureTargetX - figureX;
                         float dz = figureTargetZ - figureZ;
@@ -466,12 +472,14 @@ int main() {
                             figureX += (dx / distToTarget) * figureSpeed;
                             figureZ += (dz / distToTarget) * figureSpeed;
                         } else {
+                            // Start patrol
                             figureState = 0; 
                             figureSpeed = 0.04f; 
                             sprintf(uiMessage, "He's blind... Crouch to sneak."); 
                             messageTimer = 100;
                         }
                     }
+                    // State 0: Patrol
                     else if (figureState == 0) { 
                         float patrolX = 0, patrolZ = 0;
                         if (figureTargetWP == 0) { patrolX = -3.0f; patrolZ = roomCenterZ + 6.0f; }
@@ -499,6 +507,7 @@ int main() {
                             messageTimer = 45;
                         }
                     } 
+                    // State 1: Investigate/chase
                     else if (figureState == 1) { 
                         if (isMakingNoise && distSq < 49.0f) {
                             figureTargetX = camX;
@@ -836,7 +845,6 @@ int main() {
             // Camera effects
             float chaseMultiplier = (seekState == 2) ? 2.2f : 1.0f; 
             
-            static float currentFOV = 80.0f;
             float targetFOV = (seekState == 2) ? 105.0f : 80.0f;
             currentFOV += (targetFOV - currentFOV) * 0.1f;
             
@@ -1098,7 +1106,6 @@ int main() {
         } 
 
         // Door open/close checks
-        // Check main forward doors
         for (int i = 0; i < TOTAL_ROOMS; i++) { 
             if (rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
             float dZ = -10.0f - (i * 10.0f);
@@ -1178,7 +1185,6 @@ int main() {
         }
         
         C3D_Mtx proj, view; 
-        // Apply dynamic FOV
         Mtx_PerspTilt(&proj, C3D_AngleFromDegrees(currentFOV), C3D_AspectRatioTop, 0.01f, 1000.0f, false); 
         Mtx_Identity(&view); 
         
