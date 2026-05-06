@@ -56,11 +56,10 @@ extern int figureState;
 extern float figureX, figureY, figureZ, figureSpeed; 
 extern int figureWaypoint;
 
-// --- NEW FIGURE VARIABLES ---
+// Figure variables.
 extern int figureTargetWP;
 extern float figureTargetX;
 extern float figureTargetZ;
-// ----------------------------
 
 int getDisplayRoom(int idx);
 int getNextDoorIndex(int currentIdx);
