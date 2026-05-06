@@ -487,16 +487,27 @@ void buildWorld(int cChunk, int pRm) {
             addTiledSurface(isL?-9.0f:8.9f, 0.4f, srZ, 0.1f, 1.4f, -5.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); 
             addTiledSurface(isL?-9.02f:8.88f, 0.0f, srZ, 0.12f, 0.4f, -5.0f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
             
-            float bbFarX = isL ? -8.88f : 8.84f; 
-            addBox(bbFarX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, 0.12f, 0.06f, 0.03f, false, 0, L);
-            
             addTiledSurface(sW, 0.4f, srZ, 6.0f, 1.4f, 0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); 
             addTiledSurface(sW, 0.0f, srZ, 6.0f, 0.4f, 0.12f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
-            addBox(sW, 0.0f, srZ, 6.0f, 0.12f, -0.04f, 0.12f, 0.06f, 0.03f, false, 0, L);
             
             addTiledSurface(sW, 0.4f, srZ-5.0f, 6.0f, 1.4f, -0.1f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, true); 
             addTiledSurface(sW, 0.0f, srZ-5.0f, 6.0f, 0.4f, -0.12f, wallU,wallV,wallUW,wallVH, wallScale, cR,cG,cB, L, false);
-            addBox(sW, 0.0f, srZ-5.0f, 6.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L);
+            
+            // --- INNER SIDE ROOM BASEBOARDS ---
+            float baseR = 0.12f, baseG = 0.06f, baseB = 0.03f;
+            
+            // Back and Front Inner Walls (Z-axis bounds)
+            addBox(sW, 0.0f, srZ, 6.0f, 0.12f, -0.04f, baseR, baseG, baseB, false, 0, L); // Back Wall
+            addBox(sW, 0.0f, srZ-5.0f, 6.0f, 0.12f, 0.04f, baseR, baseG, baseB, false, 0, L); // Front Wall
+            
+            // Far Side Inner Wall (X-axis bound)
+            float farX = isL ? -9.0f : 8.96f; 
+            addBox(farX, 0.0f, srZ, 0.04f, 0.12f, -5.0f, baseR, baseG, baseB, false, 0, L);
+            
+            // Door Wall Inner Side (X-axis bound, split in two so it doesn't block the door!)
+            float doorX = isL ? -3.04f : 2.96f; 
+            addBox(doorX, 0.0f, srZ, 0.04f, 0.12f, -(srZ - dZ), baseR, baseG, baseB, false, 0, L); // Wall up to the door
+            addBox(doorX, 0.0f, dZ - 1.2f, 0.04f, 0.12f, -1.3f, baseR, baseG, baseB, false, 0, L); // Wall after the door
             
             if (i == pRm && dO) {
                 srand(i * (isL ? 123 : 321)); 
