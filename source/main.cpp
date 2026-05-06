@@ -135,7 +135,6 @@ int main() {
     int frames = 0; 
     float currentFps = 0.0f;
 
-    // THE FIX: currentFOV is now safely declared globally for the whole loop
     static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f, currentFOV = 80.0f;
 
     // Gameplay logic
@@ -832,6 +831,9 @@ int main() {
                     
                     float sx = cP.dx / 156.0f; 
                     float sy = cP.dy / 156.0f;
+                    
+                    if (seekState == 2) sx *= 1.4f; 
+                    
                     moveMag = sqrtf(sx*sx + sy*sy);
                     if (moveMag > 1.0f) moveMag = 1.0f; 
                     
@@ -848,7 +850,7 @@ int main() {
             float targetFOV = (seekState == 2) ? 105.0f : 80.0f;
             currentFOV += (targetFOV - currentFOV) * 0.1f;
             
-            float strafeTilt = isMoving ? ((cP.dx / 156.0f) * 0.04f) : 0.0f;
+            float strafeTilt = isMoving ? ((cP.dx / 156.0f) * 0.015f) : 0.0f;
             float targetRoll = (turnSpeed * 0.05f) - strafeTilt; 
             
             if (targetRoll > 0.08f * chaseMultiplier) targetRoll = 0.08f * chaseMultiplier; 
@@ -1106,6 +1108,7 @@ int main() {
         } 
 
         // Door open/close checks
+        // Check main forward doors
         for (int i = 0; i < TOTAL_ROOMS; i++) { 
             if (rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
             float dZ = -10.0f - (i * 10.0f);
