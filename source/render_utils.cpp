@@ -6,7 +6,7 @@
 #include <math.h>
 
 // Atlas pixel normalization.
-// Pixel coordinates to floating point UV conversion.
+// Pixel coordinate to UV conversion.
 inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
     const float ATLAS_WIDTH = 1024.0f;
     const float ATLAS_HEIGHT = 1024.0f;
@@ -63,7 +63,7 @@ ndspWaveBuf loadWav(const char* path) {
 bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     FILE* f = fopen(path, "rb"); 
     if (!f) { 
-        sprintf(texErrorMessage, "Texture not found: %s", path); 
+        sprintf(texErrorMessage, "Could not find %s", path); 
         return false; 
     }
     
@@ -86,7 +86,7 @@ bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
     Tex3DS_Texture t3x = Tex3DS_TextureImport(texData, size, tex, NULL, false);
     
     if (!t3x) { 
-        sprintf(texErrorMessage, "Tex3DS import failure"); 
+        sprintf(texErrorMessage, "Tex3DS Import failed"); 
         linearFree(texData); 
         return false; 
     }
