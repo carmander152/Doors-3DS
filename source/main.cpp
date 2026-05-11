@@ -804,8 +804,8 @@ int main() {
             
             if ((hideState == NOT_HIDING || hideState == BEHIND_DOOR) && seekState != 1) {
                 // L/R turning
-                if (kHeld & KEY_L) { turnSpeed = -0.8f; camYaw += 0.06f; }
-                if (kHeld & KEY_R) { turnSpeed = 0.8f; camYaw -= 0.06f; }
+                if (kHeld & KEY_L) { turnSpeed = -1.2f; camYaw += 0.12f; }
+                if (kHeld & KEY_R) { turnSpeed = 1.2f; camYaw -= 0.12f; }
 
                 // C-Stick turning
                 if (abs(cS.dx) > 10) {
