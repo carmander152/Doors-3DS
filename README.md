@@ -47,7 +47,8 @@ I enjoy playing Doors, and since there aren't really many good horror games for 
 
 ## 📦 Download & Community
 * **Download**: Grab the latest `.cia` or `.3dsx` on the [Releases](../../releases) page, or scan this QR code with FBI
-<img width="270" height="270" alt="image" src="https://github.com/user-attachments/assets/3499232f-2da2-460d-8f06-968cb0b60cf9" />
+<img width="270" height="270" alt="image" src="https://github.com/user-attachments/assets/32cf49e3-d143-4f15-a91d-8a38393cce94" />
+
 
 * **Discord**: [Join the server](https://discord.gg/h5JVJbSyu8) for updates, technical help, and suggestions. 
 
