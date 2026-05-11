@@ -19,7 +19,7 @@ I enjoy playing Doors, and since there aren't really many good horror games for 
 - [x] **Exploration** – Procedural hallways and side rooms with paintings and furniture.
 - [x] **Looting** – Interactable chests for loot and drawers that can be opened for items.
 - [x] **Hiding** – Functional wardrobes and beds to stay safe.
-- [x] **Controls** – Native C-Stick support (New 3DS) and Touchpad support (Old 3DS).
+- [x] **Controls** – Native C-Stick support (New 3DS), Touchpad support (Old 3DS), and L & R shoulder button turning.
 
 ---
 
@@ -38,7 +38,7 @@ I enjoy playing Doors, and since there aren't really many good horror games for 
 | Input | Action |
 | :--- | :--- |
 | **Circle Pad** | Move |
-| **C-Stick / Touchpad** | Look Around |
+| **C-Stick / Touchpad / L & R** | Look Around |
 | **Button A** | Interact (Open doors, pick up loot, unlock doors) |
 | **Button B** | Crouch |
 | **Button X** | Open Drawers / Hide (Wardrobes and beds) |
