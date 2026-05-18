@@ -17,6 +17,7 @@
 
 int main() {
     // System init
+    osSetSpeedupEnable(true); 
     gfxInitDefault(); 
     gfxSet3D(false); 
     irrstInit(); 
@@ -584,7 +585,7 @@ int main() {
                     for(int h = 0; h < 6; h++) {
                         if (fabsf(camX - rooms[playerCurrentRoom].pW[h]) < 0.6f && fabsf(camZ - rooms[playerCurrentRoom].pZ[h]) < 0.6f) {
                             if (rooms[playerCurrentRoom].pSide[h] == 0 && !isDead && messageTimer <= 0) {
-                                playerHealth -= 40; camZ += 1.5f; 
+                                playerHealth -= 40; 
                                 sprintf(uiMessage, "Burned! (-40 HP)"); messageTimer = 30;
                                 if (playerHealth <= 0) { isDead = true; if (audio_ok) ndspChnWaveBufClear(7); }
                             } else if (rooms[playerCurrentRoom].pSide[h] == 1 && !isDead && !isCrouching) {
