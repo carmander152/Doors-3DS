@@ -6,6 +6,8 @@
 #include <time.h>
 #include "atlas_uvs.h"
 
+#define LIBRARY_ROOM 51
+
 void buildLamp(float x, float z, float L) { 
     addBox(x-0.15f, 0.46f, z-0.15f, 0.3f, 0.05f, 0.3f, 0.3f, 0.15f, 0.05f, false, 0, L); 
     addBox(x-0.05f, 0.51f, z-0.05f, 0.1f, 0.2f, 0.1f, 0.2f, 0.3f, 0.4f, false, 0, L); 
@@ -284,8 +286,8 @@ void buildWorld(int cChunk, int pRm) {
             if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1] && (i + 1) != seekStartRoom + 1 && (i + 1) != seekStartRoom + 2) isInteriorVisible = false;
         }
 
-        // Room 50.
-        if (i == 50) {
+        // Library Room rendering
+        if (i == LIBRARY_ROOM) {
             float cL = rooms[i].lightLevel; 
             globalTintR=0.9f; globalTintG=0.8f; globalTintB=0.6f; 
             
@@ -336,7 +338,8 @@ void buildWorld(int cChunk, int pRm) {
             globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; continue; 
         }
 
-        if (i == 51) continue;
+        // Skip the physical room right after the library as the library takes up two room spaces
+        if (i == LIBRARY_ROOM + 1) continue;
 
         if (seekState == 1) {
             globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f;
@@ -820,9 +823,9 @@ void generateRooms() {
     rooms[0].isJammed = false; 
     rooms[0].hasEyes = false; 
     
-    rooms[49].doorPos = 1; 
-    rooms[50].doorPos = 1; 
-    rooms[51].doorPos = 1; 
+    rooms[LIBRARY_ROOM - 1].doorPos = 1; 
+    rooms[LIBRARY_ROOM].doorPos = 1; 
+    rooms[LIBRARY_ROOM + 1].doorPos = 1; 
     
     for (int i = 2; i < TOTAL_ROOMS - 1; i++) { 
         if (!rooms[i].isDupeRoom && !rooms[i-1].isDupeRoom && 
