@@ -18,6 +18,8 @@
 
 #define LIBRARY_ROOM 51
 
+std::vector<vertex> seek_mesh;
+
 int main() {
     // System init
     osSetSpeedupEnable(true); 
@@ -77,6 +79,9 @@ int main() {
     // Texture loading
     hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
     
+    C3D_Tex seekTex; 
+    bool hasSeekTex = loadTextureFromFile("romfs:/seek.t3x", &seekTex);
+    
     C3D_Tex loadingTex;
     bool hasLoading = loadTextureFromFile("romfs:/menu/Loading.t3x", &loadingTex);
     if (!hasLoading) hasLoading = loadTextureFromFile("romfs:/Loading.t3x", &loadingTex);
@@ -106,9 +111,12 @@ int main() {
     world_mesh_textured.reserve(MAX_VERTS); 
     entity_mesh_colored.reserve(MAX_ENTITY_VERTS); 
     entity_mesh_textured.reserve(MAX_ENTITY_VERTS);
+    seek_mesh.reserve(5000);
 
     void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS) * sizeof(vertex)); 
-    if (!vbo_main) { 
+    void* vbo_seek = linearAlloc(5000 * sizeof(vertex));
+    
+    if (!vbo_main || !vbo_seek) { 
         printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); 
         while (aptMainLoop()) { 
             hidScanInput(); 
@@ -179,7 +187,7 @@ int main() {
         totalFrames++;
         
         int world_total = colored_size + textured_size;
-        int ent_col_size = 0, ent_tex_size = 0;
+        int ent_col_size = 0, ent_tex_size = 0, seek_size = 0;
 
         // Auto-transition on frame 1 or when restarting
         if ((kDown & KEY_START) || gameState == 0) { 
@@ -1210,6 +1218,7 @@ int main() {
             buildEntities(playerCurrentRoom);
 
             // --- SEEK LOBBY TEST ---
+            seek_mesh.clear(); 
             if (hasSeekModel && playerCurrentRoom == -1) { 
                 static float seekAnimTime = 0.0f;
                 seekAnimTime += 0.2f; // Adjust this number to make the animation faster/slower
@@ -1227,6 +1236,7 @@ int main() {
             world_total = colored_size + textured_size;
             ent_col_size = entity_mesh_colored.size();
             ent_tex_size = entity_mesh_textured.size();
+            seek_size = seek_mesh.size();
             
             // CRASH FIX: Clamp entity array limits
             if (ent_col_size > MAX_ENTITY_VERTS) ent_col_size = MAX_ENTITY_VERTS;
@@ -1239,6 +1249,12 @@ int main() {
                 GSPGPU_FlushDataCache(vbo_main, (world_total + ent_col_size + ent_tex_size) * sizeof(vertex));
             } else if ((ent_col_size + ent_tex_size) > 0) {
                 GSPGPU_FlushDataCache((vertex*)vbo_main + world_total, (ent_col_size + ent_tex_size) * sizeof(vertex));
+            }
+
+            if (seek_size > 5000) seek_size = 5000;
+            if (seek_size > 0) {
+                memcpy(vbo_seek, seek_mesh.data(), seek_size * sizeof(vertex));
+                GSPGPU_FlushDataCache(vbo_seek, seek_size * sizeof(vertex));
             }
         } // End gameState == 2 logic
 
@@ -1263,7 +1279,7 @@ int main() {
             bool showImage = (gameState == 1 && hasLoading);
             
             if (showImage) {
-                C3D_TexBind(0, &loadingTex); // No more titleTex
+                C3D_TexBind(0, &loadingTex);
                 C3D_TexEnv* env = C3D_GetTexEnv(0);
                 C3D_TexEnvInit(env);
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0);
@@ -1371,6 +1387,28 @@ int main() {
                 }
                 C3D_DrawArrays(GPU_TRIANGLES, world_total + ent_col_size, ent_tex_size);
             }
+
+            // --- SEEK DRAW CALL ---
+            if (seek_size > 0) {
+                BufInfo_Add(buf, vbo_seek, sizeof(vertex), 3, 0x210);
+                if (hasSeekTex) C3D_TexBind(0, &seekTex); 
+                
+                C3D_TexEnv* env = C3D_GetTexEnv(0); 
+                C3D_TexEnvInit(env); 
+                if (flashRedFrames > 0 && !isDead) { 
+                    C3D_TexEnvColor(env, 0xFF0000FF); 
+                    C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT); 
+                    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+                } else if (hasSeekTex) { 
+                    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR); 
+                    C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
+                } else { 
+                    C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR); 
+                    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
+                }
+                C3D_DrawArrays(GPU_TRIANGLES, 0, seek_size);
+            }
+            // ----------------------
         }
 
         C3D_FrameEnd(0);
@@ -1408,8 +1446,10 @@ int main() {
     
     linearFree(ui_vbo);
     C3D_TexDelete(&atlasTex); 
-    if (hasLoading) C3D_TexDelete(&loadingTex); // Removed titleTex cleanup
+    if (hasLoading) C3D_TexDelete(&loadingTex); 
+    if (hasSeekTex) C3D_TexDelete(&seekTex); 
     linearFree(vbo_main); 
+    linearFree(vbo_seek);
     romfsExit(); 
     C3D_Fini(); 
     gfxExit(); 
