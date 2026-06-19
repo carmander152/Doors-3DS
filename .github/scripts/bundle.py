@@ -1,8 +1,11 @@
 import os
 
 # Headers first, then source files.
-HEADER_ORDER = ["game_state.h", "render_utils.h", "physics.h", "atlas_uvs.h", "world_gen.h", "entities.h", "entity_ai.h"]
-SOURCE_ORDER = ["game_state.cpp", "render_utils.cpp", "physics.cpp", "world_gen.cpp", "entities.cpp", "entity_ai.cpp", "main.cpp"]
+# ---> ADDED "md2.h" HERE
+HEADER_ORDER = ["game_state.h", "render_utils.h", "physics.h", "atlas_uvs.h", "world_gen.h", "md2.h", "entities.h", "entity_ai.h"]
+
+# ---> ADDED "md2.cpp" HERE
+SOURCE_ORDER = ["game_state.cpp", "render_utils.cpp", "physics.cpp", "world_gen.cpp", "md2.cpp", "entities.cpp", "entity_ai.cpp", "main.cpp"]
 
 def bundle():
     source_dir = "source" 
