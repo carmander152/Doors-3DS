@@ -89,15 +89,15 @@ void MD2Model::draw(int frame, float x, float y, float z, float scale, float L, 
         float rz = vx * sinR + vz * cosR;
 
         vertex vert;
-        vert.position[0] = rx + x;
-        vert.position[1] = vy + y;
-        vert.position[2] = rz + z;
-        vert.position[3] = 1.0f;
+        vert.pos[0] = rx + x;
+        vert.pos[1] = vy + y;
+        vert.pos[2] = rz + z;
+        vert.pos[3] = 1.0f;
         
         vert.texcoord[0] = uvs[uvIdx];
         vert.texcoord[1] = uvs[uvIdx+1];
         
-        vert.color[0] = L; vert.color[1] = L; vert.color[2] = L; vert.color[3] = 1.0f;
+        vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
 
         entity_mesh_textured.push_back(vert);
     }
