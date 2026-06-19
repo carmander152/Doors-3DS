@@ -1,0 +1,104 @@
+#include "md2.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+extern std::vector<vertex> entity_mesh_textured;
+
+bool MD2Model::load(const char* filepath) {
+    FILE* file = fopen(filepath, "rb");
+    if (!file) return false;
+
+    int header[17];
+    fread(header, sizeof(int), 17, file);
+    
+    // Check if it's a valid MD2 file (IDP2, version 8)
+    if (header[0] != 844121161 || header[1] != 8) { fclose(file); return false; }
+
+    int skinW = header[2], skinH = header[3];
+    numVerts = header[6];
+    int numTexCoords = header[7];
+    numTris = header[8];
+    numFrames = header[10];
+    
+    int ofsTex = header[12], ofsTris = header[13], ofsFrames = header[14];
+
+    // Load UVs
+    fseek(file, ofsTex, SEEK_SET);
+    for (int i = 0; i < numTexCoords; i++) {
+        short st[2];
+        fread(st, sizeof(short), 2, file);
+        uvs.push_back((float)st[0] / skinW);
+        uvs.push_back((float)st[1] / skinH);
+    }
+
+    // Load Triangles
+    fseek(file, ofsTris, SEEK_SET);
+    for (int i = 0; i < numTris; i++) {
+        short v[3], t[3];
+        fread(v, sizeof(short), 3, file);
+        fread(t, sizeof(short), 3, file);
+        for(int j=0; j<3; j++) { triVerts.push_back(v[j]); triUVs.push_back(t[j]); }
+    }
+
+    // Load Frames
+    fseek(file, ofsFrames, SEEK_SET);
+    int frameSize = header[4];
+    for (int i = 0; i < numFrames; i++) {
+        fseek(file, ofsFrames + i * frameSize, SEEK_SET);
+        float scale[3], trans[3];
+        fread(scale, sizeof(float), 3, file);
+        fread(trans, sizeof(float), 3, file);
+        char name[16];
+        fread(name, 1, 16, file);
+        
+        std::vector<float> verts;
+        for (int v = 0; v < numVerts; v++) {
+            unsigned char p[4]; 
+            fread(p, 1, 4, file);
+            
+            // Calculate coords and swap Quake's Up-Axis to match Citro3D
+            verts.push_back((p[0] * scale[0]) + trans[0]);        // X
+            verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
+            verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
+        }
+        frameVerts.push_back(verts);
+    }
+
+    fclose(file);
+    return true;
+}
+
+void MD2Model::draw(int frame, float x, float y, float z, float scale, float L, float rotY) {
+    if (frame < 0 || frame >= numFrames) return;
+    
+    float cosR = cosf(rotY);
+    float sinR = sinf(rotY);
+
+    for (int i = 0; i < numTris * 3; i++) {
+        int vIdx = triVerts[i] * 3;
+        int uvIdx = triUVs[i] * 2;
+
+        float vx = frameVerts[frame][vIdx] * scale;
+        float vy = frameVerts[frame][vIdx+1] * scale;
+        float vz = frameVerts[frame][vIdx+2] * scale;
+
+        // Apply Y-rotation so he faces the right way
+        float rx = vx * cosR - vz * sinR;
+        float rz = vx * sinR + vz * cosR;
+
+        vertex vert;
+        vert.position[0] = rx + x;
+        vert.position[1] = vy + y;
+        vert.position[2] = rz + z;
+        vert.position[3] = 1.0f;
+        
+        vert.texcoord[0] = uvs[uvIdx];
+        vert.texcoord[1] = uvs[uvIdx+1];
+        
+        vert.color[0] = L; vert.color[1] = L; vert.color[2] = L; vert.color[3] = 1.0f;
+
+        entity_mesh_textured.push_back(vert);
+    }
+}
