@@ -21,3 +21,7 @@ DOORS 3DS - Source code functions
 
 6. main.cpp
    - The core game loop. It handles controller inputs (joystick/C-stick), plays sound effects, updates monster AI logic, and pushes the final image to the screen
+
+7. md2.h / md2.cpp
+   - Handles parsing and loading Quake 2 `.md2` binary 3D models straight from the ROMFS
+   - Contains the math to calculate scale, rotation, and frame-by-frame vertex animations, pushing the final animated triangles directly into the custom entity mesh arrays
