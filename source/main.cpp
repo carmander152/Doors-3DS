@@ -14,6 +14,7 @@
 #include "physics.h"
 #include "world_gen.h"
 #include "entities.h"
+#include "md2.h" // <--- ADDED THIS
 
 #define LIBRARY_ROOM 51
 
@@ -94,6 +95,13 @@ int main() {
     memcpy(ui_vbo, ui_vbo_data, sizeof(ui_vbo_data));
     GSPGPU_FlushDataCache(ui_vbo, sizeof(ui_vbo_data));
     
+    // 3D Model Loading <--- ADDED THIS
+    MD2Model seekModel;
+    bool hasSeekModel = seekModel.load("romfs:/seek.md2");
+    if (!hasSeekModel) {
+        printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
+    }
+
     // World gen pre-allocation
     int currentChunk = 0, playerCurrentRoom = -1; 
     
@@ -1196,6 +1204,22 @@ int main() {
             }
 
             buildEntities(playerCurrentRoom);
+
+            // --- SEEK LOBBY TEST --- <--- ADDED THIS
+            if (hasSeekModel && playerCurrentRoom == -1) { 
+                static float seekAnimTime = 0.0f;
+                seekAnimTime += 0.2f; // Adjust this number to make the animation faster/slower
+                
+                // Safety check to prevent crashing if numFrames is 0
+                if (seekModel.numFrames > 0) {
+                    int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
+                    
+                    // Draw at X: 0.0, Y: 0.0, Z: 2.0 (Lobby center) | Scale: 0.08f | Light: 1.0f | Rot: 3.14 (Facing you)
+                    seekModel.draw(currentFrame, 0.0f, 0.0f, 2.0f, 0.08f, 1.0f, 3.14159f);
+                }
+            }
+            // -----------------------
+
             world_total = colored_size + textured_size;
             ent_col_size = entity_mesh_colored.size();
             ent_tex_size = entity_mesh_textured.size();
