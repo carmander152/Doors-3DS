@@ -4,7 +4,7 @@
 #include <string.h>
 #include <math.h>
 
-extern std::vector<vertex> entity_mesh_textured;
+extern std::vector<vertex> seek_mesh;
 
 bool MD2Model::load(const char* filepath) {
     FILE* file = fopen(filepath, "rb");
@@ -99,6 +99,6 @@ void MD2Model::draw(int frame, float x, float y, float z, float scale, float L, 
         
         vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
 
-        entity_mesh_textured.push_back(vert);
+        seek_mesh.push_back(vert);
     }
 }
