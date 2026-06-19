@@ -14,7 +14,7 @@
 #include "physics.h"
 #include "world_gen.h"
 #include "entities.h"
-#include "md2.h" // <--- ADDED THIS
+#include "md2.h" 
 
 #define LIBRARY_ROOM 51
 
@@ -77,10 +77,7 @@ int main() {
     // Texture loading
     hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
     
-    C3D_Tex titleTex, loadingTex;
-    bool hasTitle = loadTextureFromFile("romfs:/menu/title_screen.t3x", &titleTex);
-    if (!hasTitle) hasTitle = loadTextureFromFile("romfs:/title_screen.t3x", &titleTex);
-    
+    C3D_Tex loadingTex;
     bool hasLoading = loadTextureFromFile("romfs:/menu/Loading.t3x", &loadingTex);
     if (!hasLoading) hasLoading = loadTextureFromFile("romfs:/Loading.t3x", &loadingTex);
 
@@ -95,7 +92,7 @@ int main() {
     memcpy(ui_vbo, ui_vbo_data, sizeof(ui_vbo_data));
     GSPGPU_FlushDataCache(ui_vbo, sizeof(ui_vbo_data));
     
-    // 3D Model Loading <--- ADDED THIS
+    // 3D Model Loading
     MD2Model seekModel;
     bool hasSeekModel = seekModel.load("romfs:/seek.md2");
     if (!hasSeekModel) {
@@ -157,7 +154,7 @@ int main() {
 
     static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f, currentFOV = 80.0f;
     
-    // 0 = Title, 1 = Loading, 2 = Playing
+    // 0 = Title (Removed), 1 = Loading, 2 = Playing
     static int gameState = 0; 
     static int loadingTimer = 0;
 
@@ -184,8 +181,8 @@ int main() {
         int world_total = colored_size + textured_size;
         int ent_col_size = 0, ent_tex_size = 0;
 
-        // Transition to loading screen
-        if (kDown & KEY_START) { 
+        // Auto-transition on frame 1 or when restarting
+        if ((kDown & KEY_START) || gameState == 0) { 
             if (gameState == 0 || isDead) { 
                 gameState = 1;
                 loadingTimer = 0;
@@ -218,6 +215,9 @@ int main() {
                 
                 colored_size = world_mesh_colored.size(); 
                 textured_size = world_mesh_textured.size(); 
+                
+                // CRASH FIX: Clamp sizes to prevent negative memcopy overflow
+                if (colored_size > MAX_VERTS) colored_size = MAX_VERTS;
                 if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
                 
                 memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex)); 
@@ -233,11 +233,6 @@ int main() {
             if (totalFrames % 5 == 0) {
                 printf("\x1b[1;1H==============================\n");
                 printf("          LOADING...          \n==============================\n\x1b[0J");
-            }
-        } else if (gameState == 0) {
-            if (totalFrames % 5 == 0) {
-                printf("\x1b[1;1H==============================\n");
-                printf("          DOORS 3DS           \n==============================\n\n                              \n\n\n    [PRESS START TO PLAY]     \n\x1b[0J");
             }
         } else if (gameState == 2) {
             
@@ -402,10 +397,15 @@ int main() {
                     int uiRoom = playerCurrentRoom;
                     if (uiRoom == LIBRARY_ROOM + 1) uiRoom = LIBRARY_ROOM; 
 
-                    int dC = getDisplayRoom(uiRoom);
-                    int nD = getNextDoorIndex(uiRoom);
-                    if (uiRoom == LIBRARY_ROOM && nD == LIBRARY_ROOM + 1) nD = LIBRARY_ROOM + 2; 
-                    int dN = getDisplayRoom(nD); 
+                    int dC = 0, nD = 0, dN = 0;
+                    
+                    // CRASH FIX: Protect the array from -1 and out of bounds!
+                    if (uiRoom >= 0 && uiRoom < TOTAL_ROOMS) { 
+                        dC = getDisplayRoom(uiRoom);
+                        nD = getNextDoorIndex(uiRoom);
+                        if (uiRoom == LIBRARY_ROOM && nD == LIBRARY_ROOM + 1) nD = LIBRARY_ROOM + 2; 
+                        dN = getDisplayRoom(nD); 
+                    }
                     
                     if (playerCurrentRoom == -1) { 
                         printf(" Current Room : 000 (Lobby) \x1b[K\n"); 
@@ -423,7 +423,7 @@ int main() {
                         for(int i=0; i<3; i++) { g1[i] = symbols[rand()%8]; g2[i] = symbols[rand()%8]; }
                         g1[3] = '\0'; g2[3] = '\0'; 
                         printf(" Current Room : %s         \x1b[K\n Next Door     : %s         \x1b[K\n                            \x1b[K\n\n", g1, g2); 
-                    } else {
+                    } else if (uiRoom >= 0 && uiRoom < TOTAL_ROOMS) {
                         printf(" Current Room : %03d         \x1b[K\n Next Door     : %03d         \x1b[K\n                            \x1b[K\n\n", dC, dN);
                     }
                     
@@ -1198,14 +1198,18 @@ int main() {
                 buildWorld(currentChunk, playerCurrentRoom);
                 colored_size = world_mesh_colored.size();
                 textured_size = world_mesh_textured.size();
+                
+                // CRASH FIX: Clamp sizes to prevent negative memcopy overflow
+                if (colored_size > MAX_VERTS) colored_size = MAX_VERTS;
                 if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
+                
                 memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex));
                 memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
             }
 
             buildEntities(playerCurrentRoom);
 
-            // --- SEEK LOBBY TEST --- <--- ADDED THIS
+            // --- SEEK LOBBY TEST ---
             if (hasSeekModel && playerCurrentRoom == -1) { 
                 static float seekAnimTime = 0.0f;
                 seekAnimTime += 0.2f; // Adjust this number to make the animation faster/slower
@@ -1223,6 +1227,9 @@ int main() {
             world_total = colored_size + textured_size;
             ent_col_size = entity_mesh_colored.size();
             ent_tex_size = entity_mesh_textured.size();
+            
+            // CRASH FIX: Clamp entity array limits
+            if (ent_col_size > MAX_ENTITY_VERTS) ent_col_size = MAX_ENTITY_VERTS;
             if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
             
             if (ent_col_size > 0) memcpy((vertex*)vbo_main + world_total, entity_mesh_colored.data(), ent_col_size * sizeof(vertex));
@@ -1243,7 +1250,7 @@ int main() {
         C3D_BufInfo* buf = C3D_GetBufInfo(); 
         BufInfo_Init(buf); 
         
-        if (gameState == 0 || gameState == 1) {
+        if (gameState == 1) {
             // Render 2D UI Quad
             BufInfo_Add(buf, ui_vbo, 10 * sizeof(float), 3, 0x210);
             
@@ -1253,10 +1260,10 @@ int main() {
             Mtx_Multiply(&view, &proj, &view);
             C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
             
-            bool showImage = (gameState == 0 && hasTitle) || (gameState == 1 && hasLoading);
+            bool showImage = (gameState == 1 && hasLoading);
             
             if (showImage) {
-                C3D_TexBind(0, gameState == 0 ? &titleTex : &loadingTex);
+                C3D_TexBind(0, &loadingTex); // No more titleTex
                 C3D_TexEnv* env = C3D_GetTexEnv(0);
                 C3D_TexEnvInit(env);
                 C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0);
@@ -1316,7 +1323,8 @@ int main() {
             }
             
             if (textured_size > 0) {
-                C3D_TexBind(0, &atlasTex); 
+                // CRASH FIX: Protect the atlasTex binding!
+                if (hasAtlas) C3D_TexBind(0, &atlasTex); 
                 C3D_TexEnv* env = C3D_GetTexEnv(0); 
                 C3D_TexEnvInit(env); 
                 
@@ -1345,7 +1353,8 @@ int main() {
             }
             
             if (ent_tex_size > 0) {
-                C3D_TexBind(0, &atlasTex); 
+                // CRASH FIX: Protect the atlasTex binding for entities!
+                if (hasAtlas) C3D_TexBind(0, &atlasTex); 
                 C3D_TexEnv* env = C3D_GetTexEnv(0); 
                 C3D_TexEnvInit(env); 
                 
@@ -1399,8 +1408,7 @@ int main() {
     
     linearFree(ui_vbo);
     C3D_TexDelete(&atlasTex); 
-    if (hasTitle) C3D_TexDelete(&titleTex);
-    if (hasLoading) C3D_TexDelete(&loadingTex);
+    if (hasLoading) C3D_TexDelete(&loadingTex); // Removed titleTex cleanup
     linearFree(vbo_main); 
     romfsExit(); 
     C3D_Fini(); 
