@@ -99,7 +99,7 @@ int main() {
     entity_mesh_textured.reserve(MAX_ENTITY_VERTS);
     seek_mesh.reserve(MAX_SEEK_VERTS);
 
-    // CRASH FIX: We now use ONE giant buffer for everything so the GPU never gets confused mid-frame
+    // ONE giant master buffer for everything!
     void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS + MAX_SEEK_VERTS) * sizeof(vertex)); 
     
     if (!vbo_main) { 
@@ -624,6 +624,7 @@ int main() {
                             if (fabsf(camX - rooms[playerCurrentRoom].pW[h]) < 0.6f && fabsf(camZ - rooms[playerCurrentRoom].pZ[h]) < 0.6f) {
                                 if (rooms[playerCurrentRoom].pSide[h] == 0 && !isDead && messageTimer <= 0) {
                                     playerHealth -= 40; 
+                                    flashRedFrames = 15; // <-- Fire flash applied here!
                                     sprintf(uiMessage, "Burned! (-40 HP)"); messageTimer = 30;
                                     if (playerHealth <= 0) { isDead = true; if (audio_ok) ndspChnWaveBufClear(7); }
                                 } else if (rooms[playerCurrentRoom].pSide[h] == 1 && !isDead && !isCrouching) {
@@ -1200,13 +1201,18 @@ int main() {
             // --- SEEK GENERATION CALL ---
             seek_mesh.clear(); 
             if (hasSeekModel) { 
+                float seekScale = 0.16f; // Doubled Size!
+                // Calculate the Y offset needed to keep his feet on the floor when scaling up
+                // (Models usually scale from their center, pushing their feet into the floor)
+                float floorCorrectionY = ((seekScale - 0.08f) / 0.08f) * 0.5f; 
+
                 if (playerCurrentRoom == -1) { 
                     // Draw in Lobby
                     static float seekAnimTime = 0.0f;
                     seekAnimTime += 0.2f; 
                     if (seekModel.numFrames > 0) {
                         int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
-                        seekModel.draw(currentFrame, 0.0f, 0.0f, 2.0f, 0.08f, 1.0f, 3.14159f);
+                        seekModel.draw(currentFrame, 0.0f, 0.0f + floorCorrectionY, 2.0f, seekScale, 1.0f, 3.14159f);
                     }
                 } else if (seekActive) {
                     // Draw chasing player
@@ -1214,8 +1220,7 @@ int main() {
                     seekRunAnimTime += (seekState == 2) ? 0.4f : 0.1f; 
                     if (seekModel.numFrames > 0) {
                         int currentFrame = ((int)seekRunAnimTime) % seekModel.numFrames;
-                        // Draw at his actual coordinate! Facing towards the player.
-                        seekModel.draw(currentFrame, 0.0f, -0.9f, -seekZ, 0.08f, 1.0f, 3.14159f);
+                        seekModel.draw(currentFrame, 0.0f, -0.9f + floorCorrectionY, -seekZ, seekScale, 1.0f, 3.14159f);
                     }
                 }
             }
@@ -1408,7 +1413,7 @@ int main() {
         if (sWardrobeExit.data_vaddr) linearFree((void*)sWardrobeExit.data_vaddr); 
         ndspExit(); 
     }
-
+    
     C3D_TexDelete(&atlasTex); 
     if (hasSeekTex) C3D_TexDelete(&seekTex); 
     linearFree(vbo_main); 
