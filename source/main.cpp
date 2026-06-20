@@ -1361,6 +1361,7 @@ int main() {
 
             // --- SEEK DRAW CALL ---
             if (seek_size > 0) {
+                BufInfo_Init(buf); // <--- THE NEW FIX IS RIGHT HERE!
                 BufInfo_Add(buf, vbo_seek, sizeof(vertex), 3, 0x210);
                 if (hasSeekTex) C3D_TexBind(0, &seekTex); 
                 
@@ -1379,6 +1380,7 @@ int main() {
                 }
                 C3D_DrawArrays(GPU_TRIANGLES, 0, seek_size);
             }
+            // ----------------------
         }
 
         C3D_FrameEnd(0);
