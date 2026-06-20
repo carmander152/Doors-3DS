@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <string>
 
 extern std::vector<vertex> seek_mesh;
 
 bool MD2Model::load(char* filepath, const char* file_name) {
-    char full_path[500];
-    snprintf(full_path, sizeof(full_path), "%s%s", path, file_name);
+    std::string full_path = std::string(path) + file_name;
     FILE* file = fopen(full_path, "rb");
     if (!file) return false;
 

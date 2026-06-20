@@ -48,7 +48,7 @@ int main() {
     ndspWaveBuf sCoinsCollect={0}, sDarkRoomEnter={0}, sDrawerClose={0}, sDrawerOpen={0}, sLightsFlicker={0}, sWardrobeEnter={0}, sWardrobeExit={0};
 
     const char* Models = "romfs:/Models/";
-    const char* Model_Textures = Models + "Textures/";
+    const char* Model_Textures = "romfs:/Models/Textures/";
 
     const char* Music = "romfs:/Sounds/Music/";
     const char* Misc = "romfs:/Sounds/Misc/";
