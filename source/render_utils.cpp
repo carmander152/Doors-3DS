@@ -19,9 +19,11 @@ inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
     }
 }
 
-ndspWaveBuf loadWav(const char* path) {
+ndspWaveBuf loadWav(const char* path, const char* file_name) {
+    char full_path[500];
+    snprintf(full_path, sizeof(full_path), "%s%s", path, file_name);
     ndspWaveBuf w = {0}; 
-    FILE* f = fopen(path, "rb"); 
+    FILE* f = fopen(full_path, "rb");
     if(!f) return w; 
     
     fseek(f, 12, SEEK_SET);
@@ -60,8 +62,10 @@ ndspWaveBuf loadWav(const char* path) {
     return w;
 }
 
-bool loadTextureFromFile(const char* path, C3D_Tex* tex) {
-    FILE* f = fopen(path, "rb"); 
+bool loadTextureFromFile(const char* path, const char* file_name, C3D_Tex* tex) {
+    char full_path[500];
+    snprintf(full_path, sizeof(full_path), "%s%s", path, file_name);
+    FILE* f = fopen(full_path, "rb");
     if (!f) { 
         sprintf(texErrorMessage, "Could not find %s", path); 
         return false; 
