@@ -8,7 +8,6 @@
 #include <vector>
 #include <time.h>
 #include "vshader_shbin.h"
-#include <string>
 
 #include "game_state.h"
 #include "render_utils.h"
@@ -38,16 +37,16 @@ int main() {
     ndspWaveBuf sPsst={0}, sAttack={0}, sCaught={0}, sDoor={0}, sLockedDoor={0}, sDupeAttack={0}, sRushScream={0}, sEyesAppear={0}, sEyesGarble={0}, sEyesAttack={0}, sEyesHit={0}, sSeekRise={0}, sSeekChase={0}, sSeekEscaped={0}, sDeath={0}, sElevatorJam={0}, sElevatorJamEnd={0};
     ndspWaveBuf sCoinsCollect={0}, sDarkRoomEnter={0}, sDrawerClose={0}, sDrawerOpen={0}, sLightsFlicker={0}, sWardrobeEnter={0}, sWardrobeExit={0};
 
-    std::string Models = "romfs:/Models/";
-    std::string Model_Textures = Models + "Textures";
+    char Models = "romfs:/Models/";
+    char Model_Textures = Models + "Textures";
 
-    std::string Music = "romfs:/Sounds/Music/";
-    std::string Misc = "romfs:/Sounds/Misc/";
-    std::string Effects = "romfs:/Sounds/Effects/";
-    std::string Entity_Sounds = Effects + "Entities";
-    std::string Player_Sounds = Effects + "Player";
-    std::string Item_Sounds = Effects + "Items";
-    std::string World_Sounds = Effects + "World";
+    char Music = "romfs:/Sounds/Music/";
+    char Misc = "romfs:/Sounds/Misc/";
+    char Effects = "romfs:/Sounds/Effects/";
+    char Entity_Sounds = Effects + "Entities";
+    char Player_Sounds = Effects + "Player";
+    char Item_Sounds = Effects + "Items";
+    char World_Sounds = Effects + "World";
 
     if (audio_ok) { 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); 
