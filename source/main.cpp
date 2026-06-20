@@ -94,7 +94,7 @@ int main() {
     hasAtlas = loadTextureFromFile("romfs:/", "atlas.t3x", &atlasTex);
     
     C3D_Tex seekTex; 
-    bool hasSeekTex = loadTextureFromFile(Model_Textures, "seek.t3x", &seekTex);
+    bool hasSeekTex = loadTextureFromFile("romfs:/", "seek.t3x", &seekTex);
 
     // 3D Model Loading
     MD2Model seekModel;
