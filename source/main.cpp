@@ -28,8 +28,8 @@ const char* combine_const_char(const char* char_1, const char* char_2) {
     std::string combined = std::string(char_1) + char_2;
 
     const char* res = combined.c_str();
-    
-    return res
+
+    return res;
 }
 
 int main() {
