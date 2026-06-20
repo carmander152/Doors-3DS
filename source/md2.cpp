@@ -8,7 +8,7 @@
 extern std::vector<vertex> seek_mesh;
 
 bool MD2Model::load(const char* filepath, const char* file_name) {
-    std::string full_path = std::string(path) + file_name;
+    std::string full_path = std::string(filepath) + file_name;
     FILE* file = fopen(full_path.c_str(), "rb");
     if (!file) return false;
 
