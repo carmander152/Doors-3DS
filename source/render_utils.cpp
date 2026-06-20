@@ -66,7 +66,7 @@ bool loadTextureFromFile(const char* path, const char* file_name, C3D_Tex* tex) 
     std::string full_path = std::string(path) + file_name;
     FILE* f = fopen(full_path.c_str(), "rb");
     if (!f) { 
-        sprintf(texErrorMessage, "Could not find %s", path); 
+        sprintf(texErrorMessage, "Could not find %s", full_path.c_str());
         return false; 
     }
     
