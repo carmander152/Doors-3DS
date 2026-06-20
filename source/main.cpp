@@ -23,13 +23,8 @@
 std::vector<vertex> seek_mesh;
 float seekX = 0.0f; // Track his full 3D position
 
-const char* combine_const_char(const char* char_1, const char* char_2) {
-
-    std::string combined = std::string(char_1) + char_2;
-
-    const char* res = combined.c_str();
-    
-    return res;
+std::string combine_const_char(const char* str1, const char* str2) {
+    return std::string(str1) + std::string(str2);
 }
 
 int main() {
