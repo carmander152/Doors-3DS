@@ -47,16 +47,16 @@ int main() {
     ndspWaveBuf sPsst={0}, sAttack={0}, sCaught={0}, sDoor={0}, sLockedDoor={0}, sDupeAttack={0}, sRushScream={0}, sEyesAppear={0}, sEyesGarble={0}, sEyesAttack={0}, sEyesHit={0}, sSeekRise={0}, sSeekChase={0}, sSeekEscaped={0}, sDeath={0}, sElevatorJam={0}, sElevatorJamEnd={0};
     ndspWaveBuf sCoinsCollect={0}, sDarkRoomEnter={0}, sDrawerClose={0}, sDrawerOpen={0}, sLightsFlicker={0}, sWardrobeEnter={0}, sWardrobeExit={0};
 
+
+
     const char* Models = "romfs:/Models/";
-    const char* Model_Textures = combine_const_char(Models, "Textures");
+    const char* Model_Textures = "romfs:/Models/Textures/";
 
     const char* Music = "romfs:/Sounds/Music/";
-    const char* Misc = "romfs:/Sounds/Misc/";
-    const char* Effects = "romfs:/Sounds/Effects/";
-    const char* Entity_Sounds = combine_const_char(Effects , "Entities");
-    const char* Player_Sounds = combine_const_char(Effects , "Player");
-    const char* Item_Sounds = combine_const_char(Effects , "Items");
-    const char* World_Sounds = combine_const_char(Effects , "World");
+    const char* Entity_Sounds = "romfs:/Sounds/Effects/Entities/";
+    const char* Player_Sounds = "romfs:/Sounds/Effects/Player/";
+    const char* Item_Sounds = "romfs:/Sounds/Effects/Items/";
+    const char* World_Sounds = "romfs:/Sounds/Effects/World/";
 
     if (audio_ok) { 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); 
@@ -66,32 +66,32 @@ int main() {
             ndspChnSetFormat(i, NDSP_FORMAT_MONO_PCM16);
         } 
         
-        sPsst = loadWav(combine_const_char(Entity_Sounds , "Screech_Psst.wav"));
-        sAttack = loadWav(combine_const_char(Entity_Sounds , "Screech_Attack.wav"));
-        sCaught = loadWav(combine_const_char(Entity_Sounds , "Screech_Caught.wav"));
-        sDoor = loadWav(combine_const_char(World_Sounds , "Door_Open.wav"));
-        sLockedDoor = loadWav(combine_const_char(World_Sounds , "Locked_Door.wav"));
-        sDupeAttack = loadWav(combine_const_char(Entity_Sounds , "Dupe_Attack.wav"));
-        sRushScream = loadWav(combine_const_char(Entity_Sounds , "Rush_Scream.wav"));
-        sEyesAppear = loadWav(combine_const_char(Entity_Sounds , "Eyes_Appear.wav"));
-        sEyesGarble = loadWav(combine_const_char(Entity_Sounds , "Eyes_Garble.wav"));
+        sPsst = loadWav(Entity_Sounds "Screech_Psst.wav"); 
+        sAttack = loadWav(Entity_Sounds "Screech_Attack.wav");
+        sCaught = loadWav(Entity_Sounds "Screech_Caught.wav");
+        sDoor = loadWav(World_Sounds "Door_Open.wav"); 
+        sLockedDoor = loadWav(World_Sounds "Locked_Door.wav");
+        sDupeAttack = loadWav(Entity_Sounds "Dupe_Attack.wav");
+        sRushScream = loadWav(Entity_Sounds "Rush_Scream.wav");
+        sEyesAppear = loadWav(Entity_Sounds "Eyes_Appear.wav");
+        sEyesGarble = loadWav(Entity_Sounds "Eyes_Garble.wav");
         sEyesGarble.looping = true; 
-        sEyesAttack = loadWav(combine_const_char(Entity_Sounds , "Eyes_Attack.wav"));
-        sEyesHit = loadWav(combine_const_char(Entity_Sounds , "Eyes_Hit.wav"));
-        sSeekRise = loadWav(combine_const_char(Music , "Seek_Rise.wav"));
-        sSeekChase = loadWav(combine_const_char(Music , "Seek_Chase.wav"));
+        sEyesAttack = loadWav(Entity_Sounds "Eyes_Attack.wav");
+        sEyesHit = loadWav(Entity_Sounds "Eyes_Hit.wav");
+        sSeekRise = loadWav(Music "Seek_Rise.wav"); 
+        sSeekChase = loadWav(Music "Seek_Chase.wav");
         sSeekChase.looping = true; 
-        sSeekEscaped = loadWav(combine_const_char(Music , "Seek_Escaped.wav"));
-        sDeath = loadWav(combine_const_char(Player_Sounds , "Player_Death.wav"));
-        sElevatorJam = loadWav(combine_const_char(Music , "Elevator_Jam.wav"));
-        sElevatorJamEnd = loadWav(combine_const_char(Music , "Elevator_Jam_End.wav"));
-        sCoinsCollect = loadWav(combine_const_char(Item_Sounds , "Coins_Collect.wav"));
-        sDarkRoomEnter = loadWav(combine_const_char(World_Sounds , "Dark_Room_Enter.wav"));
-        sDrawerClose = loadWav(combine_const_char(World_Sounds , "Drawer_Close.wav"));
-        sDrawerOpen = loadWav(combine_const_char(World_Sounds , "Drawer_Open.wav"));
-        sLightsFlicker = loadWav(combine_const_char(World_Sounds , "Lights_Flicker.wav"));
-        sWardrobeEnter = loadWav(combine_const_char(World_Sounds , "Wardrobe_Enter.wav"));
-        sWardrobeExit = loadWav(combine_const_char(World_Sounds , "Wardrobe_Exit.wav"));
+        sSeekEscaped = loadWav(Music "Seek_Escaped.wav");
+        sDeath = loadWav(Player_Sounds "Player_Death.wav"); 
+        sElevatorJam = loadWav(Music "Elevator_Jam.wav");
+        sElevatorJamEnd = loadWav(Music "Elevator_Jam_End.wav");
+        sCoinsCollect = loadWav(Item_Sounds "Coins_Collect.wav"); 
+        sDarkRoomEnter = loadWav(World_Sounds "Dark_Room_Enter.wav");
+        sDrawerClose = loadWav(World_Sounds "Drawer_Close.wav");
+        sDrawerOpen = loadWav(World_Sounds "Drawer_Open.wav");
+        sLightsFlicker = loadWav(World_Sounds "Lights_Flicker.wav");
+        sWardrobeEnter = loadWav(World_Sounds "Wardrobe_Enter.wav");
+        sWardrobeExit = loadWav(World_Sounds "Wardrobe_Exit.wav");
     }
 
     // GPU setup
@@ -103,11 +103,11 @@ int main() {
     hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
     
     C3D_Tex seekTex; 
-    bool hasSeekTex = loadTextureFromFile(combine_const_char(Models , "seek.t3x"), &seekTex);
+    bool hasSeekTex = loadTextureFromFile(Models "seek.t3x", &seekTex);
 
     // 3D Model Loading
     MD2Model seekModel;
-    bool hasSeekModel = seekModel.load(combine_const_char(Models , "seek.md2"));
+    bool hasSeekModel = seekModel.load(Models "seek.md2");
     if (!hasSeekModel) {
         printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
     }
