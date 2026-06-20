@@ -37,16 +37,16 @@ int main() {
     ndspWaveBuf sPsst={0}, sAttack={0}, sCaught={0}, sDoor={0}, sLockedDoor={0}, sDupeAttack={0}, sRushScream={0}, sEyesAppear={0}, sEyesGarble={0}, sEyesAttack={0}, sEyesHit={0}, sSeekRise={0}, sSeekChase={0}, sSeekEscaped={0}, sDeath={0}, sElevatorJam={0}, sElevatorJamEnd={0};
     ndspWaveBuf sCoinsCollect={0}, sDarkRoomEnter={0}, sDrawerClose={0}, sDrawerOpen={0}, sLightsFlicker={0}, sWardrobeEnter={0}, sWardrobeExit={0};
 
-    char Models = "romfs:/Models/";
-    char Model_Textures = Models + "Textures";
+    const char Models = "romfs:/Models/";
+    const char Model_Textures = Models + "Textures";
 
-    char Music = "romfs:/Sounds/Music/";
-    char Misc = "romfs:/Sounds/Misc/";
-    char Effects = "romfs:/Sounds/Effects/";
-    char Entity_Sounds = Effects + "Entities";
-    char Player_Sounds = Effects + "Player";
-    char Item_Sounds = Effects + "Items";
-    char World_Sounds = Effects + "World";
+    const char Music = "romfs:/Sounds/Music/";
+    const char Misc = "romfs:/Sounds/Misc/";
+    const char Effects = "romfs:/Sounds/Effects/";
+    const char Entity_Sounds = Effects + "Entities";
+    const char Player_Sounds = Effects + "Player";
+    const char Item_Sounds = Effects + "Items";
+    const char World_Sounds = Effects + "World";
 
     if (audio_ok) { 
         ndspSetOutputMode(NDSP_OUTPUT_STEREO); 
