@@ -71,7 +71,7 @@ int main() {
         sCaught = loadWav(Entity_Sounds, "Screech_Caught.wav");
         sDoor = loadWav(World_Sounds, "Door_Open.wav"); 
         sLockedDoor = loadWav(World_Sounds, "Locked_Door.wav");
-        sDupeAttack = loadWav(Entity_Sounds "Dupe_Attack.wav");
+        sDupeAttack = loadWav(Entity_Sounds, "Dupe_Attack.wav");
         sRushScream = loadWav(Entity_Sounds, "Rush_Scream.wav");
         sEyesAppear = loadWav(Entity_Sounds, "Eyes_Appear.wav");
         sEyesGarble = loadWav(Entity_Sounds, "Eyes_Garble.wav");
