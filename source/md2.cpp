@@ -29,8 +29,12 @@ bool MD2Model::load(const char* filepath) {
     for (int i = 0; i < numTexCoords; i++) {
         short st[2];
         fread(st, sizeof(short), 2, file);
+        
+        // Push U coordinate normally
         uvs.push_back((float)st[0] / skinW);
-        uvs.push_back((float)st[1] / skinH);
+        
+        // THE FIX: Invert the V coordinate because MD2 reads from Top-Left, but 3DS reads from Bottom-Left!
+        uvs.push_back(1.0f - ((float)st[1] / skinH)); 
     }
 
     // Load Triangles
