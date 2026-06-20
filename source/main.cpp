@@ -100,7 +100,7 @@ int main() {
     C3D_RenderTargetSetOutput(target, GFX_TOP, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
     
     // Texture loading
-    hasAtlas = loadTextureFromFile("romfs:/atlas.t3x", &atlasTex);
+    hasAtlas = loadTextureFromFile("romfs:/", "atlas.t3x", &atlasTex);
     
     C3D_Tex seekTex; 
     bool hasSeekTex = loadTextureFromFile(Models, "seek.t3x", &seekTex);

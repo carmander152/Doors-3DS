@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <string>
 
 // Atlas pixel normalization.
 // Pixel coordinate to UV conversion.
@@ -20,10 +21,9 @@ inline void normalizeUVs(float& u, float& v, float& uw, float& vh) {
 }
 
 ndspWaveBuf loadWav(const char* path, const char* file_name) {
-    char full_path[500];
-    snprintf(full_path, sizeof(full_path), "%s%s", path, file_name);
+    std::string full_path = std::string(path) + file_name;
     ndspWaveBuf w = {0}; 
-    FILE* f = fopen(full_path, "rb");
+    FILE* f = fopen(full_path.c_str(), "rb");
     if(!f) return w; 
     
     fseek(f, 12, SEEK_SET);
@@ -63,9 +63,8 @@ ndspWaveBuf loadWav(const char* path, const char* file_name) {
 }
 
 bool loadTextureFromFile(const char* path, const char* file_name, C3D_Tex* tex) {
-    char full_path[500];
-    snprintf(full_path, sizeof(full_path), "%s%s", path, file_name);
-    FILE* f = fopen(full_path, "rb");
+    std::string full_path = std::string(path) + file_name;
+    FILE* f = fopen(full_path.c_str(), "rb");
     if (!f) { 
         sprintf(texErrorMessage, "Could not find %s", path); 
         return false; 
