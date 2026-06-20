@@ -13,7 +13,6 @@ typedef struct { float pos[4]; float texcoord[2]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
 
-// NEW: Enum to track absolute room rotation
 enum Direction { NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3 };
 
 extern std::vector<vertex> world_mesh_colored;
@@ -29,22 +28,31 @@ extern bool isBuildingEntities;
 extern char texErrorMessage[100];
 
 struct RoomSetup {
-    // NEW: Weaving Layout Tracking Variables
     float centerX, centerZ;
     Direction orientation;
-    int chosenExitSide; // 0 = Left, 1 = Straight, 2 = Right
-    float minX, maxX, minZ, maxZ; // Bounding boxes for tracking
+    int chosenExitSide; 
+    float minX, maxX, minZ, maxZ; 
     
-    // Existing Variables
     int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
-    bool drawerOpen[3], isLocked, isJammed, hasLeftRoom, leftDoorOpen, hasRightRoom, rightDoorOpen;
+    bool drawerOpen[3], isLocked, isJammed;
     bool isDupeRoom, hasEyes, hasSeekEyes, isSeekHallway, isSeekChase, isSeekFinale;
-    float animMain[3], animLL[3], animLR[3], animRL[3], animRL3[3], animRR[3]; 
-    float lightLevel, leftDoorOffset, rightDoorOffset, eyesX, eyesY, eyesZ; 
+    float animMain[3]; 
+    float lightLevel, eyesX, eyesY, eyesZ; 
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10]; int pSide[10];   
-    int leftRoomSlotTypeL[3], leftRoomSlotItemL[3], leftRoomSlotTypeR[3], leftRoomSlotItemR[3]; bool leftRoomDrawerOpenL[3], leftRoomDrawerOpenR[3];
-    int rightRoomSlotTypeL[3], rightRoomSlotItemL[3], rightRoomSlotTypeR[3], rightRoomSlotItemR[3]; bool rightRoomDrawerOpenL[3], rightRoomDrawerOpenR[3];
     int correctDupePos, dupeNumbers[3]; 
+
+    // --- SIDE ROOM VARIABLES ---
+    bool hasLeftRoom, leftDoorOpen; float leftDoorOffset;
+    int leftRoomSlotTypeL[3], leftRoomSlotItemL[3], leftRoomSlotTypeR[3], leftRoomSlotItemR[3]; 
+    bool leftRoomDrawerOpenL[3], leftRoomDrawerOpenR[3]; float animLL[3], animLR[3];
+
+    bool hasRightRoom, rightDoorOpen; float rightDoorOffset;
+    int rightRoomSlotTypeL[3], rightRoomSlotItemL[3], rightRoomSlotTypeR[3], rightRoomSlotItemR[3]; 
+    bool rightRoomDrawerOpenL[3], rightRoomDrawerOpenR[3]; float animRL[3], animRR[3];
+
+    bool hasFarRoom, farDoorOpen; float farDoorOffset;
+    int farRoomSlotTypeL[3], farRoomSlotItemL[3], farRoomSlotTypeR[3], farRoomSlotItemR[3]; 
+    bool farRoomDrawerOpenL[3], farRoomDrawerOpenR[3]; float animFL[3], animFR[3];
 };
 
 extern RoomSetup rooms[TOTAL_ROOMS];
@@ -60,21 +68,16 @@ extern char uiMessage[50];
 extern bool screechActive, rushActive, seekActive, inEyesRoom, isLookingAtEyes;
 extern int screechState, screechTimer, screechCooldown, rushState, rushTimer, rushCooldown, seekState, seekTimer, eyesDamageTimer, eyesDamageAccumulator, eyesGraceTimer, eyesSoundCooldown;
 
-// Added seekX so he can pathfind outside the Z-axis
 extern float screechX, screechY, screechZ, screechOffsetX, screechOffsetY, screechOffsetZ, rushStartTimer, rushZ, rushTargetZ, seekX, seekZ, seekSpeed, seekMaxSpeed; 
 
 extern bool figureActive;
 extern int figureState; 
 extern float figureX, figureY, figureZ, figureSpeed; 
 extern int figureWaypoint;
-
-// Figure variables.
 extern int figureTargetWP;
 extern float figureTargetX;
 extern float figureTargetZ;
 
 int getDisplayRoom(int idx);
 int getNextDoorIndex(int currentIdx);
-
-// Added rotation math helper
 void rotateVertexRelative(float localX, float localZ, float centerX, float centerZ, Direction dir, float& outX, float& outZ);
