@@ -1408,8 +1408,7 @@ int main() {
         if (sWardrobeExit.data_vaddr) linearFree((void*)sWardrobeExit.data_vaddr); 
         ndspExit(); 
     }
-    
-    linearFree(ui_vbo);
+
     C3D_TexDelete(&atlasTex); 
     if (hasSeekTex) C3D_TexDelete(&seekTex); 
     linearFree(vbo_main); 
