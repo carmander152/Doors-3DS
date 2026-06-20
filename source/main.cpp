@@ -78,7 +78,7 @@ int main() {
         sEyesGarble.looping = true; 
         sEyesAttack = loadWav(combine_const_char(Entity_Sounds , "Eyes_Attack.wav");
         sEyesHit = loadWav(combine_const_char(Entity_Sounds , "Eyes_Hit.wav"));
-        sSeekRise = loadWav(combine_const_char((Music , "Seek_Rise.wav"));
+        sSeekRise = loadWav(combine_const_char(Music , "Seek_Rise.wav"));
         sSeekChase = loadWav(combine_const_char(Music , "Seek_Chase.wav"));
         sSeekChase.looping = true; 
         sSeekEscaped = loadWav(combine_const_char(Music , "Seek_Escaped.wav"));
