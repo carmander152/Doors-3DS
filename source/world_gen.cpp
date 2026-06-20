@@ -304,7 +304,7 @@ void buildWorld(int cChunk, int pRm) {
             if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1]) isInteriorVisible = false;
         }
 
-        if (seekState == 1) globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f;
+        if (seekState == 1) { globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f; }
         else if (rooms[i].hasEyes) { globalTintR=0.8f; globalTintG=0.3f; globalTintB=1.0f; }
         else { globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; }
 
