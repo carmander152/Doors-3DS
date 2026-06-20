@@ -13,6 +13,9 @@ typedef struct { float pos[4]; float texcoord[2]; float clr[4]; } vertex;
 typedef struct { float minX, minY, minZ, maxX, maxY, maxZ; int type; } BBox;
 typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
 
+// NEW: Enum to track absolute room rotation
+enum Direction { NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3 };
+
 extern std::vector<vertex> world_mesh_colored;
 extern std::vector<vertex> world_mesh_textured; 
 extern std::vector<vertex> entity_mesh_colored;
@@ -26,8 +29,16 @@ extern bool isBuildingEntities;
 extern char texErrorMessage[100];
 
 struct RoomSetup {
+    // NEW: Weaving Layout Tracking Variables
+    float centerX, centerZ;
+    Direction orientation;
+    int chosenExitSide; // 0 = Left, 1 = Straight, 2 = Right
+    float minX, maxX, minZ, maxZ; // Bounding boxes for tracking
+    
+    // Existing Variables
     int slotType[3], slotItem[3], doorPos, pCount, seekEyeCount;
-    bool drawerOpen[3], isLocked, isJammed, hasLeftRoom, leftDoorOpen, hasRightRoom, rightDoorOpen, isDupeRoom, hasEyes, hasSeekEyes, isSeekHallway, isSeekChase, isSeekFinale;
+    bool drawerOpen[3], isLocked, isJammed, hasLeftRoom, leftDoorOpen, hasRightRoom, rightDoorOpen;
+    bool isDupeRoom, hasEyes, hasSeekEyes, isSeekHallway, isSeekChase, isSeekFinale;
     float animMain[3], animLL[3], animLR[3], animRL[3], animRL3[3], animRR[3]; 
     float lightLevel, leftDoorOffset, rightDoorOffset, eyesX, eyesY, eyesZ; 
     float pZ[10], pY[10], pW[10], pH[10], pR[10], pG[10], pB[10]; int pSide[10];   
@@ -49,7 +60,8 @@ extern char uiMessage[50];
 extern bool screechActive, rushActive, seekActive, inEyesRoom, isLookingAtEyes;
 extern int screechState, screechTimer, screechCooldown, rushState, rushTimer, rushCooldown, seekState, seekTimer, eyesDamageTimer, eyesDamageAccumulator, eyesGraceTimer, eyesSoundCooldown;
 
-extern float screechX, screechY, screechZ, screechOffsetX, screechOffsetY, screechOffsetZ, rushStartTimer, rushZ, rushTargetZ, seekZ, seekSpeed, seekMaxSpeed; 
+// Added seekX so he can pathfind outside the Z-axis
+extern float screechX, screechY, screechZ, screechOffsetX, screechOffsetY, screechOffsetZ, rushStartTimer, rushZ, rushTargetZ, seekX, seekZ, seekSpeed, seekMaxSpeed; 
 
 extern bool figureActive;
 extern int figureState; 
@@ -63,3 +75,6 @@ extern float figureTargetZ;
 
 int getDisplayRoom(int idx);
 int getNextDoorIndex(int currentIdx);
+
+// Added rotation math helper
+void rotateVertexRelative(float localX, float localZ, float centerX, float centerZ, Direction dir, float& outX, float& outZ);
