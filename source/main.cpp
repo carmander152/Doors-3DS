@@ -369,15 +369,19 @@ int main() {
                 };
                 for (int s = 0; s < 3; s++) { 
                     if (stepAnim(rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].animMain[s])) animActive = true; 
-                    if (rooms[playerCurrentRoom].hasLeftRoom) { 
-                        if (stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenL[s], rooms[playerCurrentRoom].animLL[s])) animActive = true; 
-                        if (stepAnim(rooms[playerCurrentRoom].leftRoomDrawerOpenR[s], rooms[playerCurrentRoom].animLR[s])) animActive = true; 
-                    } 
-                    if (rooms[playerCurrentRoom].hasRightRoom) { 
-                        if (stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].animRL[s])) animActive = true; 
-                        if (stepAnim(rooms[playerCurrentRoom].rightRoomDrawerOpenR[s], rooms[playerCurrentRoom].animRR[s])) animActive = true; 
-                    } 
                 }
+                
+                auto updateSideAnims = [&](bool hasRoom, bool* openL, float* animL, bool* openR, float* animR) {
+                    if (!hasRoom) return;
+                    for(int s=0; s<3; s++) {
+                        if (stepAnim(openL[s], animL[s])) animActive = true;
+                        if (stepAnim(openR[s], animR[s])) animActive = true;
+                    }
+                };
+                
+                updateSideAnims(rooms[playerCurrentRoom].hasLeftRoom, rooms[playerCurrentRoom].leftRoomDrawerOpenL, rooms[playerCurrentRoom].animLL, rooms[playerCurrentRoom].leftRoomDrawerOpenR, rooms[playerCurrentRoom].animLR);
+                updateSideAnims(rooms[playerCurrentRoom].hasFarRoom, rooms[playerCurrentRoom].farRoomDrawerOpenL, rooms[playerCurrentRoom].animFL, rooms[playerCurrentRoom].farRoomDrawerOpenR, rooms[playerCurrentRoom].animFR);
+                updateSideAnims(rooms[playerCurrentRoom].hasRightRoom, rooms[playerCurrentRoom].rightRoomDrawerOpenL, rooms[playerCurrentRoom].animRL, rooms[playerCurrentRoom].rightRoomDrawerOpenR, rooms[playerCurrentRoom].animRR);
             } 
             if (animActive) needsVBOUpdate = true;
 
@@ -474,7 +478,6 @@ int main() {
                 // Figure logic
                 static int figureIntroTimer = 0;
                 
-                // Figure cutscene
                 if (doorOpen[LIBRARY_ROOM] && !figureActive) { 
                     figureActive = true; 
                     figureState = 10; 
@@ -496,7 +499,6 @@ int main() {
                     hidCircleRead(&cP_fig);
                     bool isMakingNoise = (abs(cP_fig.dy) > 15 || abs(cP_fig.dx) > 15) && !isCrouching && hideState == NOT_HIDING;
 
-                    // Figure kill
                     if (distSq < 0.8f && !isDead) { 
                         playerHealth = 0; 
                         isDead = true; 
@@ -505,13 +507,11 @@ int main() {
                         messageTimer = 60; 
                     } 
                     else {
-                        // Figure intro charge
                         if (figureState == 10) {
                             figureZ += figureSpeed; 
                             figureIntroTimer++;
                             
                             if (figureIntroTimer == 45) { 
-                                // Lamp crash
                                 sprintf(uiMessage, "* CRAAASH! *"); 
                                 messageTimer = 60;
                                 if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } 
@@ -521,7 +521,6 @@ int main() {
                                 figureTargetZ = roomCenterZ + 5.0f; 
                             }
                         }
-                        // Figure intro wait
                         else if (figureState == 11) {
                             float dx = figureTargetX - figureX;
                             float dz = figureTargetZ - figureZ;
@@ -531,14 +530,12 @@ int main() {
                                 figureX += (dx / distToTarget) * figureSpeed;
                                 figureZ += (dz / distToTarget) * figureSpeed;
                             } else {
-                                // Start patrol
                                 figureState = 0; 
                                 figureSpeed = 0.04f; 
                                 sprintf(uiMessage, "He's blind... Crouch to sneak..."); 
                                 messageTimer = 100;
                             }
                         }
-                        // Figure patrol
                         else if (figureState == 0) { 
                             float patrolX = 0, patrolZ = 0;
                             if (figureTargetWP == 0) { patrolX = -3.0f; patrolZ = roomCenterZ + 6.0f; }
@@ -566,7 +563,6 @@ int main() {
                                 messageTimer = 45;
                             }
                         } 
-                        // Figure chase
                         else if (figureState == 1) { 
                             if (isMakingNoise && distSq < 49.0f) {
                                 figureTargetX = camX;
@@ -588,7 +584,6 @@ int main() {
                             }
                         }
                         
-                        // Library bounds
                         float libFrontZ = -10.0f - (LIBRARY_ROOM * 10.0f) - 1.5f;
                         float libBackZ = -10.0f - (LIBRARY_ROOM * 10.0f) - 18.5f;
                         
@@ -1129,40 +1124,34 @@ int main() {
                     // Check room interactables
                     if (!iA && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
                         for (int s = 0; s < 3; s++) {
-                            if (cI(rooms[playerCurrentRoom].slotType[s], (-10.0f - (playerCurrentRoom * 10.0f)) - 2.5f - (s * 2.5f), ((rooms[playerCurrentRoom].slotType[s] % 2 != 0) ? -2.4f : 2.4f), rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].slotItem[s])) { iA = true; break; } 
+                            float lz = -2.5f - (s * 2.5f);
+                            float lx = ((rooms[playerCurrentRoom].slotType[s] % 2 != 0) ? -2.4f : 2.4f);
+                            float gX, gZ;
+                            rotateVertexRelative(lx, lz, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, rooms[playerCurrentRoom].orientation, gX, gZ);
+                            if (cI(rooms[playerCurrentRoom].slotType[s], gZ, gX, rooms[playerCurrentRoom].drawerOpen[s], rooms[playerCurrentRoom].slotItem[s])) { iA = true; break; }
                         }
-                        if (!iA && rooms[playerCurrentRoom].hasLeftRoom) { 
-                            float srZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset + 2.5f; 
+                        
+                        auto checkSideRoomInteracts = [&](bool hasRoom, Direction wallDir, float doorOffset, int* typeL, int* itemL, bool* openL, float* animL, int* typeR, int* itemR, bool* openR, float* animR) {
+                            if (!hasRoom) return false;
                             for (int s = 0; s < 3; s++) {
-                                float fZ = srZ - 0.9f - (s * 1.6f);
-                                int tL = rooms[playerCurrentRoom].leftRoomSlotTypeL[s];
-                                if (tL > 0 && tL != 99) {
-                                    if (tL == 7 || tL == 8) { if (cC(-8.4f, fZ, rooms[playerCurrentRoom].leftRoomDrawerOpenL[s])) { iA = true; break; } }
-                                    else if (cI(tL, fZ, -8.4f, rooms[playerCurrentRoom].leftRoomDrawerOpenL[s], rooms[playerCurrentRoom].leftRoomSlotItemL[s])) { iA = true; break; }
-                                } 
-                                int tR = rooms[playerCurrentRoom].leftRoomSlotTypeR[s];
-                                if (tR > 0 && tR != 99) {
-                                    if (tR == 7 || tR == 8) { if (cC(-3.6f, fZ, rooms[playerCurrentRoom].leftRoomDrawerOpenR[s])) { iA = true; break; } }
-                                    else if (cI(tR, fZ, -3.6f, rooms[playerCurrentRoom].leftRoomDrawerOpenR[s], rooms[playerCurrentRoom].leftRoomSlotItemR[s])) { iA = true; break; }
-                                } 
-                            } 
-                        } 
-                        if (!iA && rooms[playerCurrentRoom].hasRightRoom) { 
-                            float srZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset + 2.5f; 
-                            for (int s = 0; s < 3; s++) {
-                                float fZ = srZ - 0.9f - (s * 1.6f);
-                                int tL = rooms[playerCurrentRoom].rightRoomSlotTypeL[s];
-                                if (tL > 0 && tL != 99) {
-                                    if (tL == 7 || tL == 8) { if (cC(3.6f, fZ, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s])) { iA = true; break; } }
-                                    else if (cI(tL, fZ, 3.6f, rooms[playerCurrentRoom].rightRoomDrawerOpenL[s], rooms[playerCurrentRoom].rightRoomSlotItemL[s])) { iA = true; break; }
-                                } 
-                                int tR = rooms[playerCurrentRoom].rightRoomSlotTypeR[s];
-                                if (tR > 0 && tR != 99) {
-                                    if (tR == 7 || tR == 8) { if (cC(8.4f, fZ, rooms[playerCurrentRoom].rightRoomDrawerOpenR[s])) { iA = true; break; } }
-                                    else if (cI(tR, fZ, 8.4f, rooms[playerCurrentRoom].rightRoomDrawerOpenR[s], rooms[playerCurrentRoom].rightRoomSlotItemR[s])) { iA = true; break; }
-                                } 
-                            } 
-                        } 
+                                float lz = -5.9f - (s * 1.6f);
+                                if (typeL[s] > 0 && typeL[s] != 99) {
+                                    float gX, gZ; rotateVertexRelative(doorOffset - 2.4f, lz, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, wallDir, gX, gZ);
+                                    if (typeL[s] == 7 || typeL[s] == 8) { if (cC(gX, gZ, openL[s])) return true; }
+                                    else if (cI(typeL[s], gZ, gX, openL[s], itemL[s])) return true; 
+                                }
+                                if (typeR[s] > 0 && typeR[s] != 99) {
+                                    float gX, gZ; rotateVertexRelative(doorOffset + 2.4f, lz, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, wallDir, gX, gZ);
+                                    if (typeR[s] == 7 || typeR[s] == 8) { if (cC(gX, gZ, openR[s])) return true; }
+                                    else if (cI(typeR[s], gZ, gX, openR[s], itemR[s])) return true; 
+                                }
+                            }
+                            return false;
+                        };
+                        
+                        if (!iA) iA = checkSideRoomInteracts(rooms[playerCurrentRoom].hasLeftRoom, (Direction)((rooms[playerCurrentRoom].orientation + 3) % 4), rooms[playerCurrentRoom].leftDoorOffset, rooms[playerCurrentRoom].leftRoomSlotTypeL, rooms[playerCurrentRoom].leftRoomSlotItemL, rooms[playerCurrentRoom].leftRoomDrawerOpenL, rooms[playerCurrentRoom].animLL, rooms[playerCurrentRoom].leftRoomSlotTypeR, rooms[playerCurrentRoom].leftRoomSlotItemR, rooms[playerCurrentRoom].leftRoomDrawerOpenR, rooms[playerCurrentRoom].animLR);
+                        if (!iA) iA = checkSideRoomInteracts(rooms[playerCurrentRoom].hasFarRoom, rooms[playerCurrentRoom].orientation, rooms[playerCurrentRoom].farDoorOffset, rooms[playerCurrentRoom].farRoomSlotTypeL, rooms[playerCurrentRoom].farRoomSlotItemL, rooms[playerCurrentRoom].farRoomDrawerOpenL, rooms[playerCurrentRoom].animFL, rooms[playerCurrentRoom].farRoomSlotTypeR, rooms[playerCurrentRoom].farRoomSlotItemR, rooms[playerCurrentRoom].farRoomDrawerOpenR, rooms[playerCurrentRoom].animFR);
+                        if (!iA) iA = checkSideRoomInteracts(rooms[playerCurrentRoom].hasRightRoom, (Direction)((rooms[playerCurrentRoom].orientation + 1) % 4), rooms[playerCurrentRoom].rightDoorOffset, rooms[playerCurrentRoom].rightRoomSlotTypeL, rooms[playerCurrentRoom].rightRoomSlotItemL, rooms[playerCurrentRoom].rightRoomDrawerOpenL, rooms[playerCurrentRoom].animRL, rooms[playerCurrentRoom].rightRoomSlotTypeR, rooms[playerCurrentRoom].rightRoomSlotItemR, rooms[playerCurrentRoom].rightRoomDrawerOpenR, rooms[playerCurrentRoom].animRR);
                     }
                     
                     // Lobby key pickup
@@ -1177,8 +1166,12 @@ int main() {
                         for (int i = 0; i < TOTAL_ROOMS; i++) { 
                             if (i == seekStartRoom + 1 || i == seekStartRoom + 2) continue; 
                             if (rooms[i].isLocked || rooms[i].isJammed) { 
-                                float dZ = -10.0f - (i * 10.0f), dX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f); 
-                                if (fabsf(camZ - dZ) < 2.5f && fabsf(camX - dX) < 2.0f) { 
+                                float eX, eZ, lX = 0.0f, lZ = -5.0f;
+                                if (rooms[i-1].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
+                                if (rooms[i-1].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                                rotateVertexRelative(lX, lZ, rooms[i-1].centerX, rooms[i-1].centerZ, rooms[i-1].orientation, eX, eZ);
+
+                                if (fabsf(camZ - eZ) < 2.5f && fabsf(camX - eX) < 2.0f) { 
                                     if (rooms[i].isJammed) {
                                         if (audio_ok && sLockedDoor.data_vaddr) { ndspChnWaveBufClear(1); sLockedDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sLockedDoor); }
                                         sprintf(uiMessage, "The door is jammed shut!"); messageTimer = 30;
@@ -1200,9 +1193,12 @@ int main() {
             // Door open/close checks
             for (int i = 0; i < TOTAL_ROOMS; i++) { 
                 if (rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
-                float dZ = -10.0f - (i * 10.0f);
-                float dX = (rooms[i].doorPos == 0) ? -2.0f : ((rooms[i].doorPos == 1) ? 0.0f : 2.0f);
-                bool isClose = (fabsf(camZ - dZ) < 1.5f && fabsf(camX - dX) < 1.5f); 
+                float eX, eZ, lX = 0.0f, lZ = -5.0f;
+                if (rooms[i].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
+                if (rooms[i].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                rotateVertexRelative(lX, lZ, rooms[i].centerX, rooms[i].centerZ, rooms[i].orientation, eX, eZ);
+                
+                bool isClose = (fabsf(camZ - eZ) < 1.5f && fabsf(camX - eX) < 1.5f); 
                 if (rooms[i].isLocked || rooms[i].isJammed) isClose = false; 
                 
                 if (doorOpen[i] != isClose) {
@@ -1214,22 +1210,15 @@ int main() {
 
             // Check side doors
             if (playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) {
-                if (rooms[playerCurrentRoom].hasLeftRoom && !rooms[playerCurrentRoom].leftDoorOpen) {
-                    float lDoorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].leftDoorOffset - 0.6f;
-                    if (fabsf(camZ - lDoorZ) < 2.0f && camX < -1.5f) {
-                        rooms[playerCurrentRoom].leftDoorOpen = true;
-                        needsVBOUpdate = true;
-                        if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+                auto checkSideDoor = [&](bool hasRoom, Direction wallDir, float doorOffset, bool& doorOpenState) {
+                    if (hasRoom && !doorOpenState) {
+                        float gX, gZ; rotateVertexRelative(doorOffset, -4.4f, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, wallDir, gX, gZ);
+                        if (fabsf(camZ - gZ) < 2.0f && fabsf(camX - gX) < 2.0f) { doorOpenState = true; needsVBOUpdate = true; if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); } }
                     }
-                }
-                if (rooms[playerCurrentRoom].hasRightRoom && !rooms[playerCurrentRoom].rightDoorOpen) {
-                    float rDoorZ = (-10.0f - (playerCurrentRoom * 10.0f)) + rooms[playerCurrentRoom].rightDoorOffset - 0.6f;
-                    if (fabsf(camZ - rDoorZ) < 2.0f && camX > 1.5f) {
-                        rooms[playerCurrentRoom].rightDoorOpen = true;
-                        needsVBOUpdate = true;
-                        if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
-                    }
-                }
+                };
+                checkSideDoor(rooms[playerCurrentRoom].hasLeftRoom, (Direction)((rooms[playerCurrentRoom].orientation + 3) % 4), rooms[playerCurrentRoom].leftDoorOffset, rooms[playerCurrentRoom].leftDoorOpen);
+                checkSideDoor(rooms[playerCurrentRoom].hasFarRoom, rooms[playerCurrentRoom].orientation, rooms[playerCurrentRoom].farDoorOffset, rooms[playerCurrentRoom].farDoorOpen);
+                checkSideDoor(rooms[playerCurrentRoom].hasRightRoom, (Direction)((rooms[playerCurrentRoom].orientation + 1) % 4), rooms[playerCurrentRoom].rightDoorOffset, rooms[playerCurrentRoom].rightDoorOpen);
             }
 
             // Mesh updates
@@ -1408,6 +1397,7 @@ int main() {
                 C3D_DrawArrays(GPU_TRIANGLES, world_total + ent_col_size, ent_tex_size);
             }
 
+            // --- SEEK DRAW CALL (Now using offset instead of new VBO) ---
             if (seek_size > 0) {
                 if (hasSeekTex) C3D_TexBind(0, &seekTex); 
                 
