@@ -17,6 +17,7 @@
 #include "md2.h" 
 
 #define LIBRARY_ROOM 51
+#define MAX_SEEK_VERTS 5000
 
 std::vector<vertex> seek_mesh;
 
@@ -82,17 +83,6 @@ int main() {
     C3D_Tex seekTex; 
     bool hasSeekTex = loadTextureFromFile("romfs:/seek.t3x", &seekTex);
 
-    // VBO for 2D UI screens
-    float ui_vbo_data[] = {
-        0.0f, 0.0f,   0.5f, 1.0f,   0.0f, 0.0f,   1.0f, 1.0f, 1.0f, 1.0f,
-        0.0f, 240.0f, 0.5f, 1.0f,   0.0f, 1.0f,   1.0f, 1.0f, 1.0f, 1.0f,
-        400.0f, 0.0f,   0.5f, 1.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f, 1.0f,
-        400.0f, 240.0f, 0.5f, 1.0f, 1.0f, 1.0f,   1.0f, 1.0f, 1.0f, 1.0f
-    };
-    void* ui_vbo = linearAlloc(sizeof(ui_vbo_data));
-    memcpy(ui_vbo, ui_vbo_data, sizeof(ui_vbo_data));
-    GSPGPU_FlushDataCache(ui_vbo, sizeof(ui_vbo_data));
-    
     // 3D Model Loading
     MD2Model seekModel;
     bool hasSeekModel = seekModel.load("romfs:/seek.md2");
@@ -107,12 +97,12 @@ int main() {
     world_mesh_textured.reserve(MAX_VERTS); 
     entity_mesh_colored.reserve(MAX_ENTITY_VERTS); 
     entity_mesh_textured.reserve(MAX_ENTITY_VERTS);
-    seek_mesh.reserve(5000);
+    seek_mesh.reserve(MAX_SEEK_VERTS);
 
-    void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS) * sizeof(vertex)); 
-    void* vbo_seek = linearAlloc(5000 * sizeof(vertex));
+    // CRASH FIX: We now use ONE giant buffer for everything so the GPU never gets confused mid-frame
+    void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS + MAX_SEEK_VERTS) * sizeof(vertex)); 
     
-    if (!vbo_main || !vbo_seek) { 
+    if (!vbo_main) { 
         printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); 
         while (aptMainLoop()) { 
             hidScanInput(); 
@@ -220,7 +210,6 @@ int main() {
                 colored_size = world_mesh_colored.size(); 
                 textured_size = world_mesh_textured.size(); 
                 
-                // CRASH FIX: Clamp sizes to prevent negative memcopy overflow
                 if (colored_size > MAX_VERTS) colored_size = MAX_VERTS;
                 if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
                 
@@ -403,7 +392,6 @@ int main() {
 
                     int dC = 0, nD = 0, dN = 0;
                     
-                    // CRASH FIX: Protect the array from -1 and out of bounds!
                     if (uiRoom >= 0 && uiRoom < TOTAL_ROOMS) { 
                         dC = getDisplayRoom(uiRoom);
                         nD = getNextDoorIndex(uiRoom);
@@ -1203,55 +1191,62 @@ int main() {
                 colored_size = world_mesh_colored.size();
                 textured_size = world_mesh_textured.size();
                 
-                // CRASH FIX: Clamp sizes to prevent negative memcopy overflow
                 if (colored_size > MAX_VERTS) colored_size = MAX_VERTS;
                 if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
-                
-                memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex));
-                memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex));
             }
 
             buildEntities(playerCurrentRoom);
 
-            // --- SEEK LOBBY TEST ---
+            // --- SEEK GENERATION CALL ---
             seek_mesh.clear(); 
-            if (hasSeekModel && playerCurrentRoom == -1) { 
-                static float seekAnimTime = 0.0f;
-                seekAnimTime += 0.2f; // Adjust this number to make the animation faster/slower
-                
-                // Safety check to prevent crashing if numFrames is 0
-                if (seekModel.numFrames > 0) {
-                    int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
-                    
-                    // Draw at X: 0.0, Y: 0.0, Z: 2.0 (Lobby center) | Scale: 0.08f | Light: 1.0f | Rot: 3.14 (Facing you)
-                    seekModel.draw(currentFrame, 0.0f, 0.0f, 2.0f, 0.08f, 1.0f, 3.14159f);
+            if (hasSeekModel) { 
+                if (playerCurrentRoom == -1) { 
+                    // Draw in Lobby
+                    static float seekAnimTime = 0.0f;
+                    seekAnimTime += 0.2f; 
+                    if (seekModel.numFrames > 0) {
+                        int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
+                        seekModel.draw(currentFrame, 0.0f, 0.0f, 2.0f, 0.08f, 1.0f, 3.14159f);
+                    }
+                } else if (seekActive) {
+                    // Draw chasing player
+                    static float seekRunAnimTime = 0.0f;
+                    seekRunAnimTime += (seekState == 2) ? 0.4f : 0.1f; 
+                    if (seekModel.numFrames > 0) {
+                        int currentFrame = ((int)seekRunAnimTime) % seekModel.numFrames;
+                        // Draw at his actual coordinate! Facing towards the player.
+                        seekModel.draw(currentFrame, 0.0f, -0.9f, -seekZ, 0.08f, 1.0f, 3.14159f);
+                    }
                 }
             }
             // -----------------------
 
+            // Update master VBO block offsets
             world_total = colored_size + textured_size;
             ent_col_size = entity_mesh_colored.size();
             ent_tex_size = entity_mesh_textured.size();
             seek_size = seek_mesh.size();
             
-            // CRASH FIX: Clamp entity array limits
             if (ent_col_size > MAX_ENTITY_VERTS) ent_col_size = MAX_ENTITY_VERTS;
             if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
-            
+            if (seek_size > MAX_SEEK_VERTS) seek_size = MAX_SEEK_VERTS;
+
+            // One unified memcpy push
+            if (needsVBOUpdate) {
+                memcpy(vbo_main, world_mesh_colored.data(), colored_size * sizeof(vertex)); 
+                memcpy((vertex*)vbo_main + colored_size, world_mesh_textured.data(), textured_size * sizeof(vertex)); 
+            }
             if (ent_col_size > 0) memcpy((vertex*)vbo_main + world_total, entity_mesh_colored.data(), ent_col_size * sizeof(vertex));
             if (ent_tex_size > 0) memcpy((vertex*)vbo_main + world_total + ent_col_size, entity_mesh_textured.data(), ent_tex_size * sizeof(vertex));
-            
+            if (seek_size > 0) memcpy((vertex*)vbo_main + world_total + ent_col_size + ent_tex_size, seek_mesh.data(), seek_size * sizeof(vertex));
+
+            // One unified cache flush
             if (needsVBOUpdate) {
-                GSPGPU_FlushDataCache(vbo_main, (world_total + ent_col_size + ent_tex_size) * sizeof(vertex));
-            } else if ((ent_col_size + ent_tex_size) > 0) {
-                GSPGPU_FlushDataCache((vertex*)vbo_main + world_total, (ent_col_size + ent_tex_size) * sizeof(vertex));
+                GSPGPU_FlushDataCache(vbo_main, (world_total + ent_col_size + ent_tex_size + seek_size) * sizeof(vertex));
+            } else if ((ent_col_size + ent_tex_size + seek_size) > 0) {
+                GSPGPU_FlushDataCache((vertex*)vbo_main + world_total, (ent_col_size + ent_tex_size + seek_size) * sizeof(vertex));
             }
 
-            if (seek_size > 5000) seek_size = 5000;
-            if (seek_size > 0) {
-                memcpy(vbo_seek, seek_mesh.data(), seek_size * sizeof(vertex));
-                GSPGPU_FlushDataCache(vbo_seek, seek_size * sizeof(vertex));
-            }
         } // End gameState == 2 logic
 
         // Drawing phase
@@ -1263,7 +1258,8 @@ int main() {
         BufInfo_Init(buf); 
         
         if (gameState == 2) {
-            // Render 3D World
+            
+            // --- THE MASTER VBO BIND ---
             BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
             
             float dCX = camX, dCZ = camZ, dCY = camYaw, dCP = camPitch; 
@@ -1359,10 +1355,8 @@ int main() {
                 C3D_DrawArrays(GPU_TRIANGLES, world_total + ent_col_size, ent_tex_size);
             }
 
-            // --- SEEK DRAW CALL ---
+            // --- SEEK DRAW CALL (Now using offset instead of new VBO) ---
             if (seek_size > 0) {
-                BufInfo_Init(buf); // <--- THE NEW FIX IS RIGHT HERE!
-                BufInfo_Add(buf, vbo_seek, sizeof(vertex), 3, 0x210);
                 if (hasSeekTex) C3D_TexBind(0, &seekTex); 
                 
                 C3D_TexEnv* env = C3D_GetTexEnv(0); 
@@ -1378,9 +1372,8 @@ int main() {
                     C3D_TexEnvSrc(env, C3D_Both, GPU_PRIMARY_COLOR); 
                     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE); 
                 }
-                C3D_DrawArrays(GPU_TRIANGLES, 0, seek_size);
+                C3D_DrawArrays(GPU_TRIANGLES, world_total + ent_col_size + ent_tex_size, seek_size);
             }
-            // ----------------------
         }
 
         C3D_FrameEnd(0);
@@ -1420,7 +1413,6 @@ int main() {
     C3D_TexDelete(&atlasTex); 
     if (hasSeekTex) C3D_TexDelete(&seekTex); 
     linearFree(vbo_main); 
-    linearFree(vbo_seek);
     romfsExit(); 
     C3D_Fini(); 
     gfxExit(); 
