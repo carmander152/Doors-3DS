@@ -20,6 +20,7 @@
 #define MAX_SEEK_VERTS 5000
 
 std::vector<vertex> seek_mesh;
+float seekX = 0.0f; // Track his full 3D position
 
 int main() {
     // System init
@@ -99,7 +100,6 @@ int main() {
     entity_mesh_textured.reserve(MAX_ENTITY_VERTS);
     seek_mesh.reserve(MAX_SEEK_VERTS);
 
-    // ONE giant master buffer for everything!
     void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS + MAX_SEEK_VERTS) * sizeof(vertex)); 
     
     if (!vbo_main) { 
@@ -256,25 +256,33 @@ int main() {
             // Debug cheats
             if (!isDead && (kHeld & KEY_R) && (kHeld & KEY_Y)) { 
                 if (kDown & KEY_DDOWN) { 
-                    camZ = -10.0f - ((seekStartRoom - 1) * 10.0f) + 5.0f; 
-                    camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; 
+                    camX = rooms[seekStartRoom - 1].centerX;
+                    camZ = rooms[seekStartRoom - 1].centerZ; 
+                    camYaw = 0.0f; camPitch = 0.0f; 
                     needsVBOUpdate = true; 
                     sprintf(uiMessage, "Teleported to Seek!"); 
                     messageTimer = 45; 
                 } 
                 if (kDown & KEY_DLEFT) { 
-                    camZ = -10.0f - ((LIBRARY_ROOM - 2) * 10.0f) + 5.0f; 
-                    camX = 0.0f; camYaw = 0.0f; camPitch = 0.0f; 
+                    camX = rooms[LIBRARY_ROOM - 2].centerX;
+                    camZ = rooms[LIBRARY_ROOM - 2].centerZ; 
+                    camYaw = 0.0f; camPitch = 0.0f; 
                     needsVBOUpdate = true; 
                     sprintf(uiMessage, "Teleported near Library!"); 
                     messageTimer = 45; 
                 } 
             }
             
-            // Room tracking
-            playerCurrentRoom = (camZ >= -10.0f) ? -1 : (int)((-camZ - 10.0f) / 10.0f); 
-            if (playerCurrentRoom < -1) playerCurrentRoom = -1; 
-            if (playerCurrentRoom > TOTAL_ROOMS - 2) playerCurrentRoom = TOTAL_ROOMS - 2;
+            // --- NEW SPATIAL ROOM TRACKING ---
+            int detectedRoom = -1;
+            for (int i = 0; i < TOTAL_ROOMS; i++) {
+                if (camX >= rooms[i].minX && camX <= rooms[i].maxX &&
+                    camZ >= rooms[i].minZ && camZ <= rooms[i].maxZ) {
+                    detectedRoom = i;
+                    break;
+                }
+            }
+            playerCurrentRoom = (detectedRoom != -1) ? detectedRoom : -1;
             
             bool isGlitch = false; 
             int tDR = -1; 
@@ -419,17 +427,31 @@ int main() {
                         printf(" Current Room : %03d         \x1b[K\n Next Door     : %03d         \x1b[K\n                            \x1b[K\n\n", dC, dN);
                     }
                     
-                    if (nD >= 0 && nD < TOTAL_ROOMS && fabsf(camZ - (-10.0f - (nD * 10.0f))) < 4.0f && fabsf(camX) < 2.0f) { 
+                    // --- PLAQUE RENDER LOGIC UPDATE ---
+                    if (nD >= 0 && nD < TOTAL_ROOMS) { 
                         if (isGlitch && tDR == nD) { 
-                            if (camX < -1.4f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[tDR].dupeNumbers[0]); 
-                            else if (camX >= -1.4f && camX <= 0.6f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[tDR].dupeNumbers[1]); 
-                            else printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[tDR].dupeNumbers[2]); 
+                            float dX[3], dZ[3];
+                            rotateVertexRelative(-5.0f, 0.0f, rooms[tDR].centerX, rooms[tDR].centerZ, rooms[tDR].orientation, dX[0], dZ[0]); // Left
+                            rotateVertexRelative(0.0f, -5.0f, rooms[tDR].centerX, rooms[tDR].centerZ, rooms[tDR].orientation, dX[1], dZ[1]); // Straight
+                            rotateVertexRelative(5.0f, 0.0f, rooms[tDR].centerX, rooms[tDR].centerZ, rooms[tDR].orientation, dX[2], dZ[2]);  // Right
+                            
+                            int lookedAt = -1;
+                            for(int d=0; d<3; d++) {
+                                if (fabsf(camX - dX[d]) < 3.0f && fabsf(camZ - dZ[d]) < 3.0f) { lookedAt = d; break; }
+                            }
+                            if (lookedAt != -1) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", rooms[tDR].dupeNumbers[lookedAt]); 
+                            else printf("                            \x1b[K\n\n");
                         } else {
-                            printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", dN); 
+                            float eX, eZ, lX = 0.0f, lZ = -5.0f;
+                            if (rooms[playerCurrentRoom].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
+                            if (rooms[playerCurrentRoom].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                            rotateVertexRelative(lX, lZ, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, rooms[playerCurrentRoom].orientation, eX, eZ);
+                            
+                            if (fabsf(camX - eX) < 3.0f && fabsf(camZ - eZ) < 3.0f) printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", dN); 
+                            else printf("                            \x1b[K\n\n");
                         }
-                    } else {
-                        printf("                            \x1b[K\n\n");
-                    }
+                    } else printf("                            \x1b[K\n\n");
+                    // ----------------------------------
                     
                     printf(" Health       : %d / 100   \x1b[K\n Golden Key   : %s         \x1b[K\n Coins        : %04d       \x1b[K\n FPS          : %.2f       \x1b[K\n\n       --- CONTROLS ---       \x1b[K\n [A] Interact  [B] Crouch    \x1b[K\n [X] Hide(Cab/Bed) [CPAD] Move \x1b[K\n [TOUCH/L/R/CSTICK] Look     \x1b[K\n", playerHealth, hasKey?"EQUIPPED":"None    ", playerCoins, currentFps);
                     
@@ -579,9 +601,11 @@ int main() {
                 
                 // Seek logic
                 if (playerCurrentRoom >= seekStartRoom && playerCurrentRoom <= seekStartRoom + 2) { 
-                    if (camZ < -10.0f - ((seekStartRoom + 2) * 10.0f) - 8.0f && seekState == 0) {
+                    if (camZ < rooms[seekStartRoom + 2].centerZ && seekState == 0) {
                         seekState = 1; seekActive = true; seekTimer = 0; seekSpeed = 0.0f; 
-                        seekZ = -10.0f - (seekStartRoom * 10.0f); needsVBOUpdate = true;
+                        seekX = rooms[seekStartRoom].centerX;
+                        seekZ = rooms[seekStartRoom].centerZ + 10.0f; 
+                        needsVBOUpdate = true;
                         if (audio_ok && sSeekRise.data_vaddr) {
                             ndspChnWaveBufClear(7);
                             sSeekRise.status = NDSP_WBUF_FREE;
@@ -594,7 +618,7 @@ int main() {
                     seekTimer++; 
                     if (seekTimer >= 90 && seekTimer < 115) {
                         if (seekSpeed < 0.24f) seekSpeed += 0.01f;
-                        seekZ -= seekSpeed;
+                        seekZ -= seekSpeed; // Rise animation sequence assumes direct hallway initially
                     } 
                     if (seekTimer >= 115) {
                         seekState = 2; seekSpeed = 0; 
@@ -606,25 +630,40 @@ int main() {
                         }
                     } 
                 } else if (seekState == 2) { 
-                    seekSpeed = (seekZ > -10.0f - ((seekStartRoom + 2) * 10.0f)) ? 0.13f : seekMaxSpeed; 
-                    seekZ -= seekSpeed; 
+                    seekSpeed = seekMaxSpeed; 
+                    
+                    // --- SEEK PATHFINDING UPDATE ---
+                    static int seekTargetRoom = seekStartRoom;
+                    float dx = rooms[seekTargetRoom].centerX - seekX;
+                    float dz = rooms[seekTargetRoom].centerZ - seekZ;
+                    float dist = sqrtf(dx*dx + dz*dz);
+                    
+                    // Proceed to next node if reached
+                    if (dist < 1.5f && seekTargetRoom < TOTAL_ROOMS - 1) seekTargetRoom++;
+                    if (dist > 0.0f) {
+                        seekX += (dx/dist) * seekSpeed;
+                        seekZ += (dz/dist) * seekSpeed;
+                    }
                     
                     if (audio_ok && sSeekChase.data_vaddr) { 
                         float mix[12] = {0}; mix[0] = 0.8f; mix[1] = 0.8f; ndspChnSetMix(7, mix); 
                     } 
                     
-                    if (fabsf(seekZ - camZ) < 1.2f) {
+                    // Kill Check
+                    float pdx = camX - seekX, pdz = camZ - seekZ;
+                    if (sqrtf(pdx*pdx + pdz*pdz) < 1.2f) {
                         playerHealth = 0; isDead = true; 
                         sprintf(uiMessage, "Seek caught you..."); messageTimer = 60;
                         if (audio_ok) ndspChnWaveBufClear(7);
                     } 
+                    // -------------------------------
                     
                     if (playerCurrentRoom >= 0 && rooms[playerCurrentRoom].isSeekFinale) {
                         for(int h = 0; h < 6; h++) {
                             if (fabsf(camX - rooms[playerCurrentRoom].pW[h]) < 0.6f && fabsf(camZ - rooms[playerCurrentRoom].pZ[h]) < 0.6f) {
                                 if (rooms[playerCurrentRoom].pSide[h] == 0 && !isDead && messageTimer <= 0) {
                                     playerHealth -= 40; 
-                                    flashRedFrames = 15; // <-- Fire flash applied here!
+                                    flashRedFrames = 15; 
                                     sprintf(uiMessage, "Burned! (-40 HP)"); messageTimer = 30;
                                     if (playerHealth <= 0) { isDead = true; if (audio_ok) ndspChnWaveBufClear(7); }
                                 } else if (rooms[playerCurrentRoom].pSide[h] == 1 && !isDead && !isCrouching) {
@@ -637,7 +676,7 @@ int main() {
                     } 
                     
                     if (seekActive) { 
-                        float fLZ = -10.0f - ((seekStartRoom + 8) * 10.0f) - 10.0f; 
+                        float fLZ = rooms[seekStartRoom + 8].centerZ - 10.0f; 
                         int sR = seekStartRoom + 9; 
                         bool playerSafe = (camZ < fLZ - 1.5f); 
                         
@@ -982,38 +1021,45 @@ int main() {
                 // Object interact
                 bool iA = false;
                 
-                // Dupe door
+                // --- DUPE DOOR INTERACTION UPDATE ---
                 if (!iA && (kDown & KEY_A)) { 
                     int nI = getNextDoorIndex(playerCurrentRoom); 
                     if (nI >= 0 && nI < TOTAL_ROOMS && rooms[nI].isDupeRoom && nI != LIBRARY_ROOM && nI != LIBRARY_ROOM + 1) { 
-                        float dZ = -10.0f - (nI * 10.0f); 
-                        if (fabsf(camZ - dZ) < 2.5f) { 
-                            float fx = -sinf(camYaw), fz = -cosf(camYaw); 
-                            int tD = -1; float bD = 0.85f; 
-                            for (int d = 0; d < 3; d++) { 
-                                float dx = (-2.0f + d * 2.0f) - camX, dz = dZ - camZ, distSq = dx*dx + dz*dz; 
-                                if (distSq > 0 && distSq < 9.0f) { 
-                                    float dist = sqrtf(distSq); 
-                                    float dot = (fx * (dx / dist)) + (fz * (dz / dist)); 
-                                    if (dot > bD) { bD = dot; tD = d; } 
-                                } 
+                        float dX[3], dZ[3];
+                        rotateVertexRelative(-5.0f, 0.0f, rooms[nI].centerX, rooms[nI].centerZ, rooms[nI].orientation, dX[0], dZ[0]); // Left
+                        rotateVertexRelative(0.0f, -5.0f, rooms[nI].centerX, rooms[nI].centerZ, rooms[nI].orientation, dX[1], dZ[1]); // Straight
+                        rotateVertexRelative(5.0f, 0.0f, rooms[nI].centerX, rooms[nI].centerZ, rooms[nI].orientation, dX[2], dZ[2]);  // Right
+
+                        int tD = -1; float bD = 0.85f; 
+                        float fx = -sinf(camYaw), fz = -cosf(camYaw); 
+                        for (int d = 0; d < 3; d++) { 
+                            float dx = dX[d] - camX, dz = dZ[d] - camZ;
+                            float distSq = dx*dx + dz*dz; 
+                            if (distSq > 0 && distSq < 9.0f) { 
+                                float dist = sqrtf(distSq); 
+                                float dot = (fx * (dx / dist)) + (fz * (dz / dist)); 
+                                if (dot > bD) { bD = dot; tD = d; } 
                             } 
-                            if (tD != -1) { 
-                                if (tD == rooms[nI].correctDupePos) { 
-                                    if (!doorOpen[nI]) {
-                                        if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
-                                        doorOpen[nI] = true; needsVBOUpdate = true;
-                                    } 
-                                } else { 
-                                    if (audio_ok && sDupeAttack.data_vaddr) { ndspChnWaveBufClear(2); sDupeAttack.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(2, &sDupeAttack); }
-                                    playerHealth -= 34; flashRedFrames = 8; camZ += 2.0f; 
-                                    if (playerHealth <= 0) isDead = true; 
+                        } 
+                        
+                        if (tD != -1) { 
+                            if (tD == rooms[nI].correctDupePos) { 
+                                if (!doorOpen[nI]) {
+                                    if (audio_ok && sDoor.data_vaddr) { ndspChnWaveBufClear(1); sDoor.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(1, &sDoor); }
+                                    doorOpen[nI] = true; needsVBOUpdate = true;
                                 } 
-                                iA = true; 
+                            } else { 
+                                if (audio_ok && sDupeAttack.data_vaddr) { ndspChnWaveBufClear(2); sDupeAttack.status = NDSP_WBUF_FREE; ndspChnWaveBufAdd(2, &sDupeAttack); }
+                                playerHealth -= 34; flashRedFrames = 8; 
+                                camX -= (dX[tD] - rooms[nI].centerX) * 0.15f; // Push away from wall
+                                camZ -= (dZ[tD] - rooms[nI].centerZ) * 0.15f;
+                                if (playerHealth <= 0) isDead = true; 
                             } 
+                            iA = true; 
                         } 
                     } 
                 }
+                // ------------------------------------
                 
                 // Loot interact
                 if ((kDown & KEY_A) || (kDown & KEY_X && hideState == NOT_HIDING)) {
@@ -1198,29 +1244,31 @@ int main() {
 
             buildEntities(playerCurrentRoom);
 
-            // --- SEEK GENERATION CALL ---
+            // --- SEEK GENERATION CALL WITH PATHFINDING ---
             seek_mesh.clear(); 
             if (hasSeekModel) { 
-                float seekScale = 0.16f; // Doubled Size!
-                // Calculate the Y offset needed to keep his feet on the floor when scaling up
-                // (Models usually scale from their center, pushing their feet into the floor)
-                float floorCorrectionY = ((seekScale - 0.08f) / 0.08f) * 0.5f; 
+                float seekScale = 0.16f;
+                float seekHeightAdjust = -0.4f; 
 
                 if (playerCurrentRoom == -1) { 
-                    // Draw in Lobby
                     static float seekAnimTime = 0.0f;
                     seekAnimTime += 0.2f; 
                     if (seekModel.numFrames > 0) {
                         int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
-                        seekModel.draw(currentFrame, 0.0f, 0.0f + floorCorrectionY, 2.0f, seekScale, 1.0f, 3.14159f);
+                        seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                     }
                 } else if (seekActive) {
-                    // Draw chasing player
                     static float seekRunAnimTime = 0.0f;
                     seekRunAnimTime += (seekState == 2) ? 0.4f : 0.1f; 
                     if (seekModel.numFrames > 0) {
                         int currentFrame = ((int)seekRunAnimTime) % seekModel.numFrames;
-                        seekModel.draw(currentFrame, 0.0f, -0.9f + floorCorrectionY, -seekZ, seekScale, 1.0f, 3.14159f);
+                        
+                        // He now renders at his absolute spatial coords, and calculates rotation to face the player
+                        float targetSeekX = seekX;
+                        float targetSeekZ = seekZ;
+                        float rot = atan2f(camX - targetSeekX, camZ - targetSeekZ);
+                        
+                        seekModel.draw(currentFrame, targetSeekX, -0.9f + seekHeightAdjust, -targetSeekZ, seekScale, 1.0f, rot);
                     }
                 }
             }
@@ -1360,7 +1408,6 @@ int main() {
                 C3D_DrawArrays(GPU_TRIANGLES, world_total + ent_col_size, ent_tex_size);
             }
 
-            // --- SEEK DRAW CALL (Now using offset instead of new VBO) ---
             if (seek_size > 0) {
                 if (hasSeekTex) C3D_TexBind(0, &seekTex); 
                 
