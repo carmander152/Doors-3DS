@@ -81,10 +81,6 @@ int main() {
     
     C3D_Tex seekTex; 
     bool hasSeekTex = loadTextureFromFile("romfs:/seek.t3x", &seekTex);
-    
-    C3D_Tex loadingTex;
-    bool hasLoading = loadTextureFromFile("romfs:/menu/Loading.t3x", &loadingTex);
-    if (!hasLoading) hasLoading = loadTextureFromFile("romfs:/Loading.t3x", &loadingTex);
 
     // VBO for 2D UI screens
     float ui_vbo_data[] = {
@@ -162,7 +158,7 @@ int main() {
 
     static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f, currentFOV = 80.0f;
     
-    // 0 = Title (Removed), 1 = Loading, 2 = Playing
+    // 0 = Generation initialization frame, 1 = Generation frame, 2 = Playing
     static int gameState = 0; 
     static int loadingTimer = 0;
 
@@ -1266,30 +1262,7 @@ int main() {
         C3D_BufInfo* buf = C3D_GetBufInfo(); 
         BufInfo_Init(buf); 
         
-        if (gameState == 1) {
-            // Render 2D UI Quad
-            BufInfo_Add(buf, ui_vbo, 10 * sizeof(float), 3, 0x210);
-            
-            C3D_Mtx proj, view; 
-            Mtx_OrthoTilt(&proj, 0.0f, 400.0f, 240.0f, 0.0f, 0.0f, 1.0f, true);
-            Mtx_Identity(&view);
-            Mtx_Multiply(&view, &proj, &view);
-            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_proj, &view);
-            
-            bool showImage = (gameState == 1 && hasLoading);
-            
-            if (showImage) {
-                C3D_TexBind(0, &loadingTex);
-                C3D_TexEnv* env = C3D_GetTexEnv(0);
-                C3D_TexEnvInit(env);
-                C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0);
-                C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-                
-                C3D_DepthTest(false, GPU_ALWAYS, GPU_WRITE_ALL);
-                C3D_DrawArrays(GPU_TRIANGLE_STRIP, 0, 4);
-                C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-            }
-        } else if (gameState == 2) {
+        if (gameState == 2) {
             // Render 3D World
             BufInfo_Add(buf, vbo_main, sizeof(vertex), 3, 0x210);
             
@@ -1339,7 +1312,6 @@ int main() {
             }
             
             if (textured_size > 0) {
-                // CRASH FIX: Protect the atlasTex binding!
                 if (hasAtlas) C3D_TexBind(0, &atlasTex); 
                 C3D_TexEnv* env = C3D_GetTexEnv(0); 
                 C3D_TexEnvInit(env); 
@@ -1369,7 +1341,6 @@ int main() {
             }
             
             if (ent_tex_size > 0) {
-                // CRASH FIX: Protect the atlasTex binding for entities!
                 if (hasAtlas) C3D_TexBind(0, &atlasTex); 
                 C3D_TexEnv* env = C3D_GetTexEnv(0); 
                 C3D_TexEnvInit(env); 
@@ -1408,7 +1379,6 @@ int main() {
                 }
                 C3D_DrawArrays(GPU_TRIANGLES, 0, seek_size);
             }
-            // ----------------------
         }
 
         C3D_FrameEnd(0);
@@ -1446,7 +1416,6 @@ int main() {
     
     linearFree(ui_vbo);
     C3D_TexDelete(&atlasTex); 
-    if (hasLoading) C3D_TexDelete(&loadingTex); 
     if (hasSeekTex) C3D_TexDelete(&seekTex); 
     linearFree(vbo_main); 
     linearFree(vbo_seek);
