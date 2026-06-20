@@ -69,8 +69,8 @@ int main() {
         sPsst = loadWav(combine_const_char(Entity_Sounds , "Screech_Psst.wav"));
         sAttack = loadWav(combine_const_char(Entity_Sounds , "Screech_Attack.wav"));
         sCaught = loadWav(combine_const_char(Entity_Sounds , "Screech_Caught.wav"));
-        sDoor = loadWav(World_Sounds , "Door_Open.wav")); 
-        sLockedDoor = loadWav(World_Sounds , "Locked_Door.wav"));
+        sDoor = loadWav(combine_const_char(World_Sounds , "Door_Open.wav"));
+        sLockedDoor = loadWav(combine_const_char(World_Sounds , "Locked_Door.wav"));
         sDupeAttack = loadWav(combine_const_char(Entity_Sounds , "Dupe_Attack.wav"));
         sRushScream = loadWav(combine_const_char(Entity_Sounds , "Rush_Scream.wav"));
         sEyesAppear = loadWav(combine_const_char(Entity_Sounds , "Eyes_Appear.wav"));
@@ -78,7 +78,7 @@ int main() {
         sEyesGarble.looping = true; 
         sEyesAttack = loadWav(combine_const_char(Entity_Sounds , "Eyes_Attack.wav");
         sEyesHit = loadWav(combine_const_char(Entity_Sounds , "Eyes_Hit.wav"));
-        sSeekRise = loadWavcombine_const_char((Music , "Seek_Rise.wav"));
+        sSeekRise = loadWav(combine_const_char((Music , "Seek_Rise.wav"));
         sSeekChase = loadWav(combine_const_char(Music , "Seek_Chase.wav"));
         sSeekChase.looping = true; 
         sSeekEscaped = loadWav(combine_const_char(Music , "Seek_Escaped.wav"));
