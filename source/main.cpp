@@ -102,9 +102,6 @@ int main() {
     // 3D Model Loading
     MD2Model seekModel;
     bool hasSeekModel = seekModel.load(Models, "seek.md2");
-    if (!hasSeekModel) {
-        printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
-    }
 
     // World gen pre-allocation
     int currentChunk = 0;
@@ -1722,10 +1719,10 @@ int main() {
 
                 if (playerCurrentRoom == -1) { 
                     static float seekAnimTime = 0.0f;
-                    seekAnimTime += 0.2f; 
+                    seekAnimTime += 0.5f; 
                     if (seekModel.numFrames > 0) {
                         int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
-                        seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                        seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 2.0f, 3.14159f);
                     }
                 } else if (seekActive) {
                     static float seekRunAnimTime = 0.0f;

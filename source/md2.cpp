@@ -82,7 +82,7 @@ void MD2Model::draw(int frame, float x, float y, float z, float scale, float L, 
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    for (int i = 0; i < numTris * 3; i++) {
+    for (int i = 0; i < numTris * 10; i++) {
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
