@@ -1719,10 +1719,10 @@ int main() {
 
                 if (playerCurrentRoom == -1) { 
                     static float seekAnimTime = 0.0f;
-                    seekAnimTime += 0.5f; 
+                    seekAnimTime += 1.0f; 
                     if (seekModel.numFrames > 0) {
                         int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
-                        seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 2.0f, 3.14159f);
+                        seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                     }
                 } else if (seekActive) {
                     static float seekRunAnimTime = 0.0f;
