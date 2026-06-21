@@ -30,57 +30,30 @@ void rotateVertexRelative(float localX, float localZ, float centerX, float cente
 
 void addRBox(float lx, float ly, float lz, float lw, float lh, float ld, float r, float g, float b, bool col, int type, float L, float cx, float cz, Direction dir) {
     float minX, minZ, maxX, maxZ;
-    
-    if (dir == NORTH) { 
-        minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; 
-    }
-    else if (dir == EAST) { 
-        minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; 
-    }
-    else if (dir == SOUTH) { 
-        minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; 
-    }
-    else { 
-        minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; 
-    }
+    if (dir == NORTH) { minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; }
+    else if (dir == EAST) { minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; }
+    else if (dir == SOUTH) { minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; }
+    else { minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; }
     
     addBox(cx + minX, ly, cz + minZ, maxX - minX, lh, maxZ - minZ, r, g, b, false, 0, L);
 }
 
 void addRSurf(float lx, float ly, float lz, float lw, float lh, float ld, float u, float v, float uw, float vh, float tS, float r, float g, float b, float L, bool isWall, float cx, float cz, Direction dir) {
     float minX, minZ, maxX, maxZ;
-    
-    if (dir == NORTH) { 
-        minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; 
-    }
-    else if (dir == EAST) { 
-        minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; 
-    }
-    else if (dir == SOUTH) { 
-        minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; 
-    }
-    else { 
-        minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; 
-    }
+    if (dir == NORTH) { minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; }
+    else if (dir == EAST) { minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; }
+    else if (dir == SOUTH) { minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; }
+    else { minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; }
     
     addTiledSurface(cx + minX, ly, cz + minZ, maxX - minX, lh, maxZ - minZ, u, v, uw, vh, tS, r, g, b, L, isWall);
 }
 
 void addRCol(float lx, float ly, float lz, float lw, float lh, float ld, int type, float cx, float cz, Direction dir) {
     float minX, minZ, maxX, maxZ;
-    
-    if (dir == NORTH) { 
-        minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; 
-    }
-    else if (dir == EAST) { 
-        minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; 
-    }
-    else if (dir == SOUTH) { 
-        minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; 
-    }
-    else { 
-        minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; 
-    }
+    if (dir == NORTH) { minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; }
+    else if (dir == EAST) { minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; }
+    else if (dir == SOUTH) { minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; }
+    else { minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; }
     
     collisions.push_back({cx + minX, ly, cz + minZ, cx + maxX, ly + lh, cz + maxZ, type});
 }
@@ -331,16 +304,16 @@ void buildWorld(int cChunk, int pRm) {
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
     
-    int st = pRm; 
-    int en = pRm + 1; 
+    // FIX: Expand visibility range so the room we walk into is always fully rendered before we step inside
+    int st = pRm - 1; 
+    int en = pRm; 
     
     if (pRm == -1) { 
         st = -1; 
-        en = doorOpen[0] ? 1 : 0; 
+        en = doorOpen[0] ? 0 : -1; 
     } else { 
-        if (pRm > 0 && doorOpen[pRm]) st = pRm - 1; 
-        if (pRm == 0 && doorOpen[0]) st = -1; 
-        if (pRm + 1 < TOTAL_ROOMS && doorOpen[pRm + 1]) en = pRm + 2; 
+        if (st < -1) st = -1;
+        if (pRm + 1 < TOTAL_ROOMS && doorOpen[pRm + 1]) en = pRm + 1; 
     }
     
     if (pRm >= seekStartRoom - 1 && pRm <= seekStartRoom + 3) { 
@@ -351,56 +324,38 @@ void buildWorld(int cChunk, int pRm) {
     if (st < -1) st = -1; 
     if (en > TOTAL_ROOMS - 1) en = TOTAL_ROOMS - 1;
 
-    // Hardcoded Lobby Construction
+    // Hardcoded Lobby Construction - Perfectly aligned to Z=0.0f so Room 0 connects seamlessly!
     if (st <= -1) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
-        addTiledSurface(-2, 0, 5, 4, 0.01f, 4, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
-        addTiledSurface(-2, 2, 5, 4, 0.01f, 4, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
+        addTiledSurface(-5.0f, 0.0f, 10.0f, 10.0f, 0.01f, -10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
+        addTiledSurface(-5.0f, 2.0f, 10.0f, 10.0f, 0.01f, -10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
         
-        addBox(-2, 0, 9, 4, 2, 0.1f, 0.4f, 0.3f, 0.2f, true); 
-        addBox(-2, 0, 5, 0.1f, 2, 4, 0.4f, 0.3f, 0.2f, true); 
-        addBox(1.9f, 0, 5, 0.1f, 2, 4, 0.4f, 0.3f, 0.2f, true);   
-        addBox(1.8f, 0.6f, 6.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); 
-        addBox(1.75f, 0.7f, 6.55f, 0.05f, 0.1f, 0.1f, 0, 0.8f, 0, false, 0, 1.5f); 
+        // Back wall of lobby
+        addBox(-5.0f, 0.0f, 10.0f, 10.0f, 2.0f, 0.12f, 0.4f, 0.3f, 0.2f, true); 
         
-        addBox(-2.0f - elevatorDoorOffset, 0, 5.05f, 2, 2, 0.1f, 0.6f, 0.6f, 0.6f, true); 
-        addBox(0.0f + elevatorDoorOffset, 0, 5.05f, 2, 2, 0.1f, 0.6f, 0.6f, 0.6f, true);  
+        // Side walls of lobby
+        addBox(-5.0f, 0.0f, 10.0f, 0.12f, 2.0f, -10.0f, 0.4f, 0.3f, 0.2f, true); 
+        addBox(4.88f, 0.0f, 10.0f, 0.12f, 2.0f, -10.0f, 0.4f, 0.3f, 0.2f, true);   
+        
+        // Connect Lobby Exit to Room 0 at exactly Z=0.0f
+        addRWall(true, doorOpen[0], rooms[0].isLocked, -5.0f, 0.0f, 5.0f, NORTH, 1.0f);
+        
+        // Elevator Box
+        addBox(-2.0f - elevatorDoorOffset, 0.0f, 10.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); 
+        addBox(0.0f + elevatorDoorOffset, 0.0f, 10.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  
         
         if (elevatorDoorOffset < 0.05f) {
-            addBox(-0.02f, 0, 5.04f, 0.04f, 2, 0.12f, 0, 0, 0, false); 
+            addBox(-0.02f, 0.0f, 10.04f, 0.04f, 2.0f, 0.12f, 0, 0, 0, false); 
         }
         
         if (elevatorClosing) {
-            collisions.push_back({-2.0f, 0.0f, 4.8f, 2.0f, 2.0f, 5.1f, 0});
+            collisions.push_back({-2.0f, 0.0f, 9.8f, 2.0f, 2.0f, 10.1f, 0});
         }
-        
-        addTiledSurface(-6, 0, 5, 12, 0.01f, -15, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
-        addTiledSurface(-6, 1.8f, 5, 12, 0.01f, -15, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
-        
-        addBox(-6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true); 
-        addBox(6, 0, 5, 0.1f, 1.8f, -15, 0.3f, 0.3f, 0.3f, true);  
-        
-        addBox(-6, 0, -10, 3, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
-        addBox(3, 0, -10, 3, 1.8f, 0.1f, 0.25f, 0.2f, 0.15f, true); 
-        addBox(-6, 0, 4.9f, 4, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
-        addBox(2, 0, 4.9f, 4, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  
-        addBox(-6, 0, -7, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
-        addBox(-3.3f, 0, -7.8f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
-        
-        addBox(-2.5f, 0.1f, -8.6f, 1, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-1.55f, 0.15f, -8.6f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-1.55f, 0.15f, -9.95f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
-        addBox(-2.5f, 0.6f, -8.6f, 1, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, true); 
         
         if (!lobbyKeyPickedUp) { 
-            addBox(-4.8f, 0.9f, -9.9f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
-            addBox(-4.72f, 0.75f, -9.86f, 0.035f, 0.1f, 0.035f, 1.0f, 0.84f, 0.0f, false); 
+            addBox(-4.8f, 0.9f, 0.1f, 0.2f, 0.2f, 0.05f, 0.3f, 0.2f, 0.1f, false); 
+            addBox(-4.72f, 0.75f, 0.14f, 0.035f, 0.1f, 0.035f, 1.0f, 0.84f, 0.0f, false); 
         }
-
-        // Properly attach the starting door (Room 0) using the new orientation logic
-        addRWall(true, doorOpen[0], rooms[0].isLocked, 5.0f, 0.0f, -15.0f, NORTH, 1.0f);
     }
 
     if (st < 0) st = 0; 
@@ -414,15 +369,17 @@ void buildWorld(int cChunk, int pRm) {
         float L = rooms[i].lightLevel;
         float wL = (i > 0) ? rooms[i-1].lightLevel : 1.0f; 
 
-        bool isInteriorVisible = true;
-        if (!seekActive) { 
-            if (i > pRm && i >= 0 && !doorOpen[i] && i != seekStartRoom + 1 && i != seekStartRoom + 2) isInteriorVisible = false; 
-            if (i < pRm && i >= 0 && i + 1 < TOTAL_ROOMS && !doorOpen[i + 1] && (i + 1) != seekStartRoom + 1 && (i + 1) != seekStartRoom + 2) isInteriorVisible = false; 
+        if (seekState == 1) { 
+            globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f; 
+        } else if (rooms[i].hasEyes) { 
+            globalTintR=0.8f; globalTintG=0.3f; globalTintB=1.0f; 
+        } else { 
+            globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
         }
-        
+
         // --- CUSTOM LIBRARY RENDERING ---
         if (i == LIBRARY_ROOM) {
-            float z = cz + 5.0f; // Because it was originally centered at z=-10 - (i*10), which equals centerZ+5
+            float z = cz + 5.0f; 
             float cL = rooms[i].lightLevel; 
             globalTintR = 0.9f; globalTintG = 0.8f; globalTintB = 0.6f; 
             
@@ -438,165 +395,154 @@ void buildWorld(int cChunk, int pRm) {
                 addBox(0.9f, 0.0f, z-0.9f, 0.1f, 1.8f, 1.0f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
             }
             
-            if (isInteriorVisible) {
-                addTiledSurface(-6.0f, 0.0f, z, 12.0f, 0.01f, -20.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, cL, false); 
-                addTiledSurface(-6.0f, 3.6f, z, 12.0f, 0.01f, -20.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, cL, false); 
-                
-                addTiledSurface(-6.1f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU, wallV, wallUW, wallVH, wallScale, cR, cG, cB, cL, true); 
-                addTiledSurface(6.0f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU, wallV, wallUW, wallVH, wallScale, cR, cG, cB, cL, true);  
-                
-                addTiledSurface(-6.0f, 0.0f, z-20.0f, 12.0f, 3.6f, -0.1f, wallU, wallV, wallUW, wallVH, wallScale, cR, cG, cB, cL, true);
-                
-                addBox(-0.6f, 0.0f, z-19.9f, 1.2f, 1.6f, 0.1f, 0.15f, 0.08f, 0.04f, true, 0, cL); 
-                addBox(-0.1f, 0.7f, z-19.8f, 0.2f, 0.3f, 0.1f, 0.8f, 0.8f, 0.8f, false, 0, cL); 
-                
-                addBox(-6.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
-                addBox(3.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL);  
-                addBox(-3.0f, 1.8f, z-15.0f, 6.0f, 0.1f, -3.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
+            addTiledSurface(-6.0f, 0.0f, z, 12.0f, 0.01f, -20.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, cL, false); 
+            addTiledSurface(-6.0f, 3.6f, z, 12.0f, 0.01f, -20.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, cL, false); 
+            
+            addTiledSurface(-6.1f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU, wallV, wallUW, wallVH, wallScale, cR, cG, cB, cL, true); 
+            addTiledSurface(6.0f, 0.0f, z, 0.1f, 3.6f, -20.0f, wallU, wallV, wallUW, wallVH, wallScale, cR, cG, cB, cL, true);  
+            
+            addTiledSurface(-6.0f, 0.0f, z-20.0f, 12.0f, 3.6f, -0.1f, wallU, wallV, wallUW, wallVH, wallScale, cR, cG, cB, cL, true);
+            
+            addBox(-0.6f, 0.0f, z-19.9f, 1.2f, 1.6f, 0.1f, 0.15f, 0.08f, 0.04f, true, 0, cL); 
+            addBox(-0.1f, 0.7f, z-19.8f, 0.2f, 0.3f, 0.1f, 0.8f, 0.8f, 0.8f, false, 0, cL); 
+            
+            addBox(-6.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
+            addBox(3.0f, 1.8f, z-2.0f, 3.0f, 0.1f, -16.0f, 0.25f, 0.15f, 0.1f, true, 0, cL);  
+            addBox(-3.0f, 1.8f, z-15.0f, 6.0f, 0.1f, -3.0f, 0.25f, 0.15f, 0.1f, true, 0, cL); 
 
-                addBox(-3.1f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL); 
-                addBox(3.0f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL);
-                addBox(-3.0f, 1.9f, z-14.9f, 6.0f, 0.6f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, cL);
-                
-                for(int stt = 0; stt < 12; stt++) { 
-                    float sY = stt * 0.15f; 
-                    float sZ = z - 2.0f - (stt * 0.25f);
-                    addBox(-5.5f, 0.0f, sZ, 2.0f, sY+0.15f, -0.25f, 0.2f, 0.12f, 0.08f, true, 0, cL); 
-                    addBox(3.5f, 0.0f, sZ, 2.0f, sY+0.15f, -0.25f, 0.2f, 0.12f, 0.08f, true, 0, cL); 
-                }
-                
-                addBox(-1.5f, 0.0f, z-7.0f, 3.0f, 0.6f, -4.0f, 0.3f, 0.18f, 0.1f, true, 0, cL); 
-                addBox(-1.6f, 0.6f, z-6.9f, 3.2f, 0.1f, -4.2f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
-                
-                buildRLamp(-1.2f, -7.5f, cL, cx, cz, dir); 
-                buildRLamp(1.2f, -7.5f, cL, cx, cz, dir);
+            addBox(-3.1f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL); 
+            addBox(3.0f, 1.9f, z-2.0f, 0.1f, 0.6f, -13.0f, 0.15f, 0.08f, 0.05f, true, 0, cL);
+            addBox(-3.0f, 1.9f, z-14.9f, 6.0f, 0.6f, -0.1f, 0.15f, 0.08f, 0.05f, true, 0, cL);
+            
+            for(int stt = 0; stt < 12; stt++) { 
+                float sY = stt * 0.15f; 
+                float sZ = z - 2.0f - (stt * 0.25f);
+                addBox(-5.5f, 0.0f, sZ, 2.0f, sY+0.15f, -0.25f, 0.2f, 0.12f, 0.08f, true, 0, cL); 
+                addBox(3.5f, 0.0f, sZ, 2.0f, sY+0.15f, -0.25f, 0.2f, 0.12f, 0.08f, true, 0, cL); 
             }
+            
+            addBox(-1.5f, 0.0f, z-7.0f, 3.0f, 0.6f, -4.0f, 0.3f, 0.18f, 0.1f, true, 0, cL); 
+            addBox(-1.6f, 0.6f, z-6.9f, 3.2f, 0.1f, -4.2f, 0.2f, 0.1f, 0.05f, true, 0, cL); 
+            
+            buildRLamp(-1.2f, -7.5f, cL, cx, cz, dir); 
+            buildRLamp(1.2f, -7.5f, cL, cx, cz, dir);
             
             globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f; 
             continue; 
         }
 
         if (i == LIBRARY_ROOM + 1) continue;
+
+        // Render basic floor and ceiling layout for Standard Room
+        addRSurf(-5.0f, 0.0f, -5.0f, 10.0f, 0.01f, 10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, L, false, cx, cz, dir);
+        addRSurf(-5.0f, 1.8f, -5.0f, 10.0f, 0.01f, 10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, L, false, cx, cz, dir);
         
-        if (seekState == 1) { 
-            globalTintR=1.0f; globalTintG=0.2f; globalTintB=0.2f; 
-        } else if (rooms[i].hasEyes) { 
-            globalTintR=0.8f; globalTintG=0.3f; globalTintB=1.0f; 
-        } else { 
-            globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
-        }
+        bool nextOpen = (i + 1 < TOTAL_ROOMS) ? doorOpen[i+1] : false;
+        bool nextLock = (i + 1 < TOTAL_ROOMS) ? rooms[i+1].isLocked : true;
 
-        if (isInteriorVisible) {
-            // Render basic floor and ceiling layout
-            addRSurf(-5.0f, 0.0f, -5.0f, 10.0f, 0.01f, 10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, L, false, cx, cz, dir);
-            addRSurf(-5.0f, 1.8f, -5.0f, 10.0f, 0.01f, 10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, L, false, cx, cz, dir);
+        // --- WEAVING WALL RENDERING ---
+        if (rooms[i].isDupeRoom) {
+            // Dupe rooms generate doors on all 3 remaining walls
+            addRWall(true, nextOpen && rooms[i].correctDupePos == 0, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
+            addRWall(true, nextOpen && rooms[i].correctDupePos == 1, false, -5.0f, cx, cz, dir, wL); 
+            addRWall(true, nextOpen && rooms[i].correctDupePos == 2, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
+        } else {
+            bool exitLeft = (rooms[i].chosenExitSide == 0);
+            bool exitStraight = (rooms[i].chosenExitSide == 1);
+            bool exitRight = (rooms[i].chosenExitSide == 2);
             
-            bool nextOpen = (i + 1 < TOTAL_ROOMS) ? doorOpen[i+1] : false;
-            bool nextLock = (i + 1 < TOTAL_ROOMS) ? rooms[i+1].isLocked : true;
-
-            // --- WEAVING WALL RENDERING ---
-            if (rooms[i].isDupeRoom) {
-                // Dupe rooms generate doors on all 3 remaining walls
-                addRWall(true, nextOpen && rooms[i].correctDupePos == 0, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
-                addRWall(true, nextOpen && rooms[i].correctDupePos == 1, false, -5.0f, cx, cz, dir, wL); 
-                addRWall(true, nextOpen && rooms[i].correctDupePos == 2, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
+            // Construct Left Wall or Side-Room
+            if (rooms[i].hasLeftRoom) { 
+                buildSideRoomInterior(cx, cz, (Direction)((dir + 3) % 4), rooms[i].leftDoorOffset, L, rooms[i].leftRoomSlotTypeL, rooms[i].leftRoomSlotItemL, rooms[i].animLL, rooms[i].leftRoomSlotTypeR, rooms[i].leftRoomSlotItemR, rooms[i].animLR); 
+                addRWall(true, rooms[i].leftDoorOpen, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
             } else {
-                bool exitLeft = (rooms[i].chosenExitSide == 0);
-                bool exitStraight = (rooms[i].chosenExitSide == 1);
-                bool exitRight = (rooms[i].chosenExitSide == 2);
-                
-                // Construct Left Wall or Side-Room
-                if (rooms[i].hasLeftRoom) { 
-                    buildSideRoomInterior(cx, cz, (Direction)((dir + 3) % 4), rooms[i].leftDoorOffset, L, rooms[i].leftRoomSlotTypeL, rooms[i].leftRoomSlotItemL, rooms[i].animLL, rooms[i].leftRoomSlotTypeR, rooms[i].leftRoomSlotItemR, rooms[i].animLR); 
-                    addRWall(true, rooms[i].leftDoorOpen, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
-                } else {
-                    addRWall(exitLeft, nextOpen, nextLock && exitLeft, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL);
-                }
-                
-                // Construct Straight Wall or Side-Room
-                if (rooms[i].hasFarRoom) { 
-                    buildSideRoomInterior(cx, cz, dir, rooms[i].farDoorOffset, L, rooms[i].farRoomSlotTypeL, rooms[i].farRoomSlotItemL, rooms[i].animFL, rooms[i].farRoomSlotTypeR, rooms[i].farRoomSlotItemR, rooms[i].animFR); 
-                    addRWall(true, rooms[i].farDoorOpen, false, -5.0f, cx, cz, dir, wL); 
-                } else {
-                    addRWall(exitStraight, nextOpen, nextLock && exitStraight, -5.0f, cx, cz, dir, wL);
-                }
-                
-                // Construct Right Wall or Side-Room
-                if (rooms[i].hasRightRoom) { 
-                    buildSideRoomInterior(cx, cz, (Direction)((dir + 1) % 4), rooms[i].rightDoorOffset, L, rooms[i].rightRoomSlotTypeL, rooms[i].rightRoomSlotItemL, rooms[i].animRL, rooms[i].rightRoomSlotTypeR, rooms[i].rightRoomSlotItemR, rooms[i].animRR); 
-                    addRWall(true, rooms[i].rightDoorOpen, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
-                } else {
-                    addRWall(exitRight, nextOpen, nextLock && exitRight, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL);
-                }
+                addRWall(exitLeft, nextOpen, nextLock && exitLeft, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL);
             }
             
-            // Render internal furniture
-            if (!rooms[i].isDupeRoom && !rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
-                for (int s = 0; s < 3; s++) { 
-                    float lz = -2.5f - (s * 2.5f); 
-                    int t = rooms[i].slotType[s]; 
-                    
-                    if (t == 1) buildCabinet(lz, true, L, 0, rooms[i].slotItem[s], cx, cz, dir); 
-                    else if (t == 2) buildCabinet(lz, false, L, 0, rooms[i].slotItem[s], cx, cz, dir); 
-                    else if (t == 5) buildDresser(lz, true, rooms[i].animMain[s], rooms[i].slotItem[s], L, 0, true, cx, cz, dir); 
-                    else if (t == 6) buildDresser(lz, false, rooms[i].animMain[s], rooms[i].slotItem[s], L, 0, true, cx, cz, dir); 
-                }
+            // Construct Straight Wall or Side-Room
+            if (rooms[i].hasFarRoom) { 
+                buildSideRoomInterior(cx, cz, dir, rooms[i].farDoorOffset, L, rooms[i].farRoomSlotTypeL, rooms[i].farRoomSlotItemL, rooms[i].animFL, rooms[i].farRoomSlotTypeR, rooms[i].farRoomSlotItemR, rooms[i].animFR); 
+                addRWall(true, rooms[i].farDoorOpen, false, -5.0f, cx, cz, dir, wL); 
+            } else {
+                addRWall(exitStraight, nextOpen, nextLock && exitStraight, -5.0f, cx, cz, dir, wL);
             }
             
-            // --- SEEK RENDERING EXTRAS ---
-            if(i == seekStartRoom + 9 && rooms[i].isLocked) {
-                addRBox(-3.0f, 0.0f, -4.8f, 6.0f, 1.8f, 0.1f, 0.4f, 0.7f, 1.0f, true, 0, 1.5f, cx, cz, dir);
+            // Construct Right Wall or Side-Room
+            if (rooms[i].hasRightRoom) { 
+                buildSideRoomInterior(cx, cz, (Direction)((dir + 1) % 4), rooms[i].rightDoorOffset, L, rooms[i].rightRoomSlotTypeL, rooms[i].rightRoomSlotItemL, rooms[i].animRL, rooms[i].rightRoomSlotTypeR, rooms[i].rightRoomSlotItemR, rooms[i].animRR); 
+                addRWall(true, rooms[i].rightDoorOpen, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
+            } else {
+                addRWall(exitRight, nextOpen, nextLock && exitRight, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL);
             }
-            
-            if (rooms[i].isSeekChase) { 
-                srand(i * 777); 
-                int oT = rand() % 3; 
-                float oZ = -5.0f; 
-                
-                if (oT == 0) {
-                    addRBox(-3, 0.7f, oZ, 6, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
-                } else if (oT == 1) {
-                    addRBox(-3, 0.0f, oZ, 3, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
-                    addRBox(0, 0.7f, oZ, 3, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
-                } else {
-                    addRBox(0, 0.0f, oZ, 3, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
-                    addRBox(-3, 0.7f, oZ, 3, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
-                } 
-                srand(time(NULL)); 
-            } 
-            else if (rooms[i].isSeekFinale) { 
-                addRBox(-2.95f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
-                addRBox(2.85f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
-                addRBox(-3, 0.0f, -2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
-                
-                rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = cz - 2.0f; rooms[i].pSide[0] = 1; 
-                addRBox(2, 0.8f, -2.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
-                
-                rooms[i].pW[1] = 1.8f; rooms[i].pZ[1] = cz - 3.5f; rooms[i].pSide[1] = 0; 
-                addRBox(1.4f, 0.0f, -3.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
-                addRBox(1.6f, 0.3f, -3.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
-                addRBox(-0.5f, 0.0f, -5.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
-                
-                rooms[i].pW[2] = -2.6f; rooms[i].pZ[2] = cz - 5.0f; rooms[i].pSide[2] = 1; 
-                addRBox(-3, 0.8f, -5.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
-                
-                rooms[i].pW[3] = -1.8f; rooms[i].pZ[3] = cz - 6.5f; rooms[i].pSide[3] = 0; 
-                addRBox(-2.2f, 0.0f, -6.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
-                addRBox(-2.0f, 0.3f, -6.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
-                addRBox(-3, 0.0f, -8.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
-                
-                rooms[i].pW[4] = 2.6f; rooms[i].pZ[4] = cz - 8.0f; rooms[i].pSide[4] = 1; 
-                addRBox(2, 0.8f, -8.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
-                
-                rooms[i].pW[5] = 0.8f; rooms[i].pZ[5] = cz - 9.0f; rooms[i].pSide[5] = 0; 
-                addRBox(0.4f, 0.0f, -9.4f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
-                addRBox(0.6f, 0.3f, -9.2f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
-            } 
-            else if (rooms[i].isSeekHallway) { 
-                addRBox(-2.95f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
-                addRBox(2.85f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
-            } 
         }
+        
+        // Render internal furniture
+        if (!rooms[i].isDupeRoom && !rooms[i].isSeekChase && !rooms[i].isSeekHallway && !rooms[i].isSeekFinale) {
+            for (int s = 0; s < 3; s++) { 
+                float lz = -2.5f - (s * 2.5f); 
+                int t = rooms[i].slotType[s]; 
+                
+                if (t == 1) buildCabinet(lz, true, L, 0, rooms[i].slotItem[s], cx, cz, dir); 
+                else if (t == 2) buildCabinet(lz, false, L, 0, rooms[i].slotItem[s], cx, cz, dir); 
+                else if (t == 5) buildDresser(lz, true, rooms[i].animMain[s], rooms[i].slotItem[s], L, 0, true, cx, cz, dir); 
+                else if (t == 6) buildDresser(lz, false, rooms[i].animMain[s], rooms[i].slotItem[s], L, 0, true, cx, cz, dir); 
+            }
+        }
+        
+        // --- SEEK RENDERING EXTRAS ---
+        if(i == seekStartRoom + 9 && rooms[i].isLocked) {
+            addRBox(-3.0f, 0.0f, -4.8f, 6.0f, 1.8f, 0.1f, 0.4f, 0.7f, 1.0f, true, 0, 1.5f, cx, cz, dir);
+        }
+        
+        if (rooms[i].isSeekChase) { 
+            srand(i * 777); 
+            int oT = rand() % 3; 
+            float oZ = -5.0f; 
+            
+            if (oT == 0) {
+                addRBox(-3, 0.7f, oZ, 6, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
+            } else if (oT == 1) {
+                addRBox(-3, 0.0f, oZ, 3, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
+                addRBox(0, 0.7f, oZ, 3, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
+            } else {
+                addRBox(0, 0.0f, oZ, 3, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
+                addRBox(-3, 0.7f, oZ, 3, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
+            } 
+            srand(time(NULL)); 
+        } 
+        else if (rooms[i].isSeekFinale) { 
+            addRBox(-2.95f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
+            addRBox(2.85f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
+            addRBox(-3, 0.0f, -2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
+            
+            rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = cz - 2.0f; rooms[i].pSide[0] = 1; 
+            addRBox(2, 0.8f, -2.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
+            
+            rooms[i].pW[1] = 1.8f; rooms[i].pZ[1] = cz - 3.5f; rooms[i].pSide[1] = 0; 
+            addRBox(1.4f, 0.0f, -3.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
+            addRBox(1.6f, 0.3f, -3.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
+            addRBox(-0.5f, 0.0f, -5.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
+            
+            rooms[i].pW[2] = -2.6f; rooms[i].pZ[2] = cz - 5.0f; rooms[i].pSide[2] = 1; 
+            addRBox(-3, 0.8f, -5.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
+            
+            rooms[i].pW[3] = -1.8f; rooms[i].pZ[3] = cz - 6.5f; rooms[i].pSide[3] = 0; 
+            addRBox(-2.2f, 0.0f, -6.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
+            addRBox(-2.0f, 0.3f, -6.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
+            addRBox(-3, 0.0f, -8.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
+            
+            rooms[i].pW[4] = 2.6f; rooms[i].pZ[4] = cz - 8.0f; rooms[i].pSide[4] = 1; 
+            addRBox(2, 0.8f, -8.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
+            
+            rooms[i].pW[5] = 0.8f; rooms[i].pZ[5] = cz - 9.0f; rooms[i].pSide[5] = 0; 
+            addRBox(0.4f, 0.0f, -9.4f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
+            addRBox(0.6f, 0.3f, -9.2f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
+        } 
+        else if (rooms[i].isSeekHallway) { 
+            addRBox(-2.95f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
+            addRBox(2.85f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
+        } 
+        
         globalTintR=1.0f; globalTintG=1.0f; globalTintB=1.0f; 
     } 
 }
@@ -607,13 +553,13 @@ void generateRooms() {
     
     // PERFECT LOBBY COORDINATES
     rooms[0].centerX = 0.0f; 
-    rooms[0].centerZ = -15.0f; 
+    rooms[0].centerZ = -5.0f; 
     rooms[0].orientation = NORTH; 
     rooms[0].chosenExitSide = 1;
     rooms[0].minX = -5.0f; 
     rooms[0].maxX = 5.0f; 
-    rooms[0].minZ = -20.0f; 
-    rooms[0].maxZ = -10.0f;
+    rooms[0].minZ = -10.0f; 
+    rooms[0].maxZ = 0.0f;
     rooms[0].isLocked = true; 
     rooms[0].isDupeRoom = false; 
     rooms[0].doorPos = 1;
