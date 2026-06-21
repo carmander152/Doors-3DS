@@ -29,33 +29,54 @@ void rotateVertexRelative(float localX, float localZ, float centerX, float cente
 }
 
 void addRBox(float lx, float ly, float lz, float lw, float lh, float ld, float r, float g, float b, bool col, int type, float L, float cx, float cz, Direction dir) {
-    float minX, minZ, maxX, maxZ;
-    if (dir == NORTH) { minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; }
-    else if (dir == EAST) { minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; }
-    else if (dir == SOUTH) { minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; }
-    else { minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; }
+    float rx1, rz1, rx2, rz2;
+    rotateVertexRelative(lx, lz, cx, cz, dir, rx1, rz1);
+    rotateVertexRelative(lx + lw, lz + ld, cx, cz, dir, rx2, rz2);
     
-    addBox(cx + minX, ly, cz + minZ, maxX - minX, lh, maxZ - minZ, r, g, b, false, 0, L);
+    float outX = fminf(rx1, rx2);
+    float outW = fmaxf(rx1, rx2) - outX;
+    float outZ = fminf(rz1, rz2);
+    float outD = fmaxf(rz1, rz2) - outZ;
+
+    // PREVENT CULLING BUG: Preserve original negative dimension signs based on rotation
+    if ((dir == NORTH || dir == SOUTH) && lw < 0) { outX += outW; outW = -outW; }
+    if ((dir == NORTH || dir == SOUTH) && ld < 0) { outZ += outD; outD = -outD; }
+    if ((dir == EAST || dir == WEST) && ld < 0) { outX += outW; outW = -outW; }
+    if ((dir == EAST || dir == WEST) && lw < 0) { outZ += outD; outD = -outD; }
+    
+    addBox(outX, ly, outZ, outW, lh, outD, r, g, b, false, 0, L);
 }
 
 void addRSurf(float lx, float ly, float lz, float lw, float lh, float ld, float u, float v, float uw, float vh, float tS, float r, float g, float b, float L, bool isWall, float cx, float cz, Direction dir) {
-    float minX, minZ, maxX, maxZ;
-    if (dir == NORTH) { minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; }
-    else if (dir == EAST) { minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; }
-    else if (dir == SOUTH) { minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; }
-    else { minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; }
+    float rx1, rz1, rx2, rz2;
+    rotateVertexRelative(lx, lz, cx, cz, dir, rx1, rz1);
+    rotateVertexRelative(lx + lw, lz + ld, cx, cz, dir, rx2, rz2);
     
-    addTiledSurface(cx + minX, ly, cz + minZ, maxX - minX, lh, maxZ - minZ, u, v, uw, vh, tS, r, g, b, L, isWall);
+    float outX = fminf(rx1, rx2);
+    float outW = fmaxf(rx1, rx2) - outX;
+    float outZ = fminf(rz1, rz2);
+    float outD = fmaxf(rz1, rz2) - outZ;
+
+    // PREVENT CULLING BUG: Preserve original negative dimension signs based on rotation
+    if ((dir == NORTH || dir == SOUTH) && lw < 0) { outX += outW; outW = -outW; }
+    if ((dir == NORTH || dir == SOUTH) && ld < 0) { outZ += outD; outD = -outD; }
+    if ((dir == EAST || dir == WEST) && ld < 0) { outX += outW; outW = -outW; }
+    if ((dir == EAST || dir == WEST) && lw < 0) { outZ += outD; outD = -outD; }
+    
+    addTiledSurface(outX, ly, outZ, outW, lh, outD, u, v, uw, vh, tS, r, g, b, L, isWall);
 }
 
 void addRCol(float lx, float ly, float lz, float lw, float lh, float ld, int type, float cx, float cz, Direction dir) {
-    float minX, minZ, maxX, maxZ;
-    if (dir == NORTH) { minX = lx; maxX = lx + lw; minZ = lz; maxZ = lz + ld; }
-    else if (dir == EAST) { minX = -lz - ld; maxX = -lz; minZ = lx; maxZ = lx + lw; }
-    else if (dir == SOUTH) { minX = -lx - lw; maxX = -lx; minZ = -lz - ld; maxZ = -lz; }
-    else { minX = lz; maxX = lz + ld; minZ = -lx - lw; maxZ = -lx; }
+    float rx1, rz1, rx2, rz2;
+    rotateVertexRelative(lx, lz, cx, cz, dir, rx1, rz1);
+    rotateVertexRelative(lx + lw, lz + ld, cx, cz, dir, rx2, rz2);
     
-    collisions.push_back({cx + minX, ly, cz + minZ, cx + maxX, ly + lh, cz + maxZ, type});
+    float minX = fminf(rx1, rx2);
+    float maxX = fmaxf(rx1, rx2);
+    float minZ = fminf(rz1, rz2);
+    float maxZ = fmaxf(rz1, rz2);
+    
+    collisions.push_back({minX, ly, minZ, maxX, ly + lh, maxZ, type});
 }
 
 // --- GENERATORS ---
@@ -206,18 +227,14 @@ void buildSideRoomInterior(float cx, float cz, Direction dir, float doorOffset, 
     for (int s = 0; s < 3; s++) {
         float lz = -5.9f - (s * 1.6f);
         
-        int tL = typeL[s]; 
-        int iL = itemL[s]; 
-        float aL = animL[s];
+        int tL = typeL[s]; int iL = itemL[s]; float aL = animL[s];
         
         if (tL == 1) buildCabinet(lz, true, L, doorOffset + 2.0f, iL, cx, cz, dir); 
         else if (tL == 3) buildBed(lz, true, iL, L, doorOffset + 2.0f, cx, cz, dir);
         else if (tL == 5) buildDresser(lz, true, aL, iL, L, doorOffset + 2.0f, true, cx, cz, dir);
         else if (tL == 7 || tL == 8) buildChest(doorOffset - 2.4f, lz, aL, L, cx, cz, dir);
         
-        int tR = typeR[s]; 
-        int iR = itemR[s]; 
-        float aR = animR[s];
+        int tR = typeR[s]; int iR = itemR[s]; float aR = animR[s];
         
         if (tR == 2) buildCabinet(lz, false, L, doorOffset - 2.0f, iR, cx, cz, dir);
         else if (tR == 4) buildBed(lz, false, iR, L, doorOffset - 2.0f, cx, cz, dir);
@@ -299,7 +316,6 @@ void buildWorld(int cChunk, int pRm) {
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
     
-    // Render the room before you, the room you are in, and the room after you.
     int st = pRm - 1; 
     int en = pRm + 1; 
     
@@ -396,7 +412,6 @@ void buildWorld(int cChunk, int pRm) {
 
         // --- CUSTOM LIBRARY RENDERING ---
         if (i == LIBRARY_ROOM) {
-            // Offset logic for the massive library layout
             float z = cz + 5.0f; 
             float cL = rooms[i].lightLevel; 
             globalTintR = 0.9f; globalTintG = 0.8f; globalTintB = 0.6f; 
