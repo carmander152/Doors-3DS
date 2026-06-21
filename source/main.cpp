@@ -20,7 +20,7 @@
 #define MAX_SEEK_VERTS 5000
 
 std::vector<vertex> seek_mesh;
-float seekX = 0.0f; // Track his full 3D position
+float seekX = 0.0f; 
 
 int main() {
     // System init
@@ -197,6 +197,7 @@ int main() {
                 elevatorTimer = 796; elevatorDoorsOpen = false; elevatorClosing = false; 
                 elevatorDoorOffset = 0; elevatorJamFinished = false; 
                 
+                // Set to Z=7.5 so the player spawns correctly facing Z=0 inside the Lobby
                 camX = 0; camZ = 7.5f; camYaw = 0; camPitch = 0; 
                 currentChunk = 0; playerCurrentRoom = -1; lastRoomForDarkCheck = -1; 
                 
@@ -288,14 +289,20 @@ int main() {
             
             // --- NEW SPATIAL ROOM TRACKING ---
             int detectedRoom = -1;
-            for (int i = 0; i < TOTAL_ROOMS; i++) {
-                if (camX >= rooms[i].minX && camX <= rooms[i].maxX &&
-                    camZ >= rooms[i].minZ && camZ <= rooms[i].maxZ) {
-                    detectedRoom = i;
-                    break;
+            
+            // Explicitly check Lobby bounds first since it lives behind Z=0 now
+            if (camX >= -5.0f && camX <= 5.0f && camZ >= 0.0f && camZ <= 10.0f) {
+                detectedRoom = -1;
+            } else {
+                for (int i = 0; i < TOTAL_ROOMS; i++) {
+                    if (camX >= rooms[i].minX && camX <= rooms[i].maxX &&
+                        camZ >= rooms[i].minZ && camZ <= rooms[i].maxZ) {
+                        detectedRoom = i;
+                        break;
+                    }
                 }
             }
-            playerCurrentRoom = (detectedRoom != -1) ? detectedRoom : -1;
+            playerCurrentRoom = detectedRoom;
             
             bool isGlitch = false; 
             int tDR = -1; 
@@ -363,6 +370,7 @@ int main() {
                 elevatorDoorOffset += 0.06f;
                 needsVBOUpdate = true;
             } 
+            // Trigger door close as soon as they step forward through Z=2.0f
             if (elevatorDoorsOpen && !elevatorClosing && camZ < 2.0f) {
                 inElevator = false;
                 elevatorClosing = true;
@@ -488,11 +496,15 @@ int main() {
                                 printf("                            \x1b[K\n\n");
                             }
                         } else {
-                            float eX, eZ, lX = 0.0f, lZ = -5.0f;
-                            if (rooms[playerCurrentRoom].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
-                            if (rooms[playerCurrentRoom].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
-                            
-                            rotateVertexRelative(lX, lZ, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, rooms[playerCurrentRoom].orientation, eX, eZ);
+                            float eX, eZ;
+                            if (playerCurrentRoom == -1) {
+                                eX = 0.0f; eZ = 0.0f;
+                            } else {
+                                float lX = 0.0f, lZ = -5.0f;
+                                if (rooms[playerCurrentRoom].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
+                                if (rooms[playerCurrentRoom].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                                rotateVertexRelative(lX, lZ, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, rooms[playerCurrentRoom].orientation, eX, eZ);
+                            }
                             
                             if (fabsf(camX - eX) < 3.0f && fabsf(camZ - eZ) < 3.0f) {
                                 printf(" >> PLAQUE READS: %03d <<  \x1b[K\n\n", dN); 
@@ -688,7 +700,7 @@ int main() {
                     seekTimer++; 
                     if (seekTimer >= 90 && seekTimer < 115) {
                         if (seekSpeed < 0.24f) seekSpeed += 0.01f;
-                        seekZ -= seekSpeed; // Rise animation sequence assumes direct hallway initially
+                        seekZ -= seekSpeed; 
                     } 
                     if (seekTimer >= 115) {
                         seekState = 2; 
@@ -704,13 +716,11 @@ int main() {
                 } else if (seekState == 2) { 
                     seekSpeed = seekMaxSpeed; 
                     
-                    // --- SEEK PATHFINDING UPDATE ---
                     static int seekTargetRoom = seekStartRoom;
                     float dx = rooms[seekTargetRoom].centerX - seekX;
                     float dz = rooms[seekTargetRoom].centerZ - seekZ;
                     float dist = sqrtf(dx * dx + dz * dz);
                     
-                    // Proceed to next node if reached
                     if (dist < 1.5f && seekTargetRoom < TOTAL_ROOMS - 1) {
                         seekTargetRoom++;
                     }
@@ -736,7 +746,6 @@ int main() {
                         messageTimer = 60;
                         if (audio_ok) ndspChnWaveBufClear(7);
                     } 
-                    // -------------------------------
                     
                     if (playerCurrentRoom >= 0 && rooms[playerCurrentRoom].isSeekFinale) {
                         for(int h = 0; h < 6; h++) {
@@ -1357,7 +1366,7 @@ int main() {
                                 }
                                 playerHealth -= 34; 
                                 flashRedFrames = 8; 
-                                camX -= (dX[tD] - rooms[nI].centerX) * 0.15f; // Push away from wall
+                                camX -= (dX[tD] - rooms[nI].centerX) * 0.15f; 
                                 camZ -= (dZ[tD] - rooms[nI].centerZ) * 0.15f;
                                 if (playerHealth <= 0) isDead = true; 
                             } 
@@ -1365,7 +1374,6 @@ int main() {
                         } 
                     } 
                 }
-                // ------------------------------------
                 
                 // Loot interact
                 if ((kDown & KEY_A) || (kDown & KEY_X && hideState == NOT_HIDING)) {
@@ -1507,7 +1515,6 @@ int main() {
                         return false; 
                     };
                     
-                    // Elevator exit
                     if (inElevator && !elevatorDoorsOpen && camX > 0 && camZ > 5.0f && camZ < 8.0f) { 
                         elevatorJamFinished = true; 
                         elevatorDoorsOpen = true; 
@@ -1573,7 +1580,7 @@ int main() {
                     }
                     
                     // Lobby key pickup
-                    if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && camX < -3.5f && camZ < -8.5f) {
+                    if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && camX >= -5.0f && camX <= 5.0f && camZ >= 0.0f && camZ <= 10.0f) {
                         lobbyKeyPickedUp = true; 
                         hasKey = true; 
                         needsVBOUpdate = true; 
@@ -1594,11 +1601,15 @@ int main() {
                             if (i == seekStartRoom + 1 || i == seekStartRoom + 2) continue; 
                             
                             if (rooms[i].isLocked || rooms[i].isJammed) { 
-                                float eX, eZ, lX = 0.0f, lZ = -5.0f;
-                                if (rooms[i-1].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
-                                if (rooms[i-1].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
-                                
-                                rotateVertexRelative(lX, lZ, rooms[i-1].centerX, rooms[i-1].centerZ, rooms[i-1].orientation, eX, eZ);
+                                float eX, eZ;
+                                if (i == 0) {
+                                    eX = 0.0f; eZ = 0.0f;
+                                } else {
+                                    float lX = 0.0f, lZ = -5.0f;
+                                    if (rooms[i-1].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
+                                    if (rooms[i-1].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                                    rotateVertexRelative(lX, lZ, rooms[i-1].centerX, rooms[i-1].centerZ, rooms[i-1].orientation, eX, eZ);
+                                }
 
                                 if (fabsf(camZ - eZ) < 2.5f && fabsf(camX - eX) < 2.0f) { 
                                     if (rooms[i].isJammed) {
@@ -1637,11 +1648,15 @@ int main() {
             for (int i = 0; i < TOTAL_ROOMS; i++) { 
                 if (rooms[i].isDupeRoom || i == seekStartRoom+1 || i == seekStartRoom+2) continue; 
                 
-                float eX, eZ, lX = 0.0f, lZ = -5.0f;
-                if (rooms[i].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
-                if (rooms[i].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
-                
-                rotateVertexRelative(lX, lZ, rooms[i].centerX, rooms[i].centerZ, rooms[i].orientation, eX, eZ);
+                float eX, eZ;
+                if (i == 0) {
+                    eX = 0.0f; eZ = 0.0f;
+                } else {
+                    float lX = 0.0f, lZ = -5.0f;
+                    if (rooms[i-1].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
+                    if (rooms[i-1].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                    rotateVertexRelative(lX, lZ, rooms[i-1].centerX, rooms[i-1].centerZ, rooms[i-1].orientation, eX, eZ);
+                }
                 
                 bool isClose = (fabsf(camZ - eZ) < 1.5f && fabsf(camX - eX) < 1.5f); 
                 if (rooms[i].isLocked || rooms[i].isJammed) isClose = false; 
@@ -1691,7 +1706,17 @@ int main() {
                 if (colored_size + textured_size > MAX_VERTS) textured_size = MAX_VERTS - colored_size; 
             }
 
-            buildEntities(playerCurrentRoom);
+            // ONLY draw entities if we are actually in a generated room (Not the Lobby)
+            ent_col_size = 0;
+            ent_tex_size = 0;
+            if (playerCurrentRoom >= 0) {
+                buildEntities(playerCurrentRoom);
+                ent_col_size = entity_mesh_colored.size();
+                ent_tex_size = entity_mesh_textured.size();
+                
+                if (ent_col_size > MAX_ENTITY_VERTS) ent_col_size = MAX_ENTITY_VERTS;
+                if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
+            }
 
             // --- SEEK GENERATION CALL WITH PATHFINDING ---
             seek_mesh.clear(); 
@@ -1725,12 +1750,8 @@ int main() {
 
             // Update master VBO block offsets
             world_total = colored_size + textured_size;
-            ent_col_size = entity_mesh_colored.size();
-            ent_tex_size = entity_mesh_textured.size();
             seek_size = seek_mesh.size();
             
-            if (ent_col_size > MAX_ENTITY_VERTS) ent_col_size = MAX_ENTITY_VERTS;
-            if (ent_col_size + ent_tex_size > MAX_ENTITY_VERTS) ent_tex_size = MAX_ENTITY_VERTS - ent_col_size; 
             if (seek_size > MAX_SEEK_VERTS) seek_size = MAX_SEEK_VERTS;
 
             // One unified memcpy push
