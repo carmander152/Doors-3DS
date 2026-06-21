@@ -90,9 +90,6 @@ int main() {
     // 3D Model Loading
     MD2Model seekModel;
     bool hasSeekModel = seekModel.load("romfs:/seek.md2");
-    if (!hasSeekModel) {
-        printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
-    }
 
     // World gen pre-allocation
     int currentChunk = 0;
@@ -107,7 +104,6 @@ int main() {
     void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS + MAX_SEEK_VERTS) * sizeof(vertex)); 
     
     if (!vbo_main) { 
-        printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); 
         while (aptMainLoop()) { 
             hidScanInput(); 
             if (hidKeysDown() & KEY_START) break; 
@@ -157,7 +153,6 @@ int main() {
 
     static float currentRoll = 0.0f, bobTime = 0.0f, camBobY = 0.0f, camBobX = 0.0f, currentFOV = 80.0f;
     
-    // 0 = Generation initialization frame, 1 = Generation frame, 2 = Playing
     static int gameState = 0; 
     static int loadingTimer = 0;
 
@@ -184,7 +179,6 @@ int main() {
         int world_total = colored_size + textured_size;
         int ent_col_size = 0, ent_tex_size = 0, seek_size = 0;
 
-        // Auto-transition on frame 1 or when restarting
         if ((kDown & KEY_START) || gameState == 0) { 
             if (gameState == 0 || isDead) { 
                 gameState = 1;
@@ -197,8 +191,9 @@ int main() {
                 elevatorTimer = 796; elevatorDoorsOpen = false; elevatorClosing = false; 
                 elevatorDoorOffset = 0; elevatorJamFinished = false; 
                 
-                // Set to Z=7.5 so the player spawns correctly facing Z=0 inside the Lobby
-                camX = 0; camZ = 7.5f; camYaw = 0; camPitch = 0; 
+                // --- FIX: Spawn player cleanly inside the shifted elevator
+                camX = 0.0f; camZ = 17.5f; camYaw = 0.0f; camPitch = 0.0f; 
+                
                 currentChunk = 0; playerCurrentRoom = -1; lastRoomForDarkCheck = -1; 
                 
                 for (int i = 0; i < TOTAL_ROOMS; i++) doorOpen[i] = false; 
@@ -210,7 +205,6 @@ int main() {
             } 
         }
         
-        // Handle logic purely based on game state
         if (gameState == 1) {
             loadingTimer++;
             if (loadingTimer == 2) {
@@ -287,11 +281,11 @@ int main() {
                 } 
             }
             
-            // --- NEW SPATIAL ROOM TRACKING ---
+            // --- FIX: UPDATED SPATIAL ROOM TRACKING ---
             int detectedRoom = -1;
             
-            // Explicitly check Lobby bounds first since it lives behind Z=0 now
-            if (camX >= -5.0f && camX <= 5.0f && camZ >= 0.0f && camZ <= 10.0f) {
+            // Explicitly force Lobby detection if behind the Room 0 start line
+            if (camX >= -6.0f && camX <= 6.0f && camZ >= 0.0f && camZ <= 20.0f) {
                 detectedRoom = -1;
             } else {
                 for (int i = 0; i < TOTAL_ROOMS; i++) {
@@ -370,8 +364,9 @@ int main() {
                 elevatorDoorOffset += 0.06f;
                 needsVBOUpdate = true;
             } 
-            // Trigger door close as soon as they step forward through Z=2.0f
-            if (elevatorDoorsOpen && !elevatorClosing && camZ < 2.0f) {
+            
+            // FIX: Trigger door close logic as soon as player crosses the elevator threshold at Z=14.5
+            if (elevatorDoorsOpen && !elevatorClosing && camZ < 14.5f) {
                 inElevator = false;
                 elevatorClosing = true;
                 needsVBOUpdate = true;
@@ -475,7 +470,6 @@ int main() {
                         printf("                            \x1b[K\n\n");
                     }
                     
-                    // --- PLAQUE RENDER LOGIC UPDATE ---
                     if (nD >= 0 && nD < TOTAL_ROOMS) { 
                         if (isGlitch && tDR == nD) { 
                             float dX[3], dZ[3];
@@ -515,7 +509,6 @@ int main() {
                     } else {
                         printf("                            \x1b[K\n\n");
                     }
-                    // ----------------------------------
                     
                     printf(" Health       : %d / 100   \x1b[K\n", playerHealth);
                     printf(" Golden Key   : %s         \x1b[K\n", hasKey ? "EQUIPPED" : "None    ");
@@ -736,7 +729,6 @@ int main() {
                         ndspChnSetMix(7, mix); 
                     } 
                     
-                    // Kill Check
                     float pdx = camX - seekX;
                     float pdz = camZ - seekZ;
                     if (sqrtf(pdx * pdx + pdz * pdz) < 1.2f) {
@@ -1515,19 +1507,6 @@ int main() {
                         return false; 
                     };
                     
-                    if (inElevator && !elevatorDoorsOpen && camX > 0 && camZ > 5.0f && camZ < 8.0f) { 
-                        elevatorJamFinished = true; 
-                        elevatorDoorsOpen = true; 
-                        iA = true; 
-                        needsVBOUpdate = true;
-                        
-                        if (audio_ok && sElevatorJamEnd.data_vaddr) { 
-                            ndspChnWaveBufClear(9); 
-                            sElevatorJamEnd.status = NDSP_WBUF_FREE; 
-                            ndspChnWaveBufAdd(9, &sElevatorJamEnd); 
-                        } 
-                    }
-                    
                     // Check room interactables
                     if (!iA && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
                         for (int s = 0; s < 3; s++) {
@@ -1579,19 +1558,21 @@ int main() {
                         if (!iA) iA = checkSideRoomInteracts(rooms[playerCurrentRoom].hasRightRoom, (Direction)((rooms[playerCurrentRoom].orientation + 1) % 4), rooms[playerCurrentRoom].rightDoorOffset, rooms[playerCurrentRoom].rightRoomSlotTypeL, rooms[playerCurrentRoom].rightRoomSlotItemL, rooms[playerCurrentRoom].rightRoomDrawerOpenL, rooms[playerCurrentRoom].animRL, rooms[playerCurrentRoom].rightRoomSlotTypeR, rooms[playerCurrentRoom].rightRoomSlotItemR, rooms[playerCurrentRoom].rightRoomDrawerOpenR, rooms[playerCurrentRoom].animRR);
                     }
                     
-                    // Lobby key pickup
-                    if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && camX >= -5.0f && camX <= 5.0f && camZ >= 0.0f && camZ <= 10.0f) {
-                        lobbyKeyPickedUp = true; 
-                        hasKey = true; 
-                        needsVBOUpdate = true; 
-                        sprintf(uiMessage, "Found the Lobby Key!"); 
-                        messageTimer = 45; 
-                        iA = true;
-                        
-                        if (audio_ok && sCoinsCollect.data_vaddr) { 
-                            ndspChnWaveBufClear(10); 
-                            sCoinsCollect.status = NDSP_WBUF_FREE; 
-                            ndspChnWaveBufAdd(10, &sCoinsCollect); 
+                    // --- FIX: UPDATED LOBBY KEY PICKUP ---
+                    if (!iA && (kDown & KEY_A) && !lobbyKeyPickedUp && rooms[0].isLocked) {
+                        if (fabsf(camX - (-4.8f)) < 2.0f && fabsf(camZ - 0.1f) < 2.0f) {
+                            lobbyKeyPickedUp = true; 
+                            hasKey = true; 
+                            needsVBOUpdate = true; 
+                            sprintf(uiMessage, "Found the Lobby Key!"); 
+                            messageTimer = 45; 
+                            iA = true;
+                            
+                            if (audio_ok && sCoinsCollect.data_vaddr) { 
+                                ndspChnWaveBufClear(10); 
+                                sCoinsCollect.status = NDSP_WBUF_FREE; 
+                                ndspChnWaveBufAdd(10, &sCoinsCollect); 
+                            }
                         }
                     }
                     
