@@ -1741,7 +1741,7 @@ int main() {
                                 if (currentFrame == seekModelRunAnim.numFrames) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 10;
-                                    test += 50
+                                    test += 50;
                                 }
                             }
                         }
