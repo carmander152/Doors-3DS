@@ -1736,9 +1736,10 @@ int main() {
                         if (test < 50) {
                             if (seekModelRunAnim.numFrames > 0) {
                                 int currentFrame = ((int)seekAnimTime) % seekModelRunAnim.numFrames;
+                                int last_frame = currentFrame;
                                 seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                 test += 1;
-                                if (currentFrame == seekModelRunAnim.numFrames) {
+                                if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 10;
                                     test += 50;
