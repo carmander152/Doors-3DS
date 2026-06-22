@@ -1743,19 +1743,21 @@ int main() {
                                     messageTimer = 50;
                                     test += 50;
                                     seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    last_frame = -1;
                                 }
                                 else {
                                     seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    last_frame = currentFrame;
                                 }
-                                last_frame = currentFrame;
                             }
                         }
                         else if (test < 150) {
+                            sprintf(uiMessage, last_frame);
+                            messageTimer = 50;
                             seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test += 1;
                         }
                         else {
-                            last_frame = -1;
                             seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test = 0;
                         }
