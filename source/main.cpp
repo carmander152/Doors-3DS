@@ -1738,10 +1738,11 @@ int main() {
                                 int currentFrame = ((int)seekAnimTime) % seekModelRunAnim.numFrames;
                                 seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                 test += 1;
-                                std::string current_frame_text = std::to_string(seekModelRunAnim.numFrames);
-                                const char* frame_text = current_frame_text.c_str();
-                                sprintf(uiMessage, frame_text);
-                                messageTimer = 10;
+                                if (currentFrame == seekModelRunAnim.numFrames) {
+                                    sprintf(uiMessage, "animation completed");
+                                    messageTimer = 10;
+                                    test += 50
+                                }
                             }
                         }
                         else if (test < 100) {
