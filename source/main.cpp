@@ -1747,7 +1747,7 @@ int main() {
                         float targetSeekZ = seekZ;
                         float rot = atan2f(camX - targetSeekX, camZ - targetSeekZ);
                         
-                        seekModel.draw(currentFrame, targetSeekX, -0.9f + seekHeightAdjust, -targetSeekZ, seekScale, 1.0f, rot);
+                        seekModel.draw(seekModel,currentFrame, targetSeekX, -0.9f + seekHeightAdjust, -targetSeekZ, seekScale, 1.0f, rot);
                     }
                 }
             }
