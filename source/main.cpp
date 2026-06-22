@@ -1743,6 +1743,7 @@ int main() {
                                     messageTimer = 50;
                                     test += 50;
                                     seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    currentFrame = 0;
                                 }
                                 else {
                                     seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
@@ -1751,7 +1752,6 @@ int main() {
                             }
                         }
                         else if (test < 150) {
-                            last_frame = 0;
                             seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test += 1;
                         }
