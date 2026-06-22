@@ -1739,7 +1739,7 @@ int main() {
                                 }
                             }
                         } else {
-                            seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f;
+                            seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             std::this_thread::sleep_for(std::chrono::seconds(2));
                             run_time_test = false;
                         }
