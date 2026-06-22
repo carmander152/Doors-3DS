@@ -107,9 +107,6 @@ int main() {
     MD2Model seekModelRunAnim;
     bool hasSeekModel = seekModel.load(Models, "seek.md2");
     bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations, "seek_run_anim.md2");
-    if (!hasSeekRunAnim) {
-        printf("could not load seek run anim");
-    }
 
     // World gen pre-allocation
     int currentChunk = 0;
@@ -1742,6 +1739,7 @@ int main() {
                             test += 1;
                         }
                         else {
+                            seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test = 0;
                         }
                     }
