@@ -1733,7 +1733,7 @@ int main() {
                         static int test = 0;
                         static float seekAnimTime = 0.0f;
                         seekAnimTime += 1.0f;
-                        int last_frame = 0;
+                        static int last_frame = 0;
                         if (test < 50) {
                             if (seekModelRunAnim.numFrames > 0) {
                                 int currentFrame = ((int)seekAnimTime) % seekModelRunAnim.numFrames;
