@@ -105,8 +105,10 @@ int main() {
     // 3D Model Loading
     MD2Model seekModel;
     MD2Model seekModelRunAnim;
+    MD2Model seekModelIntroAnim;
     bool hasSeekModel = seekModel.load(Models, "seek.md2");
     bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations, "seek_run_anim.md2");
+    bool hasSeekIntroAnim = seekModelIntroAnim.load(Model_Animations, "seek_intro_anim.md2");
     if (!hasSeekModel) {
         printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
     }
@@ -1726,7 +1728,7 @@ int main() {
             seek_mesh.clear(); 
             if (hasSeekModel) { 
                 float seekScale = 0.16f;
-                float seekHeightAdjust = -0.4f; 
+                float seekHeightAdjust = -0.8f; 
 
                 if (playerCurrentRoom == -1) { 
                     if (hasSeekRunAnim) {
@@ -1734,9 +1736,9 @@ int main() {
                         static float seekAnimTime = 0.0f;
                         static int last_frame = 0;
                         if (test < 50) {
-                            if (seekModelRunAnim.numFrames > 0) {
+                            if (seekModelIntroAnim.numFrames > 0) {
                                 seekAnimTime += 1.0f;
-                                int currentFrame = ((int)seekAnimTime) % seekModelRunAnim.numFrames;
+                                int currentFrame = ((int)seekAnimTime) % seekModelIntroAnim.numFrames;
                                 test += 1;
                                 if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
@@ -1747,7 +1749,7 @@ int main() {
                                     last_frame = -1;
                                 }
                                 else {
-                                    seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    seekModel.draw(seekModelIntroAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                     last_frame = currentFrame;
                                 }
                             }
