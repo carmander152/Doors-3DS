@@ -1737,10 +1737,6 @@ int main() {
                                 test += 1;
                             }
                         }
-                        else if (test < 51) {
-                            C3D_Flush();
-                            test += 1;
-                        }
                         else if (test < 100) {
                             seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test += 1;
@@ -1756,15 +1752,20 @@ int main() {
                 } else if (seekActive) {
                     static float seekRunAnimTime = 0.0f;
                     seekRunAnimTime += (seekState == 2) ? 0.4f : 0.1f; 
-                    if (seekModel.numFrames > 0) {
-                        int currentFrame = ((int)seekRunAnimTime) % seekModel.numFrames;
-                        
-                        // He now renders at his absolute spatial coords, and calculates rotation to face the player
-                        float targetSeekX = seekX;
-                        float targetSeekZ = seekZ;
-                        float rot = atan2f(camX - targetSeekX, camZ - targetSeekZ);
-                        
-                        seekModel.draw(seekModel,currentFrame, targetSeekX, -0.9f + seekHeightAdjust, -targetSeekZ, seekScale, 1.0f, rot);
+                    if (hasSeekRunAnim) {
+                        if (seekModelRunAnim.numFrames > 0) {
+                            int currentFrame = ((int)seekRunAnimTime) % seekModel.numFrames;
+
+                            // He now renders at his absolute spatial coords, and calculates rotation to face the player
+                            float targetSeekX = seekX;
+                            float targetSeekZ = seekZ;
+                            float rot = atan2f(camX - targetSeekX, camZ - targetSeekZ);
+
+                            seekModel.draw(seekModelRunAnim, currentFrame, targetSeekX, -0.9f + seekHeightAdjust, -targetSeekZ, seekScale, 1.0f, rot);
+                        }
+                    }
+                    else {
+                        seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                     }
                 }
             }
