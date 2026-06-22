@@ -1729,8 +1729,6 @@ int main() {
                     if (hasSeekRunAnim) {
                         static int test = 0;
                         static float seekAnimTime = 0.0f;
-                        sprintf(uiMessage, std::to_string(test).c_str());
-                        messageTimer = 1;
                         seekAnimTime += 1.0f;
                         if (test < 50) {
                             if (seekModelRunAnim.numFrames > 0) {
@@ -1738,6 +1736,10 @@ int main() {
                                 seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                 test += 1;
                             }
+                        }
+                        else if (test < 51) {
+                            C3D_FrameDrawOn();
+                            test += 1;
                         }
                         else if (test < 100) {
                             seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
