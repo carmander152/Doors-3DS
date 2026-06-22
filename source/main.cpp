@@ -1728,22 +1728,21 @@ int main() {
             seek_mesh.clear(); 
             if (hasSeekModel) { 
                 float seekScale = 0.16f;
-                float seekHeightAdjust = -0.8f; 
+                float seekHeightAdjust = 0.0f; 
 
                 if (playerCurrentRoom == -1) { 
-                    if (hasSeekRunAnim) {
+                    if (hasSeekRunAnim, hasSeekIntroAnim) {
                         static int test = 0;
                         static float seekAnimTime = 0.0f;
                         static int last_frame = 0;
-                        if (test < 50) {
+                        if (test < 1) {
                             if (seekModelIntroAnim.numFrames > 0) {
                                 seekAnimTime += 1.0f;
                                 int currentFrame = ((int)seekAnimTime) % seekModelIntroAnim.numFrames;
-                                test += 1;
                                 if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 50;
-                                    test += 50;
+                                    test = 1;
                                     seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                     seekAnimTime = 0.0f;
                                     last_frame = -1;
@@ -1754,12 +1753,19 @@ int main() {
                                 }
                             }
                         }
-                        else if (test < 150) {
-                            seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
-                            test += 1;
+                        else if (test < 50) {
+                            if (seekModelRunAnim.numFrames > 0) {
+                                seekAnimTime += 1.0f;
+                                int currentFrame = ((int)seekAnimTime) % seekModelIntroAnim.numFrames;
+                                seekModel.draw(seekModelRunAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                test += 1;
+                                last_frame = currentFrame;
+                            }
                         }
                         else {
-                            seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                            last_frame = -1;
+                            seekAnimTime = 0.0f;
+                            seekModel.draw(seekModelIntroAnim, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test = 0;
                         }
                     }
