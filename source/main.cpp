@@ -104,6 +104,7 @@ int main() {
 
     // 3D Model Loading
     MD2Model seekModel;
+    MD2Model seekModelRunAnim;
     bool hasSeekModel = seekModel.load(Models, "seek.md2");
     bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations, "seek_run_anim.md2");
     if (!hasSeekModel) {
