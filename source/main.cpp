@@ -42,6 +42,7 @@ int main() {
     ndspWaveBuf sLightsFlicker={0}, sWardrobeEnter={0}, sWardrobeExit={0};
 
     const char* Models = "romfs:/Models/";
+    const char* Model_Animations = "romfs:/Models/Animations/";
     const char* Model_Textures = "romfs:/Models/Textures/";
 
     const char* Music = "romfs:/Sounds/Music/";
@@ -101,7 +102,10 @@ int main() {
 
     // 3D Model Loading
     MD2Model seekModel;
+    MD2Model seekModelRunAnim;
     bool hasSeekModel = seekModel.load(Models, "seek.md2");
+    bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations, "seek_run_anim.md2");
+
 
     // World gen pre-allocation
     int currentChunk = 0;
@@ -1718,12 +1722,18 @@ int main() {
                 float seekHeightAdjust = -0.4f; 
 
                 if (playerCurrentRoom == -1) { 
-                    static float seekAnimTime = 0.0f;
-                    seekAnimTime += 1.0f; 
-                    if (seekModel.numFrames > 0) {
-                        int currentFrame = ((int)seekAnimTime) % seekModel.numFrames;
-                        seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                    if (hasSeekRunAnim) {
+                        static float seekAnimTime = 0.0f;
+                        seekAnimTime += 1.0f; 
+                        if (seekModel.numFrames > 0) {
+                            int currentFrame = ((int)seekAnimTime) % seekModelRunAnim.numFrames;
+                            seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                        }
                     }
+                    else {
+                        seekModel.draw(0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                    }
+                    
                 } else if (seekActive) {
                     static float seekRunAnimTime = 0.0f;
                     seekRunAnimTime += (seekState == 2) ? 0.4f : 0.1f; 
