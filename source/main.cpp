@@ -104,9 +104,11 @@ int main() {
 
     // 3D Model Loading
     MD2Model seekModel;
-    MD2Model seekModelRunAnim;
     bool hasSeekModel = seekModel.load(Models, "seek.md2");
     bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations, "seek_run_anim.md2");
+    if (!hasSeekModel) {
+        printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
+    }
 
     // World gen pre-allocation
     int currentChunk = 0;
@@ -121,6 +123,7 @@ int main() {
     void* vbo_main = linearAlloc((MAX_VERTS + MAX_ENTITY_VERTS + MAX_SEEK_VERTS) * sizeof(vertex)); 
     
     if (!vbo_main) { 
+        printf("\x1b[31mCRITICAL ERROR: Out of Linear Memory!\x1b[0m\n"); 
         while (aptMainLoop()) { 
             hidScanInput(); 
             if (hidKeysDown() & KEY_START) break; 
@@ -208,7 +211,7 @@ int main() {
                 elevatorTimer = 796; elevatorDoorsOpen = false; elevatorClosing = false; 
                 elevatorDoorOffset = 0; elevatorJamFinished = false; 
                 
-                // --- FIX: Spawn player cleanly inside the shifted elevator
+                // Spawn player safely in the shifted Lobby Elevator
                 camX = 0.0f; camZ = 17.5f; camYaw = 0.0f; camPitch = 0.0f; 
                 
                 currentChunk = 0; playerCurrentRoom = -1; lastRoomForDarkCheck = -1; 
@@ -298,10 +301,9 @@ int main() {
                 } 
             }
             
-            // --- FIX: UPDATED SPATIAL ROOM TRACKING ---
+            // --- UPDATED SPATIAL ROOM TRACKING ---
             int detectedRoom = -1;
             
-            // Explicitly force Lobby detection if behind the Room 0 start line
             if (camX >= -6.0f && camX <= 6.0f && camZ >= 0.0f && camZ <= 20.0f) {
                 detectedRoom = -1;
             } else {
@@ -382,7 +384,6 @@ int main() {
                 needsVBOUpdate = true;
             } 
             
-            // FIX: Trigger door close logic as soon as player crosses the elevator threshold at Z=14.5
             if (elevatorDoorsOpen && !elevatorClosing && camZ < 14.5f) {
                 inElevator = false;
                 elevatorClosing = true;
@@ -746,6 +747,7 @@ int main() {
                         ndspChnSetMix(7, mix); 
                     } 
                     
+                    // Kill Check
                     float pdx = camX - seekX;
                     float pdz = camZ - seekZ;
                     if (sqrtf(pdx * pdx + pdz * pdz) < 1.2f) {
@@ -1524,6 +1526,8 @@ int main() {
                         return false; 
                     };
                     
+                    // Elevator button interaction (Lobby exit logic remains automatic)
+                    
                     // Check room interactables
                     if (!iA && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
                         for (int s = 0; s < 3; s++) {
@@ -1575,9 +1579,10 @@ int main() {
                         if (!iA) iA = checkSideRoomInteracts(rooms[playerCurrentRoom].hasRightRoom, (Direction)((rooms[playerCurrentRoom].orientation + 1) % 4), rooms[playerCurrentRoom].rightDoorOffset, rooms[playerCurrentRoom].rightRoomSlotTypeL, rooms[playerCurrentRoom].rightRoomSlotItemL, rooms[playerCurrentRoom].rightRoomDrawerOpenL, rooms[playerCurrentRoom].animRL, rooms[playerCurrentRoom].rightRoomSlotTypeR, rooms[playerCurrentRoom].rightRoomSlotItemR, rooms[playerCurrentRoom].rightRoomDrawerOpenR, rooms[playerCurrentRoom].animRR);
                     }
                     
-                    // --- FIX: UPDATED LOBBY KEY PICKUP ---
-                    if (!iA && (kDown & KEY_A) && !lobbyKeyPickedUp && rooms[0].isLocked) {
-                        if (fabsf(camX - (-4.8f)) < 2.0f && fabsf(camZ - 0.1f) < 2.0f) {
+                    // --- FIX: STRICT KEY PICKUP ---
+                    // Explicitly requires KEY_A, localized to the specific desk key position
+                    if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && (kDown & KEY_A)) {
+                        if (fabsf(camX - (-4.8f)) < 2.0f && fabsf(camZ - 0.1f) < 2.5f) {
                             lobbyKeyPickedUp = true; 
                             hasKey = true; 
                             needsVBOUpdate = true; 
