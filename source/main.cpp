@@ -1738,7 +1738,7 @@ int main() {
                             }
                         }
                         else if (test < 51) {
-                            C3D_FrameDrawOn();
+                            C3D_Flush();
                             test += 1;
                         }
                         else if (test < 100) {
