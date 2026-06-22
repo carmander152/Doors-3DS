@@ -1729,11 +1729,11 @@ int main() {
                         seekAnimTime += 1.0f; 
                         if (seekModel.numFrames > 0) {
                             int currentFrame = ((int)seekAnimTime) % seekModelRunAnim.numFrames;
-                            seekModel.draw(currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                            seekModel.draw(seekModelRunAnim,currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                         }
                     }
                     else {
-                        seekModel.draw(0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                        seekModel.draw(seekModel,0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                     }
                     
                 } else if (seekActive) {

@@ -76,19 +76,21 @@ bool MD2Model::load(const char* filepath, const char* file_name) {
     return true;
 }
 
-void MD2Model::draw(int frame, float x, float y, float z, float scale, float L, float rotY) {
-    if (frame < 0 || frame >= numFrames) return;
-    
+void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY) {
+    if (frame < 0 || frame >= numFrames || !animation_model) return;
+    if (frame == 0) {
+        frame = 1;
+    }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    for (int i = 1; i < numTris * 3; i++) {
+    for (int i = 0; i < numTris * 3; i++) {
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = frameVerts[frame][vIdx] * scale;
-        float vy = frameVerts[frame][vIdx+1] * scale;
-        float vz = frameVerts[frame][vIdx+2] * scale;
+        float vx = animation_model.frameVerts[frame][vIdx] * scale;
+        float vy = animation_model.frameVerts[frame][vIdx+1] * scale;
+        float vz = animation_model.frameVerts[frame][vIdx+2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
