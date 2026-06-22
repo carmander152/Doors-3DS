@@ -77,7 +77,7 @@ bool MD2Model::load(const char* filepath, const char* file_name) {
 }
 
 void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY) {
-    if (frame < 0 || frame >= numFrames || !animation_model) return;
+    if (frame < 0 || frame >= numFrames || animation_model == nullptr) return;
     if (frame == 0) {
         frame = 1;
     }
