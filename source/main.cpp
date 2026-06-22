@@ -1744,6 +1744,10 @@ int main() {
                                     messageTimer = 10;
                                     test += 50;
                                 }
+                                std::string current_frame_text = std::to_string(last_frame);
+                                const char* frame_text = current_frame_text.c_str();
+                                sprintf(uiMessage, frame_text);
+                                messageTimer = 10;
                                 last_frame = currentFrame;
                             }
                         }
