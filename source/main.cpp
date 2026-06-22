@@ -1752,8 +1752,10 @@ int main() {
                             }
                         }
                         else if (test < 150) {
-                            sprintf(uiMessage, last_frame);
-                            messageTimer = 50;
+                            std::string current_frame_text = std::to_string(last_frame);
+                            const char* frame_text = current_frame_text.c_str();
+                            sprintf(uiMessage, current_frame_text);
+                            messageTimer = 10;
                             seekModel.draw(seekModel, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test += 1;
                         }
