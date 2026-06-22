@@ -1,4 +1,5 @@
 #include "md2.h"
+#include <3ds.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,6 +82,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame == 0) {
         frame = 1;
     }
+    gspWaitForVBlank();
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
