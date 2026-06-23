@@ -15,6 +15,14 @@ typedef enum { NOT_HIDING, IN_CABINET, UNDER_BED, BEHIND_DOOR } HideState;
 
 enum Direction { NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3 };
 
+enum RoomType {
+    TYPE_STRAIGHT,     // Standard hallway, exits Straight
+    TYPE_CORNER_LEFT,  // Turns Left, Far wall is solid
+    TYPE_CORNER_RIGHT, // Turns Right, Far wall is solid
+    TYPE_DUPE,         // 3-way intersection
+    TYPE_LIBRARY       // Massive special room
+};
+
 extern std::vector<vertex> world_mesh_colored;
 extern std::vector<vertex> world_mesh_textured; 
 extern std::vector<vertex> entity_mesh_colored;
@@ -30,6 +38,7 @@ extern char texErrorMessage[100];
 struct RoomSetup {
     float centerX, centerZ;
     Direction orientation;
+    RoomType type;
     int chosenExitSide; 
     float minX, maxX, minZ, maxZ; 
     
