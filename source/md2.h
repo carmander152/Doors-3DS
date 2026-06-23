@@ -10,8 +10,8 @@ struct MD2Model {
     int numTris;
     int frameSize;
     int ofsFrames;
-    int current_anim_frame;
-    int current_anim_slice_prog;
+    int current_anim_frame = 0;
+    int current_anim_slice_prog = 0;
     const char* current_anim_name;
     const char* model_name;
     

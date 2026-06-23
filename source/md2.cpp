@@ -108,9 +108,9 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     float sinR = sinf(rotY);
 
     if (current_anim_slice_prog == 5) {
+        animation_model.frameVerts.clear();
         current_anim_slice_prog = 0;
         animation_model.load_anim();
-        animation_model.frameVerts.clear();
     }
 
     for (int i = 0; i < numTris * 3; i++) {
