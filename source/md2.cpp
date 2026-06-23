@@ -19,7 +19,7 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
     // Check if it's a valid MD2 file (IDP2, version 8)
     if (header[0] != 844121161 || header[1] != 8) { fclose(file); return false; }
     
-    int ofsTex = header[12], ofsTris = header[13]
+    int ofsTex = header[12], ofsTris = header[13];
     ofsFrames = header[14];
 
     model_name = file_name;
