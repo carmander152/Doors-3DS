@@ -153,6 +153,6 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-        animation_model.frameVerts.erase(0,0);
+        animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
     }
 }
