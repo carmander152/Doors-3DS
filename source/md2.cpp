@@ -54,34 +54,41 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
         // Load Frames
         numVerts = header[6];
         numFrames = header[10];
-        /*
-        fseek(file, ofsFrames, SEEK_SET);
-        int frameSize = header[4];
-        for (int i = 0; i < numFrames; i++) {
-            fseek(file, ofsFrames + i * frameSize, SEEK_SET);
-            float scale[3], trans[3];
-            fread(scale, sizeof(float), 3, file);
-            fread(trans, sizeof(float), 3, file);
-            char name[16];
-            fread(name, 1, 16, file);
-
-            std::vector<float> verts;
-            for (int v = 0; v < numVerts; v++) {
-                unsigned char p[4];
-                fread(p, 1, 4, file);
-
-                // Calculate coords and swap Quake's Up-Axis to match Citro3D
-                verts.push_back((p[0] * scale[0]) + trans[0]);        // X
-                verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
-                verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
-            }
-            frameVerts.push_back(verts);
-        }
-        */
+        frameSize = header[4];
+        load_anim();
     }
 
     fclose(file);
     return true;
+}
+
+void MD2Model::load_anim() {
+    frameVerts.clear();
+    std::string full_path = "romfs:/Models/Animations/" + model_name;
+    FILE* file = fopen(full_path.c_str(), "rb");
+    if (!file) return false;
+    fseek(file, ofsFrames, SEEK_SET);
+    for (int i = current_anim_frame; i < current_anim_frame + 5; i++) {
+        fseek(file, ofsFrames + i * frameSize, SEEK_SET);
+        float scale[3], trans[3];
+        fread(scale, sizeof(float), 3, file);
+        fread(trans, sizeof(float), 3, file);
+        char name[16];
+        fread(name, 1, 16, file);
+
+        std::vector<float> verts;
+        for (int v = 0; v < numVerts; v++) {
+            unsigned char p[4];
+            fread(p, 1, 4, file);
+
+            // Calculate coords and swap Quake's Up-Axis to match Citro3D
+            verts.push_back((p[0] * scale[0]) + trans[0]);        // X
+            verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
+            verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
+        }
+        frameVerts.push_back(verts);
+    }
+
 }
 
 void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY) {
@@ -89,43 +96,12 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame == 0) {
         frame = 1;
         current_anim_frame = 1;
-        animation_model.frameVerts.clear();
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
     if (current_anim_frame >= frame + 5) {
-        animation_model.frameVerts.clear();
-        std::string full_path = std::string("romfs:/Models/Animations/") + animation_model.model_name;
-        FILE* file = fopen(full_path.c_str(), "rb");
-        if (!file) return;
-
-        fseek(file, animation_model.ofsFrames, SEEK_SET);
-        for (int i = frame; i < frame + 5; i++) {
-            int current_selected_frame = i;
-            if (current_selected_frame > animation_model.numFrames) {
-                current_selected_frame = animation_model.numFrames;
-                i = frame + 5;
-            }
-            fseek(file, animation_model.ofsFrames + current_selected_frame * animation_model.frameSize, SEEK_SET);
-            float scale[3], trans[3];
-            fread(scale, sizeof(float), 3, file);
-            fread(trans, sizeof(float), 3, file);
-            char name[16];
-            fread(name, 1, 16, file);
-
-            std::vector<float> verts;
-            for (int v = 0; v < animation_model.numVerts; v++) {
-                unsigned char p[4];
-                fread(p, 1, 4, file);
-
-                // Calculate coords and swap Quake's Up-Axis to match Citro3D
-                verts.push_back((p[0] * scale[0]) + trans[0]);        // X
-                verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
-                verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
-            }
-            animation_model.frameVerts.push_back(verts);
-        }
+        animation_model.load_anim();
     }
 
     for (int i = 0; i < numTris * 3; i++) {
