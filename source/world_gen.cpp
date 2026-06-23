@@ -10,31 +10,17 @@
 
 // --- ROTATIONAL MATRIX WRAPPERS ---
 void getRotatedDimensions(float lx, float lz, float lw, float ld, Direction dir, float& outX, float& outZ, float& outW, float& outD) {
-    // This perfectly preserves the negative/positive signs of widths and depths 
-    // so the GPU's Backface Culling draws the walls facing the correct direction!
     if (dir == NORTH) { 
-        outX = lx; 
-        outZ = lz; 
-        outW = lw; 
-        outD = ld; 
+        outX = lx; outZ = lz; outW = lw; outD = ld; 
     }
     else if (dir == EAST) { 
-        outX = -lz; 
-        outZ = lx; 
-        outW = -ld; 
-        outD = lw; 
+        outX = -lz; outZ = lx; outW = -ld; outD = lw; 
     }
     else if (dir == SOUTH) { 
-        outX = -lx; 
-        outZ = -lz; 
-        outW = -lw; 
-        outD = -ld; 
+        outX = -lx; outZ = -lz; outW = -lw; outD = -ld; 
     }
     else if (dir == WEST) { 
-        outX = lz; 
-        outZ = -lx; 
-        outW = ld; 
-        outD = -lw; 
+        outX = lz; outZ = -lx; outW = ld; outD = -lw; 
     }
 }
 
@@ -48,14 +34,12 @@ void rotateVertexRelative(float localX, float localZ, float centerX, float cente
 void addRBox(float lx, float ly, float lz, float lw, float lh, float ld, float r, float g, float b, bool col, int type, float L, float cx, float cz, Direction dir) {
     float ox, oz, ow, od;
     getRotatedDimensions(lx, lz, lw, ld, dir, ox, oz, ow, od);
-    
     addBox(cx + ox, ly, cz + oz, ow, lh, od, r, g, b, false, 0, L);
 }
 
 void addRSurf(float lx, float ly, float lz, float lw, float lh, float ld, float u, float v, float uw, float vh, float tS, float r, float g, float b, float L, bool isWall, float cx, float cz, Direction dir) {
     float ox, oz, ow, od;
     getRotatedDimensions(lx, lz, lw, ld, dir, ox, oz, ow, od);
-    
     addTiledSurface(cx + ox, ly, cz + oz, ow, lh, od, u, v, uw, vh, tS, r, g, b, L, isWall);
 }
 
@@ -63,7 +47,6 @@ void addRCol(float lx, float ly, float lz, float lw, float lh, float ld, int typ
     float ox, oz, ow, od;
     getRotatedDimensions(lx, lz, lw, ld, dir, ox, oz, ow, od);
     
-    // Collisions require absolute Min/Max values regardless of orientation
     float minX = fminf(cx + ox, cx + ox + ow);
     float maxX = fmaxf(cx + ox, cx + ox + ow);
     float minZ = fminf(cz + oz, cz + oz + od);
@@ -188,26 +171,21 @@ void buildSideRoomInterior(float cx, float cz, Direction dir, float doorOffset, 
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, tS = 2.4f;
     
-    // Side Room Floor and Ceiling
     addRSurf(doorOffset - 3.0f, 0.0f, -11.0f, 6.0f, 0.01f, 6.0f, floorU, floorV, floorUW, floorVH, tS, cR, cG, cB, L, false, cx, cz, dir);
     addRSurf(doorOffset - 3.0f, 1.8f, -11.0f, 6.0f, 0.01f, 6.0f, floorU, floorV, floorUW, floorVH, tS, cR, cG, cB, L, false, cx, cz, dir);
     
-    // Left Wall
     addRSurf(doorOffset - 3.0f, 0.4f, -11.0f, 0.1f, 1.4f, 6.0f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, true, cx, cz, dir); 
     addRSurf(doorOffset - 3.0f, 0.0f, -11.0f, 0.12f, 0.4f, 6.0f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, false, cx, cz, dir); 
     addRBox(doorOffset - 2.88f, 0.0f, -11.0f, 0.04f, 0.12f, 6.0f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir);
     
-    // Right Wall
     addRSurf(doorOffset + 2.9f, 0.4f, -11.0f, 0.1f, 1.4f, 6.0f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, true, cx, cz, dir); 
     addRSurf(doorOffset + 2.88f, 0.0f, -11.0f, 0.12f, 0.4f, 6.0f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, false, cx, cz, dir); 
     addRBox(doorOffset + 2.84f, 0.0f, -11.0f, 0.04f, 0.12f, 6.0f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir);
 
-    // Far Wall
     addRSurf(doorOffset - 3.0f, 0.4f, -11.1f, 6.0f, 1.4f, 0.1f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, true, cx, cz, dir); 
     addRSurf(doorOffset - 3.0f, 0.0f, -11.12f, 6.0f, 0.4f, 0.12f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, false, cx, cz, dir); 
     addRBox(doorOffset - 3.0f, 0.0f, -11.04f, 6.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir);
     
-    // Front Threshold Walls (Connecting to main room)
     addRSurf(doorOffset - 3.0f, 0.4f, -5.0f, 2.4f, 1.4f, 0.1f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, true, cx, cz, dir);
     addRSurf(doorOffset - 3.0f, 0.0f, -5.0f, 2.4f, 0.4f, 0.12f, wallU, wallV, wallUW, wallVH, tS, cR, cG, cB, L, false, cx, cz, dir);
     addRBox(doorOffset - 3.0f, 0.0f, -5.04f, 2.4f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir);
@@ -245,11 +223,12 @@ void buildSideRoomInterior(float cx, float cz, Direction dir, float doorOffset, 
     }
 }
 
-void addRWall(bool hasDoor, bool isDoorOpen, bool isLocked, float lz, float cx, float cz, Direction dir, float L) {
+// mode 0 = Solid, mode 1 = Door (Exit), mode 2 = Open Arch (Entry/Side Room)
+void addRWall(int mode, bool isDoorOpen, bool isLocked, float lz, float cx, float cz, Direction dir, float L) {
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh; 
     float tS = 2.4f, r = 1.0f, g = 1.0f, b = 1.0f; 
     
-    if (!hasDoor) {
+    if (mode == 0) {
         addRSurf(-5.0f, 0.4f, lz, 10.0f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, true, cx, cz, dir);
         addRSurf(-5.0f, 0.0f, lz, 10.0f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, false, cx, cz, dir);
         addRBox(-5.0f, 0.0f, lz, 10.0f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir); 
@@ -258,51 +237,50 @@ void addRWall(bool hasDoor, bool isDoorOpen, bool isLocked, float lz, float cx, 
             addRCol(-5.0f, 0.0f, lz-0.2f, 10.0f, 2.0f, 0.4f, 0, cx, cz, dir); 
         }
     } else {
-        // Left section
+        // Left piece
         addRSurf(-5.0f, 0.4f, lz, 4.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, true, cx, cz, dir);
         addRSurf(-5.0f, 0.0f, lz, 4.4f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, false, cx, cz, dir);
         addRBox(-5.0f, 0.0f, lz, 4.4f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir);
-        if (!isBuildingEntities) {
-            addRCol(-5.0f, 0.0f, lz-0.2f, 4.4f, 2.0f, 0.4f, 0, cx, cz, dir); 
-        }
         
-        // Right section
+        // Right piece
         addRSurf(0.6f, 0.4f, lz, 4.4f, 1.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, true, cx, cz, dir);
         addRSurf(0.6f, 0.0f, lz, 4.4f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, false, cx, cz, dir);
         addRBox(0.6f, 0.0f, lz, 4.4f, 0.12f, 0.04f, 0.12f, 0.06f, 0.03f, false, 0, L, cx, cz, dir);
-        if (!isBuildingEntities) {
-            addRCol(0.6f, 0.0f, lz-0.2f, 4.4f, 2.0f, 0.4f, 0, cx, cz, dir); 
-        }
         
-        // Top section
+        // Top piece
         addRSurf(-0.6f, 1.4f, lz, 1.2f, 0.4f, -0.2f, wallU, wallV, wallUW, wallVH, tS, r,g,b, L, false, cx, cz, dir);
         
-        // Door frame
+        // Frame
         addRBox(-0.6f, 0.0f, lz, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L, cx, cz, dir); 
         addRBox(0.55f, 0.0f, lz, 0.05f, 1.4f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L, cx, cz, dir); 
         addRBox(-0.55f, 1.35f, lz, 1.1f, 0.05f, -0.2f, 0.15f, 0.08f, 0.04f, false, 0, L, cx, cz, dir); 
         
-        if (!isDoorOpen) { 
-            // Closed door
-            addRBox(-0.6f, 0.0f, lz, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, false, 0, L, cx, cz, dir); 
-            addRBox(-0.2f, 1.1f, lz+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L, cx, cz, dir); 
-            addRBox(0.45f, 0.7f, lz+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L, cx, cz, dir); 
-            
-            if (isLocked) {
-                addRBox(0.3f, 0.6f, lz+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L, cx, cz, dir);
-            }
-            if (!isBuildingEntities) {
-                addRCol(-0.6f, 0.0f, lz-0.2f, 1.2f, 2.0f, 0.4f, 0, cx, cz, dir); 
-            }
-        } else { 
-            // Open door
-            addRBox(-0.6f, 0.0f, lz, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, false, 0, L, cx, cz, dir); 
-            addRBox(-0.5f, 1.1f, lz-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false, 0, L, cx, cz, dir); 
-            addRBox(-0.5f, 0.7f, lz-1.05f, 0.03f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L, cx, cz, dir); 
-            
-            if (!isBuildingEntities) { 
-                addRCol(-0.6f, 0.0f, lz-1.15f, 1.1f, 1.8f, 0.1f, 4, cx, cz, dir); 
-                addRCol(-0.6f, 0.0f, lz-1.2f, 0.1f, 2.0f, 1.2f, 0, cx, cz, dir); 
+        if (!isBuildingEntities) {
+            addRCol(-5.0f, 0.0f, lz-0.2f, 4.4f, 2.0f, 0.4f, 0, cx, cz, dir); 
+            addRCol(0.6f, 0.0f, lz-0.2f, 4.4f, 2.0f, 0.4f, 0, cx, cz, dir); 
+        }
+        
+        if (mode == 1) {
+            if (!isDoorOpen) { 
+                addRBox(-0.6f, 0.0f, lz, 1.2f, 1.4f, -0.1f, 0.15f, 0.08f, 0.05f, false, 0, L, cx, cz, dir); 
+                addRBox(-0.2f, 1.1f, lz+0.02f, 0.4f, 0.12f, 0.02f, 0.8f, 0.7f, 0.2f, false, 0, L, cx, cz, dir); 
+                addRBox(0.45f, 0.7f, lz+0.02f, 0.05f, 0.15f, 0.03f, 0.6f, 0.6f, 0.6f, false, 0, L, cx, cz, dir); 
+                
+                if (isLocked) {
+                    addRBox(0.3f, 0.6f, lz+0.05f, 0.2f, 0.2f, 0.05f, 0.8f, 0.8f, 0.8f, false, 0, L, cx, cz, dir);
+                }
+                if (!isBuildingEntities) {
+                    addRCol(-0.6f, 0.0f, lz-0.2f, 1.2f, 2.0f, 0.4f, 0, cx, cz, dir); 
+                }
+            } else { 
+                addRBox(-0.6f, 0.0f, lz, 0.1f, 1.4f, -1.2f, 0.3f, 0.15f, 0.08f, false, 0, L, cx, cz, dir); 
+                addRBox(-0.5f, 1.1f, lz-0.8f, 0.02f, 0.12f, 0.4f, 0.8f, 0.7f, 0.2f, false, 0, L, cx, cz, dir); 
+                addRBox(-0.5f, 0.7f, lz-1.05f, 0.03f, 0.15f, 0.05f, 0.6f, 0.6f, 0.6f, false, 0, L, cx, cz, dir); 
+                
+                if (!isBuildingEntities) { 
+                    addRCol(-0.6f, 0.0f, lz-1.15f, 1.1f, 1.8f, 0.1f, 4, cx, cz, dir); 
+                    addRCol(-0.6f, 0.0f, lz-1.2f, 0.1f, 2.0f, 1.2f, 0, cx, cz, dir); 
+                }
             }
         }
     }
@@ -318,33 +296,39 @@ void buildWorld(int cChunk, int pRm) {
     float wallU = TEX_WALL.u, wallV = TEX_WALL.v, wallUW = TEX_WALL.uw, wallVH = TEX_WALL.vh;
     float cR = 1.0f, cG = 1.0f, cB = 1.0f, floorScale = 2.4f, wallScale = 2.4f;  
     
-    // Draw the room behind you, current room, and the room in front of you
     int st = pRm - 1; 
     int en = pRm + 1; 
     
-    if (st < -1) st = -1;
+    if (pRm == -1) { 
+        st = -1; 
+        en = doorOpen[0] ? 0 : -1; 
+    } else { 
+        if (st < -1) st = -1;
+        if (pRm + 1 < TOTAL_ROOMS && doorOpen[pRm + 1]) en = pRm + 2; 
+    }
+    
+    if (pRm >= seekStartRoom - 1 && pRm <= seekStartRoom + 3) { 
+        st = seekStartRoom - 1; 
+        en = seekStartRoom + 4; 
+    }
+    
+    if (st < -1) st = -1; 
     if (en > TOTAL_ROOMS - 1) en = TOTAL_ROOMS - 1;
 
-    // Hardcoded Custom Lobby Construction
+    // Hardcoded Lobby Construction - Shifted +10 units down the Z-axis
     if (st <= -1) {
         globalTintR = 1.0f; globalTintG = 1.0f; globalTintB = 1.0f;
         
-        // Lobby Elevator Corridor
         addTiledSurface(-2.0f, 0.0f, 15.0f, 4.0f, 0.01f, 4.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
         addTiledSurface(-2.0f, 2.0f, 15.0f, 4.0f, 0.01f, 4.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
         
-        // Lobby Back Wall
         addBox(-2.0f, 0.0f, 19.0f, 4.0f, 2.0f, 0.1f, 0.4f, 0.3f, 0.2f, true); 
-        
-        // Lobby Corridor Side Walls
         addBox(-2.0f, 0.0f, 15.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true); 
         addBox(1.9f, 0.0f, 15.0f, 0.1f, 2.0f, 4.0f, 0.4f, 0.3f, 0.2f, true);   
         
-        // Elevator Call Button
         addBox(1.8f, 0.6f, 16.5f, 0.15f, 0.3f, 0.2f, 0.1f, 0.1f, 0.1f, false); 
         addBox(1.75f, 0.7f, 16.55f, 0.05f, 0.1f, 0.1f, 0, 0.8f, 0, false, 0, 1.5f); 
         
-        // Elevator Doors
         addBox(-2.0f - elevatorDoorOffset, 0.0f, 15.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true); 
         addBox(0.0f + elevatorDoorOffset, 0.0f, 15.05f, 2.0f, 2.0f, 0.1f, 0.6f, 0.6f, 0.6f, true);  
         
@@ -356,11 +340,9 @@ void buildWorld(int cChunk, int pRm) {
             collisions.push_back({-2.0f, 0.0f, 14.8f, 2.0f, 2.0f, 15.1f, 0});
         }
         
-        // Wide Lobby Area Floor & Ceiling
         addTiledSurface(-6.0f, 0.0f, 15.0f, 12.0f, 0.01f, -15.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
         addTiledSurface(-6.0f, 1.8f, 15.0f, 12.0f, 0.01f, -15.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, 1.0f, false); 
         
-        // Wide Lobby Outer Walls
         addBox(-6.0f, 0.0f, 15.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true); 
         addBox(6.0f, 0.0f, 15.0f, 0.1f, 1.8f, -15.0f, 0.3f, 0.3f, 0.3f, true);  
         
@@ -370,11 +352,9 @@ void buildWorld(int cChunk, int pRm) {
         addBox(-6.0f, 0.0f, 14.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true); 
         addBox(2.0f, 0.0f, 14.9f, 4.0f, 1.8f, 0.1f, 0.25f, 0.15f, 0.1f, true);  
         
-        // Central Counter/Desk
         addBox(-6.0f, 0.0f, 3.0f, 3.5f, 0.8f, -0.8f, 0.3f, 0.15f, 0.1f, true); 
         addBox(-3.3f, 0.0f, 2.2f, 0.8f, 0.8f, -1.0f, 0.3f, 0.15f, 0.1f, true); 
         
-        // Key Holder / Desk Detailing
         addBox(-2.5f, 0.1f, 1.4f, 1.0f, 0.05f, -1.4f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-2.5f, 0.15f, 1.4f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
         addBox(-1.55f, 0.15f, 1.4f, 0.05f, 0.45f, -0.05f, 0.8f, 0.7f, 0.2f, false); 
@@ -388,7 +368,7 @@ void buildWorld(int cChunk, int pRm) {
         }
 
         // Attach exit door to perfectly link up with Room 0 at Z=0.0f!
-        addRWall(true, doorOpen[0], rooms[0].isLocked, 0.0f, 0.0f, 0.0f, NORTH, 1.0f);
+        addRWall(1, doorOpen[0], rooms[0].isLocked, 0.0f, 0.0f, 0.0f, NORTH, 1.0f);
     }
 
     if (st < 0) st = 0; 
@@ -404,7 +384,6 @@ void buildWorld(int cChunk, int pRm) {
 
         bool isInteriorVisible = true;
         if (!seekActive) { 
-            // Determine if there is a direct line of sight to the room being evaluated
             if (i > pRm) {
                 for (int k = pRm + 1; k <= i; k++) {
                     if (k >= 0 && !doorOpen[k]) { isInteriorVisible = false; break; }
@@ -483,51 +462,81 @@ void buildWorld(int cChunk, int pRm) {
 
             if (i == LIBRARY_ROOM + 1) continue;
 
-            // Render basic floor and ceiling layout for Standard Room
+            // 1. GUARANTEED FLOOR AND CEILING
             addRSurf(-5.0f, 0.0f, -5.0f, 10.0f, 0.01f, 10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, L, false, cx, cz, dir);
             addRSurf(-5.0f, 1.8f, -5.0f, 10.0f, 0.01f, 10.0f, floorU, floorV, floorUW, floorVH, floorScale, cR, cG, cB, L, false, cx, cz, dir);
             
             bool nextOpen = (i + 1 < TOTAL_ROOMS) ? doorOpen[i+1] : false;
             bool nextLock = (i + 1 < TOTAL_ROOMS) ? rooms[i+1].isLocked : true;
 
-            // --- ALL 4 WALLS RENDERING SYSTEM ---
-            
-            // 1. Back Wall (Entry)
-            addRWall(true, doorOpen[i], rooms[i].isLocked, -5.0f, cx, cz, (Direction)((dir + 2) % 4), L);
-            
-            // Generate Exits/Side-Rooms dynamically for the remaining 3 walls
-            if (rooms[i].isDupeRoom) {
-                addRWall(true, nextOpen && rooms[i].correctDupePos == 0, nextLock, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
-                addRWall(true, nextOpen && rooms[i].correctDupePos == 1, nextLock, -5.0f, cx, cz, dir, wL); 
-                addRWall(true, nextOpen && rooms[i].correctDupePos == 2, nextLock, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
-            } else {
-                bool exitLeft = (rooms[i].chosenExitSide == 0);
-                bool exitStraight = (rooms[i].chosenExitSide == 1);
-                bool exitRight = (rooms[i].chosenExitSide == 2);
-                
-                // Construct Left Wall or Side-Room
-                if (rooms[i].hasLeftRoom) { 
-                    buildSideRoomInterior(cx, cz, (Direction)((dir + 3) % 4), rooms[i].leftDoorOffset, L, rooms[i].leftRoomSlotTypeL, rooms[i].leftRoomSlotItemL, rooms[i].animLL, rooms[i].leftRoomSlotTypeR, rooms[i].leftRoomSlotItemR, rooms[i].animLR); 
-                    addRWall(true, rooms[i].leftDoorOpen, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
-                } else {
-                    addRWall(exitLeft, nextOpen, nextLock && exitLeft, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL);
-                }
-                
-                // Construct Straight Wall or Side-Room
-                if (rooms[i].hasFarRoom) { 
-                    buildSideRoomInterior(cx, cz, dir, rooms[i].farDoorOffset, L, rooms[i].farRoomSlotTypeL, rooms[i].farRoomSlotItemL, rooms[i].animFL, rooms[i].farRoomSlotTypeR, rooms[i].farRoomSlotItemR, rooms[i].animFR); 
-                    addRWall(true, rooms[i].farDoorOpen, false, -5.0f, cx, cz, dir, wL); 
-                } else {
-                    addRWall(exitStraight, nextOpen, nextLock && exitStraight, -5.0f, cx, cz, dir, wL);
-                }
-                
-                // Construct Right Wall or Side-Room
-                if (rooms[i].hasRightRoom) { 
-                    buildSideRoomInterior(cx, cz, (Direction)((dir + 1) % 4), rooms[i].rightDoorOffset, L, rooms[i].rightRoomSlotTypeL, rooms[i].rightRoomSlotItemL, rooms[i].animRL, rooms[i].rightRoomSlotTypeR, rooms[i].rightRoomSlotItemR, rooms[i].animRR); 
-                    addRWall(true, rooms[i].rightDoorOpen, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
-                } else {
-                    addRWall(exitRight, nextOpen, nextLock && exitRight, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL);
-                }
+            // 2. THE ENTRY ARCHWAY (Mode 2)
+            addRWall(2, true, false, -5.0f, cx, cz, (Direction)((dir + 2) % 4), wL);
+
+            // 3. THE OTHER 3 WALLS
+            switch (rooms[i].type) {
+                case TYPE_STRAIGHT:
+                    addRWall(1, nextOpen, nextLock, -5.0f, cx, cz, dir, wL); // Front Exit Door
+                    
+                    if (rooms[i].hasLeftRoom) { 
+                        buildSideRoomInterior(cx, cz, (Direction)((dir + 3) % 4), rooms[i].leftDoorOffset, L, rooms[i].leftRoomSlotTypeL, rooms[i].leftRoomSlotItemL, rooms[i].animLL, rooms[i].leftRoomSlotTypeR, rooms[i].leftRoomSlotItemR, rooms[i].animLR); 
+                        addRWall(2, true, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); // Open Arch to side room
+                    } else {
+                        addRWall(0, false, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); // Solid Left
+                    }
+                    
+                    if (rooms[i].hasRightRoom) { 
+                        buildSideRoomInterior(cx, cz, (Direction)((dir + 1) % 4), rooms[i].rightDoorOffset, L, rooms[i].rightRoomSlotTypeL, rooms[i].rightRoomSlotItemL, rooms[i].animRL, rooms[i].rightRoomSlotTypeR, rooms[i].rightRoomSlotItemR, rooms[i].animRR); 
+                        addRWall(2, true, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); // Open Arch to side room
+                    } else {
+                        addRWall(0, false, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); // Solid Right
+                    }
+                    break;
+
+                case TYPE_CORNER_LEFT:
+                    addRWall(1, nextOpen, nextLock, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); // Left Exit Door
+                    
+                    if (rooms[i].hasFarRoom) { 
+                        buildSideRoomInterior(cx, cz, dir, rooms[i].farDoorOffset, L, rooms[i].farRoomSlotTypeL, rooms[i].farRoomSlotItemL, rooms[i].animFL, rooms[i].farRoomSlotTypeR, rooms[i].farRoomSlotItemR, rooms[i].animFR); 
+                        addRWall(2, true, false, -5.0f, cx, cz, dir, wL); 
+                    } else {
+                        addRWall(0, false, false, -5.0f, cx, cz, dir, wL); // Solid Front
+                    }
+                    
+                    if (rooms[i].hasRightRoom) { 
+                        buildSideRoomInterior(cx, cz, (Direction)((dir + 1) % 4), rooms[i].rightDoorOffset, L, rooms[i].rightRoomSlotTypeL, rooms[i].rightRoomSlotItemL, rooms[i].animRL, rooms[i].rightRoomSlotTypeR, rooms[i].rightRoomSlotItemR, rooms[i].animRR); 
+                        addRWall(2, true, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
+                    } else {
+                        addRWall(0, false, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); // Solid Right
+                    }
+                    break;
+
+                case TYPE_CORNER_RIGHT:
+                    addRWall(1, nextOpen, nextLock, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); // Right Exit Door
+                    
+                    if (rooms[i].hasLeftRoom) { 
+                        buildSideRoomInterior(cx, cz, (Direction)((dir + 3) % 4), rooms[i].leftDoorOffset, L, rooms[i].leftRoomSlotTypeL, rooms[i].leftRoomSlotItemL, rooms[i].animLL, rooms[i].leftRoomSlotTypeR, rooms[i].leftRoomSlotItemR, rooms[i].animLR); 
+                        addRWall(2, true, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
+                    } else {
+                        addRWall(0, false, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); // Solid Left
+                    }
+                    
+                    if (rooms[i].hasFarRoom) { 
+                        buildSideRoomInterior(cx, cz, dir, rooms[i].farDoorOffset, L, rooms[i].farRoomSlotTypeL, rooms[i].farRoomSlotItemL, rooms[i].animFL, rooms[i].farRoomSlotTypeR, rooms[i].farRoomSlotItemR, rooms[i].animFR); 
+                        addRWall(2, true, false, -5.0f, cx, cz, dir, wL); 
+                    } else {
+                        addRWall(0, false, false, -5.0f, cx, cz, dir, wL); // Solid Front
+                    }
+                    break;
+
+                case TYPE_DUPE:
+                    // 3 Doors
+                    addRWall(1, nextOpen && rooms[i].correctDupePos == 0, false, -5.0f, cx, cz, (Direction)((dir + 3) % 4), wL); 
+                    addRWall(1, nextOpen && rooms[i].correctDupePos == 1, false, -5.0f, cx, cz, dir, wL); 
+                    addRWall(1, nextOpen && rooms[i].correctDupePos == 2, false, -5.0f, cx, cz, (Direction)((dir + 1) % 4), wL); 
+                    break;
+                    
+                case TYPE_LIBRARY:
+                    break;
             }
             
             // Render internal furniture
@@ -554,41 +563,55 @@ void buildWorld(int cChunk, int pRm) {
                 float oZ = -5.0f; 
                 
                 if (oT == 0) {
-                    addRBox(-3, 0.7f, oZ, 6, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
+                    addRBox(-3.0f, 0.7f, oZ, 6.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
                 } else if (oT == 1) {
-                    addRBox(-3, 0.0f, oZ, 3, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
-                    addRBox(0, 0.7f, oZ, 3, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
+                    addRBox(-3.0f, 0.0f, oZ, 3.0f, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
+                    addRBox(0.0f, 0.7f, oZ, 3.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
                 } else {
-                    addRBox(0, 0.0f, oZ, 3, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
-                    addRBox(-3, 0.7f, oZ, 3, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
+                    addRBox(0.0f, 0.0f, oZ, 3.0f, 1.8f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir); 
+                    addRBox(-3.0f, 0.7f, oZ, 3.0f, 1.1f, 0.4f, 0.2f, 0.15f, 0.1f, true, 0, L, cx, cz, dir);
                 } 
                 srand(time(NULL)); 
             } 
             else if (rooms[i].isSeekFinale) { 
                 addRBox(-2.95f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
                 addRBox(2.85f, 0.4f, -8.5f, 0.1f, 1.0f, 7.0f, 0.4f, 0.7f, 1.0f, false, 0, L, cx, cz, dir); 
-                addRBox(-3, 0.0f, -2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
                 
-                rooms[i].pW[0] = 2.6f; rooms[i].pZ[0] = cz - 2.0f; rooms[i].pSide[0] = 1; 
-                addRBox(2, 0.8f, -2.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
+                float trapX, trapZ;
+
+                addRBox(-3.0f, 0.0f, -2.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
+                rooms[i].pSide[0] = 1; 
+                rotateVertexRelative(2.6f, -2.0f, cx, cz, dir, trapX, trapZ);
+                rooms[i].pW[0] = trapX; rooms[i].pZ[0] = trapZ; 
+                addRBox(2.0f, 0.8f, -2.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
                 
-                rooms[i].pW[1] = 1.8f; rooms[i].pZ[1] = cz - 3.5f; rooms[i].pSide[1] = 0; 
+                rooms[i].pSide[1] = 0; 
+                rotateVertexRelative(1.8f, -3.5f, cx, cz, dir, trapX, trapZ);
+                rooms[i].pW[1] = trapX; rooms[i].pZ[1] = trapZ; 
                 addRBox(1.4f, 0.0f, -3.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
                 addRBox(1.6f, 0.3f, -3.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
                 addRBox(-0.5f, 0.0f, -5.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
                 
-                rooms[i].pW[2] = -2.6f; rooms[i].pZ[2] = cz - 5.0f; rooms[i].pSide[2] = 1; 
-                addRBox(-3, 0.8f, -5.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
+                rooms[i].pSide[2] = 1; 
+                rotateVertexRelative(-2.6f, -5.0f, cx, cz, dir, trapX, trapZ);
+                rooms[i].pW[2] = trapX; rooms[i].pZ[2] = trapZ; 
+                addRBox(-3.0f, 0.8f, -5.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
                 
-                rooms[i].pW[3] = -1.8f; rooms[i].pZ[3] = cz - 6.5f; rooms[i].pSide[3] = 0; 
+                rooms[i].pSide[3] = 0; 
+                rotateVertexRelative(-1.8f, -6.5f, cx, cz, dir, trapX, trapZ);
+                rooms[i].pW[3] = trapX; rooms[i].pZ[3] = trapZ; 
                 addRBox(-2.2f, 0.0f, -6.9f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
                 addRBox(-2.0f, 0.3f, -6.7f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
-                addRBox(-3, 0.0f, -8.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
+                addRBox(-3.0f, 0.0f, -8.0f, 3.5f, 1.8f, 0.4f, 0.05f, 0.05f, 0.05f, true, 0, L, cx, cz, dir); 
                 
-                rooms[i].pW[4] = 2.6f; rooms[i].pZ[4] = cz - 8.0f; rooms[i].pSide[4] = 1; 
-                addRBox(2, 0.8f, -8.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
+                rooms[i].pSide[4] = 1; 
+                rotateVertexRelative(2.6f, -8.0f, cx, cz, dir, trapX, trapZ);
+                rooms[i].pW[4] = trapX; rooms[i].pZ[4] = trapZ; 
+                addRBox(2.0f, 0.8f, -8.2f, 1.0f, 0.2f, 0.4f, 0.05f, 0.05f, 0.05f, false, 0, L, cx, cz, dir); 
                 
-                rooms[i].pW[5] = 0.8f; rooms[i].pZ[5] = cz - 9.0f; rooms[i].pSide[5] = 0; 
+                rooms[i].pSide[5] = 0; 
+                rotateVertexRelative(0.8f, -9.0f, cx, cz, dir, trapX, trapZ);
+                rooms[i].pW[5] = trapX; rooms[i].pZ[5] = trapZ; 
                 addRBox(0.4f, 0.0f, -9.4f, 0.8f, 0.3f, 0.8f, 1.0f, 0.4f, 0.0f, false, 0, L, cx, cz, dir); 
                 addRBox(0.6f, 0.3f, -9.2f, 0.4f, 0.4f, 0.4f, 1.0f, 0.8f, 0.0f, false, 0, L, cx, cz, dir); 
             } 
@@ -609,6 +632,7 @@ void generateRooms() {
     rooms[0].centerX = 0.0f; 
     rooms[0].centerZ = -5.0f; 
     rooms[0].orientation = NORTH; 
+    rooms[0].type = TYPE_STRAIGHT;
     rooms[0].chosenExitSide = 1;
     rooms[0].minX = -5.0f; 
     rooms[0].maxX = 5.0f; 
@@ -643,31 +667,58 @@ void generateRooms() {
         
         rooms[i].isDupeRoom = (!iSCE && i > 1 && (rand() % 100 < 15)); 
         
-        if (rooms[i].isDupeRoom) {
-            rooms[i].hasLeftRoom = false; 
-            rooms[i].hasFarRoom = false; 
-            rooms[i].hasRightRoom = false;
+        // --- SMART TYPE GENERATION ---
+        if (i == LIBRARY_ROOM) {
+            rooms[i].type = TYPE_LIBRARY;
+            prev.chosenExitSide = 1; 
+        } 
+        else if (iSCE || iSE) {
+            rooms[i].type = TYPE_STRAIGHT;
+            prev.chosenExitSide = 1;
+        } 
+        else if (rooms[i].isDupeRoom) {
+            rooms[i].type = TYPE_DUPE;
             rooms[i].correctDupePos = rand() % 3; 
-            
-            if (rooms[i].correctDupePos == 0) prev.chosenExitSide = 0; 
-            else if (rooms[i].correctDupePos == 1) prev.chosenExitSide = 1; 
-            else prev.chosenExitSide = 2; 
+            prev.chosenExitSide = rooms[i].correctDupePos;
             
             int dN = getDisplayRoom(i);
             int f1 = dN + (rand() % 3 + 1);
             int f2 = dN - (rand() % 3 + 1); 
-            
             if (f2 <= 0) f2 = dN + 4; 
             
             rooms[i].dupeNumbers[0] = f1; 
             rooms[i].dupeNumbers[1] = f2; 
             rooms[i].dupeNumbers[2] = dN + 5; 
             rooms[i].dupeNumbers[rooms[i].correctDupePos] = dN;
-        } else if (i == LIBRARY_ROOM || iSCE) {
-            prev.chosenExitSide = 1; 
-        } else {
-            prev.chosenExitSide = rand() % 3; 
+        } 
+        else {
+            if (prev.type == TYPE_CORNER_LEFT) {
+                rooms[i].type = (rand() % 2 == 0) ? TYPE_STRAIGHT : TYPE_CORNER_RIGHT;
+            } 
+            else if (prev.type == TYPE_CORNER_RIGHT) {
+                rooms[i].type = (rand() % 2 == 0) ? TYPE_STRAIGHT : TYPE_CORNER_LEFT;
+            } 
+            else {
+                int roll = rand() % 100;
+                if (roll < 60) rooms[i].type = TYPE_STRAIGHT;
+                else if (roll < 80) rooms[i].type = TYPE_CORNER_LEFT;
+                else rooms[i].type = TYPE_CORNER_RIGHT;
+            }
         }
+        
+        // Map Type back to Exit Side for math
+        if (rooms[i].type == TYPE_STRAIGHT || rooms[i].type == TYPE_LIBRARY) {
+            rooms[i].chosenExitSide = 1;
+            if (i > 1 && !rooms[i-1].isDupeRoom && !iSCE) prev.chosenExitSide = 1;
+        } 
+        else if (rooms[i].type == TYPE_CORNER_LEFT) {
+            rooms[i].chosenExitSide = 0;
+            if (i > 1 && !rooms[i-1].isDupeRoom && !iSCE) prev.chosenExitSide = 0;
+        } 
+        else if (rooms[i].type == TYPE_CORNER_RIGHT) {
+            rooms[i].chosenExitSide = 2;
+            if (i > 1 && !rooms[i-1].isDupeRoom && !iSCE) prev.chosenExitSide = 2;
+        } 
         
         int prevDir = (int)prev.orientation;
         if (prev.chosenExitSide == 0) {
@@ -731,9 +782,9 @@ void generateRooms() {
                 } 
             }
             
-            rooms[i].hasLeftRoom = (rooms[i].chosenExitSide != 0) && (rand() % 100 < 60); 
-            rooms[i].hasFarRoom  = (rooms[i].chosenExitSide != 1) && (rand() % 100 < 60); 
-            rooms[i].hasRightRoom = (rooms[i].chosenExitSide != 2) && (rand() % 100 < 60);
+            rooms[i].hasLeftRoom = (rooms[i].type != TYPE_CORNER_LEFT) && (rand() % 100 < 60); 
+            rooms[i].hasFarRoom  = (rooms[i].type != TYPE_STRAIGHT) && (rand() % 100 < 60); 
+            rooms[i].hasRightRoom = (rooms[i].type != TYPE_CORNER_RIGHT) && (rand() % 100 < 60);
             
             auto popSideRoom = [&](int* typeL, int* itemL, int* typeR, int* itemR) {
                 bool cL = false, cR = false;
@@ -746,7 +797,6 @@ void generateRooms() {
                     if(rand() % 100 < 45) {
                         int r = rand() % 100; 
                         typeL[s] = (r < 25) ? 1 : ((r < 50) ? 3 : ((r < 75) ? 5 : 7)); 
-                        
                         if(typeL[s] == 7) { 
                             if(cL) typeL[s] = 5; 
                             else cL = true; 
@@ -759,7 +809,6 @@ void generateRooms() {
                     if(rand() % 100 < 45) {
                         int r = rand() % 100; 
                         typeR[s] = (r < 33) ? 2 : ((r < 66) ? 6 : 8); 
-                        
                         if(typeR[s] == 8) { 
                             if(cR) typeR[s] = 6; 
                             else cR = true; 
