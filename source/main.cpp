@@ -497,8 +497,8 @@ int main() {
                                 eX = 0.0f; eZ = 0.0f;
                             } else {
                                 float lX = 0.0f, lZ = -5.0f;
-                                if (rooms[playerCurrentRoom].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
-                                if (rooms[playerCurrentRoom].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                                if (rooms[playerCurrentRoom].type == TYPE_CORNER_LEFT) { lX = -5.0f; lZ = 0.0f; }
+                                if (rooms[playerCurrentRoom].type == TYPE_CORNER_RIGHT) { lX = 5.0f; lZ = 0.0f; }
                                 rotateVertexRelative(lX, lZ, rooms[playerCurrentRoom].centerX, rooms[playerCurrentRoom].centerZ, rooms[playerCurrentRoom].orientation, eX, eZ);
                             }
                             
@@ -665,6 +665,7 @@ int main() {
                         float libFrontZ = -10.0f - (LIBRARY_ROOM * 10.0f) - 1.5f;
                         float libBackZ = -10.0f - (LIBRARY_ROOM * 10.0f) - 18.5f;
                         
+                        // We do not clamp figure bounds based on weaving grid since Library is a custom wide box
                         if (figureZ > libFrontZ) figureZ = libFrontZ; 
                         if (figureZ < libBackZ) figureZ = libBackZ; 
                         if (figureX > 5.5f) figureX = 5.5f;
@@ -1510,8 +1511,6 @@ int main() {
                         return false; 
                     };
                     
-                    // Elevator button interaction (Lobby exit logic remains automatic)
-                    
                     // Check room interactables
                     if (!iA && playerCurrentRoom >= 0 && playerCurrentRoom < TOTAL_ROOMS) { 
                         for (int s = 0; s < 3; s++) {
@@ -1563,8 +1562,6 @@ int main() {
                         if (!iA) iA = checkSideRoomInteracts(rooms[playerCurrentRoom].hasRightRoom, (Direction)((rooms[playerCurrentRoom].orientation + 1) % 4), rooms[playerCurrentRoom].rightDoorOffset, rooms[playerCurrentRoom].rightRoomSlotTypeL, rooms[playerCurrentRoom].rightRoomSlotItemL, rooms[playerCurrentRoom].rightRoomDrawerOpenL, rooms[playerCurrentRoom].animRL, rooms[playerCurrentRoom].rightRoomSlotTypeR, rooms[playerCurrentRoom].rightRoomSlotItemR, rooms[playerCurrentRoom].rightRoomDrawerOpenR, rooms[playerCurrentRoom].animRR);
                     }
                     
-                    // --- FIX: STRICT KEY PICKUP ---
-                    // Explicitly requires KEY_A, localized to the specific desk key position
                     if (!iA && !lobbyKeyPickedUp && rooms[0].isLocked && (kDown & KEY_A)) {
                         if (fabsf(camX - (-4.8f)) < 2.0f && fabsf(camZ - 0.1f) < 2.5f) {
                             lobbyKeyPickedUp = true; 
@@ -1583,7 +1580,7 @@ int main() {
                     }
                     
                     // Unlocking doors
-                    if (!iA) { 
+                    if (!iA && (kDown & KEY_A)) { 
                         for (int i = 0; i < TOTAL_ROOMS; i++) { 
                             if (i == seekStartRoom + 1 || i == seekStartRoom + 2) continue; 
                             
@@ -1593,8 +1590,8 @@ int main() {
                                     eX = 0.0f; eZ = 0.0f;
                                 } else {
                                     float lX = 0.0f, lZ = -5.0f;
-                                    if (rooms[i-1].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
-                                    if (rooms[i-1].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                                    if (rooms[i-1].type == TYPE_CORNER_LEFT) { lX = -5.0f; lZ = 0.0f; }
+                                    if (rooms[i-1].type == TYPE_CORNER_RIGHT) { lX = 5.0f; lZ = 0.0f; }
                                     rotateVertexRelative(lX, lZ, rooms[i-1].centerX, rooms[i-1].centerZ, rooms[i-1].orientation, eX, eZ);
                                 }
 
@@ -1640,8 +1637,8 @@ int main() {
                     eX = 0.0f; eZ = 0.0f;
                 } else {
                     float lX = 0.0f, lZ = -5.0f;
-                    if (rooms[i-1].chosenExitSide == 0) { lX = -5.0f; lZ = 0.0f; }
-                    if (rooms[i-1].chosenExitSide == 2) { lX = 5.0f; lZ = 0.0f; }
+                    if (rooms[i-1].type == TYPE_CORNER_LEFT) { lX = -5.0f; lZ = 0.0f; }
+                    if (rooms[i-1].type == TYPE_CORNER_RIGHT) { lX = 5.0f; lZ = 0.0f; }
                     rotateVertexRelative(lX, lZ, rooms[i-1].centerX, rooms[i-1].centerZ, rooms[i-1].orientation, eX, eZ);
                 }
                 
@@ -1733,7 +1730,6 @@ int main() {
                     }
                 }
             }
-            // -----------------------
 
             // Update master VBO block offsets
             world_total = colored_size + textured_size;
