@@ -95,10 +95,10 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     float sinR = sinf(rotY);
 
     if (current_anim_frame >= frame + 5) {
-        animation_model.frameVerts.clear()
+        animation_model.frameVerts.clear();
         std::string full_path = std::string("romfs:/Models/Animations/") + animation_model.model_name;
         FILE* file = fopen(full_path.c_str(), "rb");
-        if (!file) return false;
+        if (!file) return;
 
         fseek(file, animation_model.ofsFrames, SEEK_SET);
         for (int i = frame; i < frame + 5; i++) {
@@ -153,6 +153,6 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-        animation_model.frameVerts.erase(0);
+        animation_model.frameVerts.erase(0,0);
     }
 }
