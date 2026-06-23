@@ -12,6 +12,7 @@ struct MD2Model {
     int ofsFrames;
     int current_anim_frame = 0;
     int current_anim_slice_prog = 0;
+
     const char* model_name;
     const char* model_path;
     
@@ -22,7 +23,7 @@ struct MD2Model {
 
     bool load(const char* filepath, bool is_animation, const char* file_name);
     void draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY);
-    void load_frame(int frame);
+    void load_anim(int frame);
 };
 
 #endif
