@@ -103,7 +103,7 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
     }
 }
 
-void MD2Model::load_frame(int frmae) {
+void MD2Model::load_frame(int frame) {
     frameVerts.clear();
     frameVerts.resize(1);
     FILE* file = fopen(model_path, "rb");
