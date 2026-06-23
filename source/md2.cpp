@@ -22,7 +22,7 @@ bool MD2Model::load(const char* filepath, bool is_animation, const char* file_na
     int ofsTex = header[12], ofsTris = header[13]; 
     ofsFrames = header[14];
     model_name = file_name;
-    model_path = full_path;
+    model_path = full_path.c_str();
 
     if (is_animation == false) {
         numTris = header[8];
