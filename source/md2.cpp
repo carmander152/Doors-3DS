@@ -66,17 +66,24 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
     if (frame < 0 || frame >= animation_model.numFrames) return;
     if (frame == 0) {
         frame = 1;
+        current_anim_slice_prog = 0;
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
+
+    if (current_anim_slice_prog > 5) {
+        animation_model.frameVerts.clear();
+        animation_model.load_anim();
+        current_anim_slice_prog = 0;
+    }
 
     for (int i = 0; i < numTris * 3; i++) {
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[frame][vIdx] * scale;
-        float vy = animation_model.frameVerts[frame][vIdx + 1] * scale;
-        float vz = animation_model.frameVerts[frame][vIdx + 2] * scale;
+        float vx = animation_model.frameVerts[current_anim_slice_prog][vIdx] * scale;
+        float vy = animation_model.frameVerts[current_anim_slice_prog][vIdx + 1] * scale;
+        float vz = animation_model.frameVerts[current_anim_slice_prog][vIdx + 2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -93,7 +100,8 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
 
         vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
 
-        seek_mesh.push_back(vert);
+        push_back(vert);
+        current_anim_slice_prog += 1;
     }
 }
 
@@ -102,7 +110,8 @@ void MD2Model::load_anim(){
     if (!file) return;
 
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = 5; i < numFrames; i++) {
+    for (int i = current_anim_frame; i < current_anim_frame + 5; i ++) {
+        std::vector<float> verts;
         fseek(file, ofsFrames + i * frameSize, SEEK_SET);
         float scale[3], trans[3];
         char name[16];
@@ -110,7 +119,6 @@ void MD2Model::load_anim(){
         fread(trans, sizeof(float), 3, file);
         fread(name, 1, 16, file);
 
-        std::vector<float> verts;
         for (int v = 0; v < numVerts; v++) {
             unsigned char p[4];
             fread(p, 1, 4, file);
