@@ -102,6 +102,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame == 0) {
         frame = 1;
         current_anim_frame = 1;
+        animation_model.frameVerts.clear();
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
