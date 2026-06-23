@@ -100,7 +100,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    if (current_anim_frame >= frame + 5) {
+    if (animation_model.frameVerts.size() == 1) {
         animation_model.load_anim();
     }
 
