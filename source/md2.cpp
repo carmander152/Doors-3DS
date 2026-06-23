@@ -64,7 +64,7 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
 
 void MD2Model::load_anim() {
     frameVerts.clear();
-    std::string full_path = "romfs:/Models/Animations/" + model_name;
+    std::string full_path = std::string("romfs:/Models/Animations/") + model_name;
     FILE* file = fopen(full_path.c_str(), "rb");
     if (!file) return;
     fseek(file, ofsFrames, SEEK_SET);
