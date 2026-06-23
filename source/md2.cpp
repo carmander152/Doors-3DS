@@ -74,7 +74,7 @@ void MD2Model::load_anim() {
         return;
     }
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = current_anim_frame; i < current_anim_frame + 5; i++) {
+    for (int i = current_anim_frame + 1; i < current_anim_frame + 5; i++) {
         fseek(file, ofsFrames + i * frameSize, SEEK_SET);
         float scale[3], trans[3];
         fread(scale, sizeof(float), 3, file);
@@ -94,7 +94,6 @@ void MD2Model::load_anim() {
         }
         frameVerts.push_back(verts);
     }
-
 }
 
 void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY) {
@@ -112,7 +111,6 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     }
 
     for (int i = 0; i < numTris * 3; i++) {
-        animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
@@ -137,7 +135,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-        
-        
+
+        animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
     }
 }
