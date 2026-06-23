@@ -14,7 +14,7 @@ struct MD2Model {
     std::vector<int> triUVs;   
     std::vector<std::vector<float>> frameVerts; 
 
-    bool load(const char* filepath, const char* file_name);
+    bool load(const char* filepath, const bool* is_animation, const char* file_name);
     void draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY);
 };
 

@@ -106,9 +106,9 @@ int main() {
     MD2Model seekModel;
     MD2Model seekModelRunAnim;
     MD2Model seekModelIntroAnim;
-    bool hasSeekModel = seekModel.load(Models, "seek.md2");
-    bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations, "seek_run_anim.md2");
-    bool hasSeekIntroAnim = seekModelIntroAnim.load(Model_Animations, "seek_intro_anim.md2");
+    bool hasSeekModel = seekModel.load(Models,false, "seek.md2");
+    bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations,true, "seek_run_anim.md2");
+    bool hasSeekIntroAnim = seekModelIntroAnim.load(Model_Animations, true, "seek_intro_anim.md2");
     if (!hasSeekModel) {
         printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
     }

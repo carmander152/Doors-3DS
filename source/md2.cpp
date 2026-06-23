@@ -8,7 +8,7 @@
 
 extern std::vector<vertex> seek_mesh;
 
-bool MD2Model::load(const char* filepath, const char* file_name) {
+bool MD2Model::load(const char* filepath,const bool* is_animation, const char* file_name) {
     std::string full_path = std::string(filepath) + file_name;
     FILE* file = fopen(full_path.c_str(), "rb");
     if (!file) return false;
@@ -27,26 +27,28 @@ bool MD2Model::load(const char* filepath, const char* file_name) {
     
     int ofsTex = header[12], ofsTris = header[13], ofsFrames = header[14];
 
-    // Load UVs
-    fseek(file, ofsTex, SEEK_SET);
-    for (int i = 0; i < numTexCoords; i++) {
-        short st[2];
-        fread(st, sizeof(short), 2, file);
-        
-        // Push U coordinate normally
-        uvs.push_back((float)st[0] / skinW);
-        
-        // THE FIX: Invert the V coordinate because MD2 reads from Top-Left, but 3DS reads from Bottom-Left!
-        uvs.push_back(1.0f - ((float)st[1] / skinH)); 
-    }
+    if (is_animation == false) {
+        // Load UVs
+        fseek(file, ofsTex, SEEK_SET);
+        for (int i = 0; i < numTexCoords; i++) {
+            short st[2];
+            fread(st, sizeof(short), 2, file);
 
-    // Load Triangles
-    fseek(file, ofsTris, SEEK_SET);
-    for (int i = 0; i < numTris; i++) {
-        short v[3], t[3];
-        fread(v, sizeof(short), 3, file);
-        fread(t, sizeof(short), 3, file);
-        for(int j=0; j<3; j++) { triVerts.push_back(v[j]); triUVs.push_back(t[j]); }
+            // Push U coordinate normally
+            uvs.push_back((float)st[0] / skinW);
+
+            // THE FIX: Invert the V coordinate because MD2 reads from Top-Left, but 3DS reads from Bottom-Left!
+            uvs.push_back(1.0f - ((float)st[1] / skinH));
+        }
+
+        // Load Triangles
+        fseek(file, ofsTris, SEEK_SET);
+        for (int i = 0; i < numTris; i++) {
+            short v[3], t[3];
+            fread(v, sizeof(short), 3, file);
+            fread(t, sizeof(short), 3, file);
+            for (int j = 0; j < 3; j++) { triVerts.push_back(v[j]); triUVs.push_back(t[j]); }
+        }
     }
 
     // Load Frames
