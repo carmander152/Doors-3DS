@@ -66,7 +66,10 @@ void MD2Model::load_anim() {
     frameVerts.clear();
     std::string full_path = std::string("romfs:/Models/Animations/") + model_name;
     FILE* file = fopen(full_path.c_str(), "rb");
-    if (!file) return;
+    if (!file) {
+
+        return;
+    }
     fseek(file, ofsFrames, SEEK_SET);
     for (int i = current_anim_frame; i < current_anim_frame + 5; i++) {
         fseek(file, ofsFrames + i * frameSize, SEEK_SET);
@@ -100,7 +103,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    if (animation_model.frameVerts.size() == 1) {
+    if (animation_model.frameVerts.size() < 2) {
         animation_model.load_anim();
     }
 
