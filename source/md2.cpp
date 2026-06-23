@@ -100,7 +100,6 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
 
         vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
 
-        push_back(vert);
         current_anim_slice_prog += 1;
     }
 }
