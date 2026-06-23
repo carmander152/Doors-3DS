@@ -64,9 +64,6 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
 }
 
 void MD2Model::load_anim() {
-    if (frameVerts.size() != 1) {
-        frameVerts.clear();
-    }
     sprintf(uiMessage, "loading anim");
     messageTimer = 30;
     std::string full_path = std::string("romfs:/Models/Animations/") + model_name;
@@ -97,6 +94,7 @@ void MD2Model::load_anim() {
         }
         frameVerts.push_back(verts);
     }
+
 }
 
 void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY) {
@@ -108,7 +106,8 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    if (animation_model.frameVerts.size() <= 1) {
+    if (current_anim_slice_prog == 5) {
+        current_anim_slice_prog = 0;
         animation_model.load_anim();
     }
 
@@ -116,9 +115,9 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[1][vIdx] * scale;
-        float vy = animation_model.frameVerts[1][vIdx+1] * scale;
-        float vz = animation_model.frameVerts[1][vIdx+2] * scale;
+        float vx = animation_model.frameVerts[0][vIdx] * scale;
+        float vy = animation_model.frameVerts[0][vIdx+1] * scale;
+        float vz = animation_model.frameVerts[0][vIdx+2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -137,7 +136,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-        int index_to_remove = 1;
-        animation_model.frameVerts.erase(animation_model.frameVerts.begin() + index_to_remove);
+        current_anim_slice_prog += 1;
+        animation_model.frameVerts.erase(animation_model.frameVerts.begin());
     }
 }

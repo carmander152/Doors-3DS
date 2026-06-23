@@ -11,6 +11,7 @@ struct MD2Model {
     int frameSize;
     int ofsFrames;
     int current_anim_frame = 0;
+    int current_anim_slice_prog = 0;
     const char* current_anim_name;
     const char* model_name;
     
