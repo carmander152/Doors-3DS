@@ -8,6 +8,11 @@ struct MD2Model {
     int numFrames;
     int numVerts;
     int numTris;
+    int frameSize;
+    int ofsFrames;
+    int current_anim_frame;
+    const char* current_anim_name;
+    const char* model_name;
     
     std::vector<float> uvs; 
     std::vector<int> triVerts; 

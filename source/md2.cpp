@@ -21,6 +21,8 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
     
     int ofsTex = header[12], ofsTris = header[13], ofsFrames = header[14];
 
+    model_name = file_name;
+
     if (is_animation == false) {
         numTris = header[8];
         int numTexCoords = header[7];
@@ -47,10 +49,12 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
             for (int j = 0; j < 3; j++) { triVerts.push_back(v[j]); triUVs.push_back(t[j]); }
         }
     }
+    
     else {
         // Load Frames
         numVerts = header[6];
         numFrames = header[10];
+        /*
         fseek(file, ofsFrames, SEEK_SET);
         int frameSize = header[4];
         for (int i = 0; i < numFrames; i++) {
@@ -73,6 +77,7 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
             }
             frameVerts.push_back(verts);
         }
+        */
     }
 
     fclose(file);
@@ -83,17 +88,53 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame < 0 || frame >= animation_model.numFrames) return;
     if (frame == 0) {
         frame = 1;
+        current_anim_frame = 1;
+        animation_model.frameVerts.clear();
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
+
+    if (current_anim_frame >= frame + 5) {
+        animation_model.frameVerts.clear()
+        std::string full_path = std::string("romfs:/Models/Animations/") + animation_model.model_name;
+        FILE* file = fopen(full_path.c_str(), "rb");
+        if (!file) return false;
+
+        fseek(file, animation_model.ofsFrames, SEEK_SET);
+        for (int i = frame; i < frame + 5; i++) {
+            int current_selected_frame = i;
+            if (current_selected_frame > animation_model.numFrames) {
+                current_selected_frame = animation_model.numFrames;
+                i = frame + 5;
+            }
+            fseek(file, animation_model.ofsFrames + current_selected_frame * animation_model.frameSize, SEEK_SET);
+            float scale[3], trans[3];
+            fread(scale, sizeof(float), 3, file);
+            fread(trans, sizeof(float), 3, file);
+            char name[16];
+            fread(name, 1, 16, file);
+
+            std::vector<float> verts;
+            for (int v = 0; v < animation_model.numVerts; v++) {
+                unsigned char p[4];
+                fread(p, 1, 4, file);
+
+                // Calculate coords and swap Quake's Up-Axis to match Citro3D
+                verts.push_back((p[0] * scale[0]) + trans[0]);        // X
+                verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
+                verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
+            }
+            animation_model.frameVerts.push_back(verts);
+        }
+    }
 
     for (int i = 0; i < numTris * 3; i++) {
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[frame][vIdx] * scale;
-        float vy = animation_model.frameVerts[frame][vIdx+1] * scale;
-        float vz = animation_model.frameVerts[frame][vIdx+2] * scale;
+        float vx = animation_model.frameVerts[0][vIdx] * scale;
+        float vy = animation_model.frameVerts[0][vIdx+1] * scale;
+        float vz = animation_model.frameVerts[0][vIdx+2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -111,5 +152,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
         vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
 
         seek_mesh.push_back(vert);
+        current_anim_frame += 1;
+        animation_model.frameVerts.erase(0);
     }
 }
