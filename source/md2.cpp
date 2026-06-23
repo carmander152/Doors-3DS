@@ -64,6 +64,9 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
 }
 
 void MD2Model::load_anim() {
+    if (frameVerts.size() != 1) {
+        frameVerts.clear()
+    }
     sprintf(uiMessage, "loading anim");
     messageTimer = 30;
     std::string full_path = std::string("romfs:/Models/Animations/") + model_name;
@@ -101,13 +104,11 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame == 0) {
         frame = 1;
         current_anim_frame = 1;
-        animation_model.frameVerts.clear();
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
     if (animation_model.frameVerts.size() <= 1) {
-        animation_model.frameVerts.clear();
         animation_model.load_anim();
     }
 
