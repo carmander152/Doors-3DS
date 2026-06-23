@@ -100,6 +100,7 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
 
         vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
 
+        current_anim_frame = frame;
         current_anim_slice_prog += 1;
     }
 }
@@ -109,24 +110,26 @@ void MD2Model::load_anim(){
     if (!file) return;
 
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = current_anim_frame; i < current_anim_frame + 5; i ++) {
-        std::vector<float> verts;
-        fseek(file, ofsFrames + i * frameSize, SEEK_SET);
-        float scale[3], trans[3];
-        char name[16];
-        fread(scale, sizeof(float), 3, file);
-        fread(trans, sizeof(float), 3, file);
-        fread(name, 1, 16, file);
+    for (int i = current_anim_frame; i < current_anim_frame + 4; i ++) {
+        if (i < numFrames - 1) {
+            std::vector<float> verts;
+            fseek(file, ofsFrames + i * frameSize, SEEK_SET);
+            float scale[3], trans[3];
+            char name[16];
+            fread(scale, sizeof(float), 3, file);
+            fread(trans, sizeof(float), 3, file);
+            fread(name, 1, 16, file);
 
-        for (int v = 0; v < numVerts; v++) {
-            unsigned char p[4];
-            fread(p, 1, 4, file);
+            for (int v = 0; v < numVerts; v++) {
+                unsigned char p[4];
+                fread(p, 1, 4, file);
 
-            // Calculate coords and swap Quake's Up-Axis to match Citro3D
-            verts.push_back((p[0] * scale[0]) + trans[0]);        // X
-            verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
-            verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
+                // Calculate coords and swap Quake's Up-Axis to match Citro3D
+                verts.push_back((p[0] * scale[0]) + trans[0]);        // X
+                verts.push_back((p[2] * scale[2]) + trans[2]);        // Y (Up)
+                verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
+            }
+            frameVerts.push_back(verts);
         }
-        frameVerts.push_back(verts);
     }
 }

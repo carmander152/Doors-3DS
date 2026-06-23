@@ -211,7 +211,7 @@ int main() {
                 hideState = NOT_HIDING; playerHealth = 100; screechActive = false; screechState = 0; 
                 flashRedFrames = 0; playerCoins = 0; screechCooldown = 900; rushActive = false; 
                 rushState = 0; rushCooldown = 0; messageTimer = 0; inElevator = true; 
-                elevatorTimer = 796; elevatorDoorsOpen = false; elevatorClosing = false; 
+                elevatorTimer = 60; elevatorDoorsOpen = false; elevatorClosing = false; 
                 elevatorDoorOffset = 0; elevatorJamFinished = false; 
                 
                 // Spawn player safely in the shifted Lobby Elevator
