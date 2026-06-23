@@ -55,7 +55,7 @@ bool MD2Model::load(const char* filepath, bool is_animation, const char* file_na
         numVerts = header[6];
         numFrames = header[10];
         frameSize = header[4];
-        load_anim(0);
+        load_frame(0);
     }
 
     fclose(file);
@@ -70,7 +70,7 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
     }
 
     current_anim_frame = frame;
-    animation_model.load_anim(current_anim_frame);
+    animation_model.load_frame(current_anim_frame);
 
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);

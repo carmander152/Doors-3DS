@@ -22,7 +22,7 @@ struct MD2Model {
 
     bool load(const char* filepath, bool is_animation, const char* file_name);
     void draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY);
-    void load_anim(int frame);
+    void load_frame(int frame);
 };
 
 #endif
