@@ -14,6 +14,7 @@ struct MD2Model {
     int current_anim_slice_prog = 0;
     const char* current_anim_name;
     const char* model_name;
+    const char* model_path;
     
     std::vector<float> uvs; 
     std::vector<int> triVerts; 

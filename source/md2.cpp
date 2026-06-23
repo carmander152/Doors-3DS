@@ -8,21 +8,21 @@
 
 extern std::vector<vertex> seek_mesh;
 
-bool MD2Model::load(const char* filepath,bool is_animation, const char* file_name) {
+bool MD2Model::load(const char* filepath, bool is_animation, const char* file_name) {
     std::string full_path = std::string(filepath) + file_name;
     FILE* file = fopen(full_path.c_str(), "rb");
     if (!file) return false;
 
     int header[17];
     fread(header, sizeof(int), 17, file);
-    
+
     // Check if it's a valid MD2 file (IDP2, version 8)
     if (header[0] != 844121161 || header[1] != 8) { fclose(file); return false; }
-    
-    int ofsTex = header[12], ofsTris = header[13];
-    ofsFrames = header[14];
 
+    int ofsTex = header[12], ofsTris = header[13]; 
+    ofsFrames = header[14];
     model_name = file_name;
+    model_path = full_path;
 
     if (is_animation == false) {
         numTris = header[8];
@@ -50,7 +50,6 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
             for (int j = 0; j < 3; j++) { triVerts.push_back(v[j]); triUVs.push_back(t[j]); }
         }
     }
-    
     else {
         // Load Frames
         numVerts = header[6];
@@ -63,23 +62,52 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
     return true;
 }
 
-void MD2Model::load_anim() {
-    sprintf(uiMessage, "loading anim");
-    messageTimer = 30;
-    std::string full_path = std::string("romfs:/Models/Animations/") + model_name;
-    FILE* file = fopen(full_path.c_str(), "rb");
-    if (!file) {
-        sprintf(uiMessage, "could not load anim fuck");
-        messageTimer = 30;
-        return;
+void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float z, float scale, float L, float rotY) {
+    if (frame < 0 || frame >= animation_model.numFrames) return;
+    if (frame == 0) {
+        frame = 1;
     }
+    float cosR = cosf(rotY);
+    float sinR = sinf(rotY);
+
+    for (int i = 0; i < numTris * 3; i++) {
+        int vIdx = triVerts[i] * 3;
+        int uvIdx = triUVs[i] * 2;
+
+        float vx = animation_model.frameVerts[frame][vIdx] * scale;
+        float vy = animation_model.frameVerts[frame][vIdx + 1] * scale;
+        float vz = animation_model.frameVerts[frame][vIdx + 2] * scale;
+
+        // Apply Y-rotation so he faces the right way
+        float rx = vx * cosR - vz * sinR;
+        float rz = vx * sinR + vz * cosR;
+
+        vertex vert;
+        vert.pos[0] = rx + x;
+        vert.pos[1] = vy + y;
+        vert.pos[2] = rz + z;
+        vert.pos[3] = 1.0f;
+
+        vert.texcoord[0] = uvs[uvIdx];
+        vert.texcoord[1] = uvs[uvIdx + 1];
+
+        vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
+
+        seek_mesh.push_back(vert);
+    }
+}
+
+void MD2Model::load_anim(){
+    FILE* file = fopen(model_path, "rb");
+    if (!file) return;
+
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = current_anim_frame; i < current_anim_frame + 5; i++) {
+    for (int i = 0; i < numFrames; i++) {
         fseek(file, ofsFrames + i * frameSize, SEEK_SET);
         float scale[3], trans[3];
+        char name[16];
         fread(scale, sizeof(float), 3, file);
         fread(trans, sizeof(float), 3, file);
-        char name[16];
         fread(name, 1, 16, file);
 
         std::vector<float> verts;
@@ -93,50 +121,5 @@ void MD2Model::load_anim() {
             verts.push_back(-((p[1] * scale[1]) + trans[1]));     // Z (Depth)
         }
         frameVerts.push_back(verts);
-    }
-
-}
-
-void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float z, float scale, float L, float rotY) {
-    if (frame < 0 || frame >= animation_model.numFrames) return;
-    if (frame == 0) {
-        frame = 1;
-        current_anim_frame = 1;
-    }
-    float cosR = cosf(rotY);
-    float sinR = sinf(rotY);
-
-    if (current_anim_slice_prog == 5) {
-        current_anim_slice_prog = 0;
-        animation_model.load_anim();
-    }
-
-    for (int i = 0; i < numTris * 3; i++) {
-        int vIdx = triVerts[i] * 3;
-        int uvIdx = triUVs[i] * 2;
-
-        float vx = animation_model.frameVerts[0][vIdx] * scale;
-        float vy = animation_model.frameVerts[0][vIdx+1] * scale;
-        float vz = animation_model.frameVerts[0][vIdx+2] * scale;
-
-        // Apply Y-rotation so he faces the right way
-        float rx = vx * cosR - vz * sinR;
-        float rz = vx * sinR + vz * cosR;
-
-        vertex vert;
-        vert.pos[0] = rx + x;
-        vert.pos[1] = vy + y;
-        vert.pos[2] = rz + z;
-        vert.pos[3] = 1.0f;
-        
-        vert.texcoord[0] = uvs[uvIdx];
-        vert.texcoord[1] = uvs[uvIdx+1];
-        
-        vert.clr[0] = L; vert.clr[1] = L; vert.clr[2] = L; vert.clr[3] = 1.0f;
-
-        seek_mesh.push_back(vert);
-        current_anim_frame += 1;
-        current_anim_slice_prog += 1;
-        animation_model.frameVerts.erase(animation_model.frameVerts.begin());
     }
 }
