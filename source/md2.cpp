@@ -65,7 +65,7 @@ bool MD2Model::load(const char* filepath,bool is_animation, const char* file_nam
 
 void MD2Model::load_anim() {
     if (frameVerts.size() != 1) {
-        frameVerts.clear()
+        frameVerts.clear();
     }
     sprintf(uiMessage, "loading anim");
     messageTimer = 30;
