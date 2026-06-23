@@ -1748,7 +1748,7 @@ int main() {
                                 }
                                 else {
                                     if (last_frame != currentFrame) {
-                                        seekModel.draw(seekModelIntroAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                        seekModel.draw(seekModelIntroAnim, currentFrame, 0.0f, 1.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                         last_frame = currentFrame;
                                     }
                                     seekAnimTime += 1.0f;
