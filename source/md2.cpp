@@ -74,7 +74,7 @@ void MD2Model::load_anim() {
         return;
     }
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = current_anim_frame + 1; i < current_anim_frame + 5; i++) {
+    for (int i = current_anim_frame; i < current_anim_frame + 5; i++) {
         fseek(file, ofsFrames + i * frameSize, SEEK_SET);
         float scale[3], trans[3];
         fread(scale, sizeof(float), 3, file);
@@ -100,23 +100,26 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame < 0 || frame >= animation_model.numFrames) return;
     if (frame == 0) {
         frame = 1;
+        current_anim_slice_prog = 0;
         current_anim_frame = 1;
         animation_model.frameVerts.clear();
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    if (animation_model.frameVerts.size() == 0) {
+    if (current_anim_slice_prog == 5) {
+        current_anim_slice_prog = 0;
         animation_model.load_anim();
+        animation_model.frameVerts.clear();
     }
 
     for (int i = 0; i < numTris * 3; i++) {
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[0][vIdx] * scale;
-        float vy = animation_model.frameVerts[0][vIdx+1] * scale;
-        float vz = animation_model.frameVerts[0][vIdx+2] * scale;
+        float vx = animation_model.frameVerts[current_anim_slice_prog][vIdx] * scale;
+        float vy = animation_model.frameVerts[current_anim_slice_prog][vIdx+1] * scale;
+        float vz = animation_model.frameVerts[current_anim_slice_prog][vIdx+2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -135,7 +138,6 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-
-        animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
+        current_anim_slice_prog += 1;
     }
 }

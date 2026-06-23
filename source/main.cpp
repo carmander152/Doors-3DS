@@ -1769,7 +1769,7 @@ int main() {
                         else {
                             last_frame = -1;
                             seekAnimTime = 0.0f;
-                            seekModel.draw(seekModelIntroAnim, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                            seekModel.draw(seekModelIntroAnim, 0, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                             test = -1;
                         }
                     }
