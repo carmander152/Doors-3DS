@@ -112,12 +112,13 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     }
 
     for (int i = 0; i < numTris * 3; i++) {
+        animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[1][vIdx] * scale;
-        float vy = animation_model.frameVerts[1][vIdx+1] * scale;
-        float vz = animation_model.frameVerts[1][vIdx+2] * scale;
+        float vx = animation_model.frameVerts[0][vIdx] * scale;
+        float vy = animation_model.frameVerts[0][vIdx+1] * scale;
+        float vz = animation_model.frameVerts[0][vIdx+2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -136,13 +137,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-        animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
         
-        if (animation_model.frameVerts.size()) {
-            std::string full_path = std::string(animation_model.frameVerts.size());
-
-            sprintf(uiMessage, full_path.c_str());
-            messageTimer = 30;
-        }
+        
     }
 }
