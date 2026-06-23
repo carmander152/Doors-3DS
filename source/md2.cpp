@@ -102,7 +102,7 @@ void MD2Model::load_anim(){
     if (!file) return;
 
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = 0; i < numFrames; i++) {
+    for (int i = 5; i < numFrames; i++) {
         fseek(file, ofsFrames + i * frameSize, SEEK_SET);
         float scale[3], trans[3];
         char name[16];
