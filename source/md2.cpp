@@ -100,16 +100,14 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
     if (frame < 0 || frame >= animation_model.numFrames) return;
     if (frame == 0) {
         frame = 1;
-        current_anim_slice_prog = 0;
         current_anim_frame = 1;
         animation_model.frameVerts.clear();
     }
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
 
-    if (current_anim_slice_prog == 5) {
+    if (animation_model.frameVerts.size() == 1) {
         animation_model.frameVerts.clear();
-        current_anim_slice_prog = 0;
         animation_model.load_anim();
     }
 
@@ -117,9 +115,9 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[current_anim_slice_prog][vIdx] * scale;
-        float vy = animation_model.frameVerts[current_anim_slice_prog][vIdx+1] * scale;
-        float vz = animation_model.frameVerts[current_anim_slice_prog][vIdx+2] * scale;
+        float vx = animation_model.frameVerts[1][vIdx] * scale;
+        float vy = animation_model.frameVerts[1][vIdx+1] * scale;
+        float vz = animation_model.frameVerts[1][vIdx+2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -138,6 +136,7 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
 
         seek_mesh.push_back(vert);
         current_anim_frame += 1;
-        current_anim_slice_prog += 1;
+        int index_to_remove = 1;
+        animation_model.frameVerts.erase(animation_model.frameVerts.begin() + index_to_remove);
     }
 }
