@@ -138,9 +138,11 @@ void MD2Model::draw(MD2Model animation_model,int frame, float x, float y, float 
         current_anim_frame += 1;
         animation_model.frameVerts.erase(animation_model.frameVerts.begin(), animation_model.frameVerts.begin());
         
-        std::string full_path = std::string(animation_model.frameVerts.size());
-        
-        sprintf(uiMessage, full_path.c_str());
-        messageTimer = 30;
+        if (animation_model.frameVerts.size()) {
+            std::string full_path = std::string(animation_model.frameVerts.size());
+
+            sprintf(uiMessage, full_path.c_str());
+            messageTimer = 30;
+        }
     }
 }
