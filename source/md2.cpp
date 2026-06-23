@@ -55,7 +55,7 @@ bool MD2Model::load(const char* filepath, bool is_animation, const char* file_na
         numVerts = header[6];
         numFrames = header[10];
         frameSize = header[4];
-        load_anim(0);
+        load_anim();
     }
 
     fclose(file);
@@ -67,9 +67,8 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
     if (frame == 0) {
         frame = 1;
     }
-    current_anim_frame = frame;
 
-    animation_model.load_anim(current_anim_frame);
+    current_anim_frame = frame;
 
     float cosR = cosf(rotY);
     float sinR = sinf(rotY);
@@ -78,9 +77,9 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
         int vIdx = triVerts[i] * 3;
         int uvIdx = triUVs[i] * 2;
 
-        float vx = animation_model.frameVerts[0][vIdx] * scale;
-        float vy = animation_model.frameVerts[0][vIdx + 1] * scale;
-        float vz = animation_model.frameVerts[0][vIdx + 2] * scale;
+        float vx = animation_model.frameVerts[frame][vIdx] * scale;
+        float vy = animation_model.frameVerts[frame][vIdx + 1] * scale;
+        float vz = animation_model.frameVerts[frame][vIdx + 2] * scale;
 
         // Apply Y-rotation so he faces the right way
         float rx = vx * cosR - vz * sinR;
@@ -101,17 +100,13 @@ void MD2Model::draw(MD2Model animation_model, int frame, float x, float y, float
     }
 }
 
-void MD2Model::load_anim(int frame){
+void MD2Model::load_anim(){
     FILE* file = fopen(model_path, "rb");
     if (!file) return;
 
-    if (frameVerts.size() == 1) {
-        frameVerts.clear();
-    }
-
     fseek(file, ofsFrames, SEEK_SET);
-    for (int i = frame; i < frame; i++) {
-        fseek(file, ofsFrames + frame * frameSize, SEEK_SET);
+    for (int i = 0; i < numFrames; i++) {
+        fseek(file, ofsFrames + i * frameSize, SEEK_SET);
         float scale[3], trans[3];
         char name[16];
         fread(scale, sizeof(float), 3, file);
