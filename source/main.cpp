@@ -1767,7 +1767,7 @@ int main() {
                                 if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 50;
-                                    test = 1;
+                                    test = 2;
                                     seekModel.draw(seekModelIntroClip3, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                     seekAnimTime = 0.0f;
                                     last_frame = -1;
@@ -1787,7 +1787,7 @@ int main() {
                                 if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 50;
-                                    test = 1;
+                                    test = 3;
                                     seekModel.draw(seekModelIntroClip4, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                     seekAnimTime = 0.0f;
                                     last_frame = -1;
@@ -1807,7 +1807,7 @@ int main() {
                                 if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 50;
-                                    test = 1;
+                                    test = 4;
                                     seekModel.draw(seekModelRunAnim, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                     seekAnimTime = 0.0f;
                                     last_frame = -1;
