@@ -105,10 +105,16 @@ int main() {
     // 3D Model Loading
     MD2Model seekModel;
     MD2Model seekModelRunAnim;
-    MD2Model seekModelIntroAnim;
+    MD2Model seekModelIntroClip1;
+    MD2Model seekModelIntroClip2;
+    MD2Model seekModelIntroClip3;
+    MD2Model seekModelIntroClip4;
     bool hasSeekModel = seekModel.load(Models,false, "seek.md2");
     bool hasSeekRunAnim = seekModelRunAnim.load(Model_Animations,true, "seek_run_anim.md2");
-    bool hasSeekIntroAnim = seekModelIntroAnim.load(Model_Animations, true, "seek_intro_anim.md2");
+    bool hasSeekIntroClip1 = seekModelIntroClip1.load(Model_Animations, true, "seek_intro_clip1.md2");
+    bool hasSeekIntroClip2 = seekModelIntroClip2.load(Model_Animations, true, "seek_intro_clip2.md2");
+    bool hasSeekIntroClip3 = seekModelIntroClip3.load(Model_Animations, true, "seek_intro_clip3.md2");
+    bool hasSeekIntroClip4 = seekModelIntroClip4.load(Model_Animations, true, "seek_intro_clip4.md2");
     if (!hasSeekModel) {
         printf("\x1b[33m[WARNING] Could not load seek.md2!\x1b[0m\n");
     }
@@ -1731,13 +1737,73 @@ int main() {
                 float seekHeightAdjust = 0.0f; 
 
                 if (playerCurrentRoom == -1) { 
-                    if (hasSeekRunAnim, hasSeekIntroAnim) {
+                    if (hasSeekRunAnim, hasSeekIntroClip1, hasSeekIntroClip2, hasSeekIntroClip3, hasSeekIntroClip4) {
                         static int test = 0;
                         static float seekAnimTime = 0.0f;
                         static int last_frame = 0;
                         if (test < 1) {
-                            if (seekModelIntroAnim.numFrames > 0) {
-                                int currentFrame = ((int)seekAnimTime) % seekModelIntroAnim.numFrames;
+                            if (seekModelIntroClip1.numFrames > 0) {
+                                int currentFrame = ((int)seekAnimTime) % seekModelIntroClip1.numFrames;
+                                if (currentFrame < last_frame) {
+                                    sprintf(uiMessage, "animation completed");
+                                    messageTimer = 50;
+                                    test = 1;
+                                    seekModel.draw(seekModelIntroClip2, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    seekAnimTime = 0.0f;
+                                    last_frame = -1;
+                                }
+                                else {
+                                    if (last_frame != currentFrame) {
+                                        seekModel.draw(seekModelIntroClip1, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                        last_frame = currentFrame;
+                                    }
+                                    seekAnimTime += 1.0f;
+                                }
+                            }
+                        }
+                        else if (test < 2) {
+                            if (seekModelIntroClip2.numFrames > 0) {
+                                int currentFrame = ((int)seekAnimTime) % seekModelIntroClip2.numFrames;
+                                if (currentFrame < last_frame) {
+                                    sprintf(uiMessage, "animation completed");
+                                    messageTimer = 50;
+                                    test = 1;
+                                    seekModel.draw(seekModelIntroClip3, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    seekAnimTime = 0.0f;
+                                    last_frame = -1;
+                                }
+                                else {
+                                    if (last_frame != currentFrame) {
+                                        seekModel.draw(seekModelIntroClip2, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                        last_frame = currentFrame;
+                                    }
+                                    seekAnimTime += 1.0f;
+                                }
+                            }
+                        }
+                        else if (test < 3) {
+                            if (seekModelIntroClip3.numFrames > 0) {
+                                int currentFrame = ((int)seekAnimTime) % seekModelIntroClip3.numFrames;
+                                if (currentFrame < last_frame) {
+                                    sprintf(uiMessage, "animation completed");
+                                    messageTimer = 50;
+                                    test = 1;
+                                    seekModel.draw(seekModelIntroClip4, 1, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                    seekAnimTime = 0.0f;
+                                    last_frame = -1;
+                                }
+                                else {
+                                    if (last_frame != currentFrame) {
+                                        seekModel.draw(seekModelIntroClip3, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                        last_frame = currentFrame;
+                                    }
+                                    seekAnimTime += 1.0f;
+                                }
+                            }
+                        }
+                        else if (test < 4) {
+                            if (seekModelIntroClip4.numFrames > 0) {
+                                int currentFrame = ((int)seekAnimTime) % seekModelIntroClip4.numFrames;
                                 if (currentFrame < last_frame) {
                                     sprintf(uiMessage, "animation completed");
                                     messageTimer = 50;
@@ -1748,7 +1814,7 @@ int main() {
                                 }
                                 else {
                                     if (last_frame != currentFrame) {
-                                        seekModel.draw(seekModelIntroAnim, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
+                                        seekModel.draw(seekModelIntroClip4, currentFrame, 0.0f, 0.0f + seekHeightAdjust, 2.0f, seekScale, 1.0f, 3.14159f);
                                         last_frame = currentFrame;
                                     }
                                     seekAnimTime += 1.0f;
