@@ -1,8 +1,8 @@
 #pragma once
 #include "game_state.h"
 
-ndspWaveBuf loadWav(const char* path);
-bool loadTextureFromFile(const char* path, C3D_Tex* tex);
+ndspWaveBuf loadWav(const char* path, const char* file_name);
+bool loadTextureFromFile(const char* path, const char* file_name, C3D_Tex* tex);
 
 void addFaceTextured(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6);
 void addFaceColored(vertex v1, vertex v2, vertex v3, vertex v4, vertex v5, vertex v6);
